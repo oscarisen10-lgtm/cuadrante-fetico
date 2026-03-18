@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-// --- CONEXIÓN FIREBASE (NUBE REAL) ---
 import { auth, db } from './firebase'; 
 import { onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
-import { doc, setDoc, onSnapshot } from "firebase/firestore";
-// --- ICONOS ---
+import { doc, setDoc, onSnapshot, collection, addDoc, deleteDoc } from "firebase/firestore";
 import { 
   Clock, Calendar as CalendarIcon, PieChart, MessageCircle, Play, Square, 
   Coffee, User, Lock, ChevronLeft, ChevronRight, LogOut, Store, Newspaper, 
-  Timer, X, Mail, Award, KeyRound, ShieldCheck, Settings, Building2
+  Timer, X, Mail, Award, KeyRound, ShieldCheck, Settings, Building2, Plus, 
+  Link, Trash2 
 } from 'lucide-react';
 
 const CONFIG = {
@@ -15,21 +14,10 @@ const CONFIG = {
   LIMITE_ANUAL_HORAS: 1770,
   MAX_FINES_CALIDAD: 10,
   UMBRAL_DIA_HA_MINUTOS: 510,
-  COLORES: {
-    PINK_WORK: '#fbcfe8',
-    PINK_TEXT: '#831843',
-    FETICO_QUALITY: '#22c55e',
-    BLUE_HA: '#2563eb',
-    AMBER_REST: '#f59e0b',
-    PURPLE_VAC: '#a855f7'
-  }
 };
 
-const MOCK_NEWS = [
-  { id: 1, title: "Nuevo acuerdo domingos", date: "Hoy", tag: "ANGED", desc: "Se ha firmado el nuevo calendario de aperturas para el 2026 en todos los centros Supercor." },
-  { id: 2, title: "Guía rápida días HA", date: "Ayer", tag: "Fetico", desc: "Recuerda que los días de alta actividad se deben registrar correctamente para su compensación." },
-  { id: 3, title: "Elecciones Sindicales", date: "2 Mar", tag: "Fetico", desc: "Resultados positivos en las últimas mesas electorales de la zona centro." }
-];
+// 👇 PON AQUÍ TU EMAIL REAL PARA SER EL ÚNICO ADMINISTRADOR 👇
+const ADMIN_EMAIL = "oscargarcia@fetico.es"; 
 
 const getFormattedDate = (date) => {
   const y = date.getFullYear();
@@ -50,6 +38,7 @@ export default function App() {
   const [workTimeAccumulated, setWorkTimeAccumulated] = useState(0);
   const [isBreakActive, setIsBreakActive] = useState(false);
   const [breakStartTime, setBreakStartTime] = useState(null);
+  const [newsList, setNewsList] = useState([]);
 
   // Estados UI
   const [isRegistering, setIsRegistering] = useState(false);
@@ -62,13 +51,11 @@ export default function App() {
   const [showConfirmLogout, setShowConfirmLogout] = useState(false);
   const [showBreakFinishedMsg, setShowBreakFinishedMsg] = useState(false);
   
-  // Agenda UI
   const [selectedDates, setSelectedDates] = useState([]); 
   const [editingDay, setEditingDay] = useState(null); 
   const [editHH, setEditHH] = useState("0");
   const [editmm, setEditmm] = useState("0");
 
-  // 1. INICIALIZAR SESIÓN EN GOOGLE CLOUD
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
@@ -93,7 +80,16 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 2. FUNCIÓN PARA GUARDAR EN LA NUBE
+  useEffect(() => {
+    if (!user) return;
+    const unsubNews = onSnapshot(collection(db, "noticias"), (snapshot) => {
+      const arr = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      arr.sort((a, b) => b.createdAt - a.createdAt);
+      setNewsList(arr);
+    });
+    return () => unsubNews();
+  }, [user]);
+
   const saveToCloud = async (updates) => {
     if (auth.currentUser) {
       try {
@@ -104,7 +100,6 @@ export default function App() {
     }
   };
 
-  // 3. LÓGICA DEL TIEMPO
   useEffect(() => {
     let interval;
     if (activeShift && !isBreakActive) {
@@ -127,7 +122,6 @@ export default function App() {
     return () => clearInterval(interval);
   }, [activeShift, isBreakActive, workTimeAccumulated, breakStartTime, showBreakFinishedMsg, settings.breakDuration]);
 
-  // --- CÁLCULOS ANGED ---
   const shiftsMap = useMemo(() => {
     const map = {};
     shifts.forEach(s => { map[s.date] = s; });
@@ -165,7 +159,6 @@ export default function App() {
     return { horasTotales: horasTotalesDecimal, contadorHA, findesCalidad, vacacionesCount };
   }, [shifts, shiftsMap]);
 
-  // --- ACCESO Y RECUPERACIÓN (ADAPTADOS A FIREBASE) ---
   const handleAuth = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
@@ -238,7 +231,43 @@ export default function App() {
     setShowConfirmLogout(false);
   };
 
-  // --- MANEJADORES DE INTERFAZ ---
+  const handleAddNews = async () => {
+    const title = prompt("Escribe el titular de la noticia:");
+    if (!title) return;
+    
+    const desc = prompt("Escribe el texto de la noticia:");
+    if (!desc) return;
+
+    const tag = prompt("Etiqueta (ej: ANGED, Fetico, Supercor):") || "Fetico";
+    const imageUrl = prompt("Opcional: Pega el enlace (URL) de una FOTO (Deja en blanco si no quieres foto):");
+    const linkUrl = prompt("Opcional: Pega un enlace a una web para poner un botón de 'Leer más':");
+    
+    try {
+      await addDoc(collection(db, "noticias"), {
+        title,
+        desc,
+        tag,
+        imageUrl: imageUrl || null,
+        linkUrl: linkUrl || null,
+        date: "Hoy",
+        createdAt: Date.now()
+      });
+      alert("¡Noticia publicada con éxito!");
+    } catch (error) {
+      alert("Hubo un error publicando la noticia: " + error.message);
+    }
+  };
+
+  const handleDeleteNews = async (id) => {
+    if (window.confirm("¿Seguro que quieres borrar esta noticia? Desaparecerá para todos los afiliados.")) {
+      try {
+        await deleteDoc(doc(db, "noticias", id));
+      } catch (error) {
+        alert("No se pudo borrar: " + error.message);
+      }
+    }
+  };
+
   const toggleDescanso = () => {
     const isNowActive = !isBreakActive;
     const newWorkTime = isNowActive ? workTimeAccumulated + Math.floor((Date.now() - activeShift.startTime) / 1000) : workTimeAccumulated;
@@ -332,10 +361,8 @@ export default function App() {
     setEditingDay(null);
   };
 
-  // --- RENDER PANTALLA DE CARGA ---
   if (loading) return <div className="h-screen flex items-center justify-center text-emerald-600 font-bold italic text-sm">Sincronizando con Google...</div>;
 
-  // --- RENDER PANTALLA DE ACCESO ---
   if (!user) {
     return (
       <div className="h-[100dvh] bg-emerald-50 flex flex-col items-center justify-center p-4 font-sans overflow-hidden">
@@ -354,7 +381,6 @@ export default function App() {
                 <>
                   <InputGroup label="Nombre y Apellidos" name="fullName" small icon={<User size={14}/>} />
                   <InputGroup label="Email" name="email" type="email" small icon={<Mail size={14}/>} />
-                  
                   <div className="grid grid-cols-2 gap-2">
                     <InputGroup label="Nº Afiliado Fetico" name="affiliate" small icon={<Award size={14}/>} />
                     <div className="space-y-0.5">
@@ -366,7 +392,6 @@ export default function App() {
                       </select>
                     </div>
                   </div>
-                  
                   <div className="grid grid-cols-2 gap-2">
                     <InputGroup label="Centro / Tienda" name="store" small icon={<Store size={14}/>} />
                     <div className="space-y-0.5">
@@ -378,7 +403,6 @@ export default function App() {
                       </select>
                     </div>
                   </div>
-                  
                   <InputGroup label="Contraseña (mín. 6)" name="password" type="password" minLength={6} small icon={<Lock size={14}/>} />
                   <InputGroup label="Repetir Contraseña" name="confirmPassword" type="password" minLength={6} small icon={<ShieldCheck size={14}/>} />
                 </>
@@ -405,7 +429,6 @@ export default function App() {
           </form>
         </div>
 
-        {/* MODAL RECUPERACIÓN (FIREBASE NATIVO) */}
         {showForgotModal && (
           <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in">
             <div className="bg-white rounded-[2rem] p-5 shadow-2xl w-full max-w-sm border border-emerald-50 relative animate-in zoom-in-95">
@@ -427,7 +450,6 @@ export default function App() {
     );
   }
 
-  // --- RENDER APP PRINCIPAL ---
   return (
     <div className="h-[100dvh] bg-slate-50 flex justify-center font-sans overflow-hidden">
       <div className="w-full max-w-md bg-white h-full flex flex-col relative overflow-hidden">
@@ -435,7 +457,7 @@ export default function App() {
         <header className="bg-emerald-600 text-white p-3 rounded-b-[1.5rem] shadow-lg shrink-0">
           <div className="flex justify-between items-center px-1">
             <div>
-              <h1 className="font-black text-base italic leading-tight">Hola, {user.fullName?.split(' ')[0] || 'Compañero'}</h1>
+              <h1 className="font-black text-base italic leading-tight">Hola, {user.fullName?.split(' ')[0]}</h1>
               <span className="text-[7px] uppercase font-bold opacity-80 tracking-widest leading-none">Sincronizado en la nube ☁️</span>
             </div>
             <button onClick={() => setShowConfirmLogout(true)} className="bg-white/10 p-2 rounded-lg"><LogOut size={16} /></button>
@@ -443,7 +465,6 @@ export default function App() {
         </header>
 
         <main className="flex-1 p-3 overflow-y-auto scrollbar-hide flex flex-col min-h-0">
-          
           {activeTab === 'dashboard' && (
             <div className="flex flex-col animate-in fade-in duration-300 gap-4 pb-20">
               <div className="bg-white rounded-[1.5rem] p-5 shadow-sm border border-slate-100 flex flex-col min-h-[320px]">
@@ -458,23 +479,54 @@ export default function App() {
               </div>
 
               <div className="bg-slate-900 rounded-[1.5rem] p-5 flex flex-col min-h-[350px]">
-                <h3 className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-4 flex items-center gap-1.5 shrink-0">
-                    <Newspaper size={12}/> Noticias Fetico
-                </h3>
-                <div className="space-y-4">
-                    {MOCK_NEWS.map(news => (
-                        <div key={news.id} className="bg-white/5 p-4 rounded-xl border border-white/5 active:scale-95 transition-all">
-                            <div className="flex justify-between items-center mb-1.5">
-                                <span className="text-[9px] font-black text-emerald-400 uppercase tracking-tighter">{news.tag}</span>
-                                <span className="text-[8px] text-white/40">{news.date}</span>
-                            </div>
-                            <h4 className="text-xs font-black text-white uppercase leading-tight mb-2">{news.title}</h4>
-                            <p className="text-[10px] text-white/60 leading-snug">{news.desc}</p>
-                        </div>
-                    ))}
-                    <button className="w-full py-3 bg-emerald-600/20 rounded-xl border border-emerald-500/30 text-center active:scale-95 transition-all mt-2">
-                        <span className="text-[9px] font-black text-emerald-400 uppercase italic">Ver todas las noticias</span>
+                <div className="flex justify-between items-center mb-4 shrink-0">
+                  <h3 className="text-[10px] font-black text-white/50 uppercase tracking-widest flex items-center gap-1.5">
+                      <Newspaper size={12}/> Noticias Fetico
+                  </h3>
+                  
+                  {/* SOLO EL ADMIN VE ESTE BOTÓN */}
+                  {user.email === ADMIN_EMAIL.toLowerCase() && (
+                    <button onClick={handleAddNews} className="bg-emerald-600 text-white p-1.5 rounded-lg active:scale-95 transition-all shadow-md">
+                       <Plus size={14}/>
                     </button>
+                  )}
+                </div>
+                
+                <div className="space-y-4 overflow-y-auto pr-1">
+                    {newsList.length === 0 ? (
+                       <p className="text-[10px] text-white/40 text-center italic py-4">No hay noticias publicadas.</p>
+                    ) : (
+                      newsList.map(news => (
+                          <div key={news.id} className="bg-white/5 p-4 rounded-xl border border-white/5 flex flex-col">
+                              <div className="flex justify-between items-center mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[9px] font-black text-emerald-400 uppercase tracking-tighter bg-emerald-400/10 px-2 py-0.5 rounded-md">{news.tag}</span>
+                                    <span className="text-[8px] text-white/40">{news.date}</span>
+                                  </div>
+                                  
+                                  {/* SOLO EL ADMIN VE ESTE BOTÓN */}
+                                  {user.email === ADMIN_EMAIL.toLowerCase() && (
+                                    <button onClick={() => handleDeleteNews(news.id)} className="text-rose-400 p-1.5 bg-rose-400/10 hover:bg-rose-500/20 rounded-lg transition-colors">
+                                      <Trash2 size={12} />
+                                    </button>
+                                  )}
+                              </div>
+                              
+                              {news.imageUrl && (
+                                <img src={news.imageUrl} alt="Noticia" className="w-full h-32 object-cover rounded-lg mb-3 border border-white/10 shadow-sm" />
+                              )}
+
+                              <h4 className="text-xs font-black text-white uppercase leading-tight mb-2">{news.title}</h4>
+                              <p className="text-[10px] text-white/60 leading-snug whitespace-pre-wrap">{news.desc}</p>
+
+                              {news.linkUrl && (
+                                <a href={news.linkUrl} target="_blank" rel="noopener noreferrer" className="mt-3 bg-white/10 hover:bg-white/20 transition-colors text-white py-2 px-3 rounded-lg text-[9px] font-bold uppercase text-center flex items-center justify-center gap-1.5">
+                                  <Link size={12}/> Ver más información
+                                </a>
+                              )}
+                          </div>
+                      ))
+                    )}
                 </div>
               </div>
             </div>
@@ -491,13 +543,8 @@ export default function App() {
 
               <button 
                 onClick={() => {
-                  if (activeShift) {
-                     cerrarTurno((elapsed/60)>=CONFIG.UMBRAL_DIA_HA_MINUTOS);
-                  } else {
-                     const newShift = {startTime: Date.now()};
-                     setActiveShift(newShift);
-                     saveToCloud({activeShift: newShift});
-                  }
+                  if (activeShift) cerrarTurno((elapsed/60)>=CONFIG.UMBRAL_DIA_HA_MINUTOS);
+                  else { const ns = {startTime: Date.now()}; setActiveShift(ns); saveToCloud({activeShift: ns}); }
                 }} 
                 className={`w-36 h-36 rounded-full flex flex-col items-center justify-center shadow-2xl transition-all active:scale-90 border-[6px] shrink-0 ${activeShift ? 'bg-rose-500 border-rose-100 shadow-rose-200' : 'bg-emerald-600 border-emerald-100 shadow-emerald-200'}`}
               >
@@ -674,7 +721,6 @@ export default function App() {
   );
 }
 
-// --- SUBCOMPONENTES ---
 function NavItem({ icon, label, isActive, onClick }) {
   return (
     <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-all flex-1 ${isActive ? 'text-emerald-700' : 'text-slate-300'}`}>
@@ -705,11 +751,7 @@ function InputGroup({ label, name, icon, type = "text", maxLength, minLength, ce
       <div className="relative">
         {icon && <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400">{icon}</div>}
         <input 
-          name={name} 
-          type={type} 
-          maxLength={maxLength} 
-          minLength={minLength}
-          required 
+          name={name} type={type} maxLength={maxLength} minLength={minLength} required 
           className={`w-full ${icon ? 'pl-7' : 'px-2'} bg-slate-50 border-none ${small ? 'p-1.5 text-[10px]' : 'p-2.5 text-xs'} rounded-lg outline-none ring-1 ring-slate-200 focus:ring-1 focus:ring-emerald-500 ${center ? 'text-center font-black tracking-widest' : ''} leading-none transition-all shadow-sm`} 
         />
       </div>
