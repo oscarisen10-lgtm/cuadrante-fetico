@@ -6,7 +6,7 @@ import {
   Clock, Calendar as CalendarIcon, PieChart, MessageCircle, Play, Square, 
   Coffee, User, Lock, ChevronLeft, ChevronRight, LogOut, Store, Newspaper, 
   Timer, X, Mail, Award, KeyRound, ShieldCheck, Settings, Building2, Plus, 
-  Link, Trash2 
+  Link, Trash2, FileText
 } from 'lucide-react';
 
 const CONFIG = {
@@ -14,6 +14,7 @@ const CONFIG = {
   LIMITE_ANUAL_HORAS: 1770,
   MAX_FINES_CALIDAD: 10,
   UMBRAL_DIA_HA_MINUTOS: 510,
+  MAX_DOMINGOS: 22,
 };
 
 // 👇 PON AQUÍ TU EMAIL REAL PARA SER EL ÚNICO ADMINISTRADOR 👇
@@ -144,13 +145,21 @@ export default function App() {
     let contadorHA = 0;
     let vacacionesCount = 0;
     let findesCalidad = 0;
+    let domingosCount = 0;
+
     shifts.forEach(s => {
       if (s.type === 'work') {
         horasTotalesDecimal += s.hours;
         if (s.isHA) contadorHA += 1;
+
+        // Comprobamos si el día trabajado es domingo (0 = Domingo en JS)
+        const [y, m, d] = s.date.split('-');
+        const dayOfWeek = new Date(y, m - 1, d).getDay();
+        if (dayOfWeek === 0) domingosCount += 1;
       }
       if (s.type === 'vacation') vacacionesCount += 1;
     });
+
     const year = new Date().getFullYear();
     const start = new Date(year, 0, 1);
     const end = new Date();
@@ -167,7 +176,7 @@ export default function App() {
       }
       current.setDate(current.getDate() + 1);
     }
-    return { horasTotales: horasTotalesDecimal, contadorHA, findesCalidad, vacacionesCount };
+    return { horasTotales: horasTotalesDecimal, contadorHA, findesCalidad, vacacionesCount, domingosCount };
   }, [shifts, shiftsMap]);
 
   const handleAuth = async (e) => {
@@ -195,11 +204,19 @@ export default function App() {
            return;
         }
         
+        // VALIDACIÓN DEL CÓDIGO DE ACTIVACIÓN
+        const activationCode = formData.get('activationCode');
+        if (activationCode !== '2026') {
+           setRecoveryError("Código de activación incorrecto.");
+           setIsLoading(false);
+           setTimeout(() => setRecoveryError(""), 3000);
+           return;
+        }
+
         const res = await createUserWithEmailAndPassword(auth, emailInput, pass);
         const newUserProfile = {
           email: emailInput,
           fullName: formData.get('fullName') || 'Compañero/a',
-          affiliate: formData.get('affiliate') || '',
           company: formData.get('company') || "Supercor",
           store: formData.get('store') || "Supercor",
           rank: formData.get('rank') || "Personal base"
@@ -391,7 +408,7 @@ export default function App() {
 
   if (!user) {
     return (
-      <div className="h-[100dvh] bg-emerald-50 flex flex-col items-center justify-center p-4 font-sans overflow-hidden">
+      <div className="h-[100dvh] bg-emerald-50 flex flex-col items-center justify-center p-4 font-sans overflow-hidden text-slate-800">
         <div className="w-full max-w-sm bg-white rounded-[2rem] shadow-xl overflow-hidden border border-emerald-100 flex flex-col max-h-[95vh]">
           <div className="bg-emerald-600 p-4 text-center text-white shrink-0">
             <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center mx-auto mb-1 shadow-inner shrink-0">
@@ -408,7 +425,7 @@ export default function App() {
                   <InputGroup label="Nombre y Apellidos" name="fullName" small icon={<User size={14}/>} />
                   <InputGroup label="Email" name="email" type="email" small icon={<Mail size={14}/>} />
                   <div className="grid grid-cols-2 gap-2">
-                    <InputGroup label="Nº Afiliado Fetico" name="affiliate" small icon={<Award size={14}/>} />
+                    <InputGroup label="Cód. Activación" name="activationCode" small icon={<KeyRound size={14}/>} />
                     <div className="space-y-0.5">
                       <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight">Empresa</label>
                       <select name="company" className="w-full bg-slate-50 border-none p-1.5 rounded-lg text-sm outline-none ring-1 ring-slate-200">
@@ -436,10 +453,10 @@ export default function App() {
                 <div className="space-y-4 py-2">
                   <InputGroup label="Correo Electrónico" name="email" type="email" icon={<Mail size={14}/>} />
                   <InputGroup label="Contraseña" name="password" type="password" minLength={6} icon={<Lock size={14}/>} />
-                  <button type="button" onClick={() => setShowForgotModal(true)} className="w-full text-center text-xs font-black text-slate-400 uppercase tracking-tighter hover:text-emerald-600 transition-colors">
+                  <button type="button" onClick={() => setShowForgotModal(true)} className="w-full text-center text-xs font-black text-slate-400 uppercase tracking-tighter hover:text-emerald-600 transition-colors mt-2">
                     ¿Has olvidado tu contraseña?
                   </button>
-                  {recoveryError && <div className="text-xs text-rose-500 font-bold text-center animate-pulse">{recoveryError}</div>}
+                  {recoveryError && <div className="text-xs text-rose-500 font-bold text-center animate-pulse bg-rose-50 p-2 rounded-lg">{recoveryError}</div>}
                 </div>
               )}
             </div>
@@ -462,10 +479,10 @@ export default function App() {
                 <div className="text-emerald-600 flex justify-center mb-1"><KeyRound size={28}/></div>
                 <h3 className="text-base font-black text-center text-slate-800 mb-1 italic uppercase">Recuperar Acceso</h3>
                 <p className="text-center text-slate-500 text-xs mb-3 uppercase font-bold">Te enviaremos un email seguro</p>
-                <form onSubmit={handleRecovery} className="space-y-2">
+                <form onSubmit={handleRecovery} className="space-y-4">
                     <InputGroup label="Email Registrado" name="email" type="email" icon={<Mail size={14}/>} />
                     {recoveryError && <div className={`p-1.5 rounded text-center text-[8px] font-black uppercase ${recoveryError.includes('Éxito') ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>{recoveryError}</div>}
-                    <button type="submit" disabled={isLoading} className={`w-full bg-emerald-600 text-white font-black py-3 rounded-xl uppercase text-xs mt-2 ${isLoading ? 'opacity-70' : ''}`}>
+                    <button type="submit" disabled={isLoading} className={`w-full bg-emerald-600 text-white font-black py-3 rounded-xl uppercase text-xs mt-2 shadow-md ${isLoading ? 'opacity-70' : ''}`}>
                       {isLoading ? 'ENVIANDO...' : 'ENVIAR EMAIL DE RECUPERACIÓN'}
                     </button>
                 </form>
@@ -476,8 +493,9 @@ export default function App() {
     );
   }
 
+  // ==== MAIN APP (IF USER LOGGED IN) ====
   return (
-    <div className="h-[100dvh] bg-slate-50 flex justify-center font-sans overflow-hidden">
+    <div className="h-[100dvh] bg-slate-50 flex justify-center font-sans overflow-hidden text-slate-800">
       <div className="w-full max-w-md bg-white h-full flex flex-col relative overflow-hidden">
         
         <header className="bg-emerald-600 text-white p-3 rounded-b-[1.5rem] shadow-lg shrink-0 z-10 relative">
@@ -501,6 +519,7 @@ export default function App() {
                   <StatBar label="Horas Anuales" currentValue={formatTotalTime(stats.horasTotales)} percentage={(stats.horasTotales/CONFIG.LIMITE_ANUAL_HORAS)*100} totalValue="1770h" color="bg-pink-300" large={true} />
                   <StatBar label="Días HA" currentValue={stats.contadorHA} percentage={(stats.contadorHA/CONFIG.MAX_DIAS_HA)*100} totalValue={CONFIG.MAX_DIAS_HA} color="bg-blue-500" large={true} />
                   <StatBar label="Calidad" currentValue={stats.findesCalidad} percentage={(stats.findesCalidad/CONFIG.MAX_FINES_CALIDAD)*100} totalValue={CONFIG.MAX_FINES_CALIDAD} color="bg-emerald-500" large={true} />
+                  <StatBar label="Domingos" currentValue={stats.domingosCount} percentage={(stats.domingosCount/CONFIG.MAX_DOMINGOS)*100} totalValue={CONFIG.MAX_DOMINGOS} color="bg-orange-400" large={true} />
                 </div>
               </div>
 
@@ -732,13 +751,26 @@ export default function App() {
             </div>
           )}
 
+          {activeTab === 'licencias' && (
+            <div className="flex flex-col items-center justify-center h-full animate-in fade-in duration-300 pb-20">
+               <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 text-center w-full max-w-[280px]">
+                   <FileText size={48} className="text-emerald-200 mx-auto mb-4" />
+                   <h3 className="text-sm font-black text-slate-800 uppercase italic">Licencias</h3>
+                   <p className="text-[10px] text-slate-500 mt-2 uppercase font-bold tracking-tighter leading-relaxed">Módulo en construcción.<br/>Próximamente disponible.</p>
+               </div>
+            </div>
+          )}
+
           {activeTab === 'support' && (
             <div className="flex flex-col space-y-5 animate-in fade-in duration-300 pb-20">
               <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 flex items-center gap-5">
                 <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center border-2 border-white shadow-sm shrink-0"><User className="text-emerald-700" size={32}/></div>
                 <div className="flex-1">
-                  <h3 className="text-sm font-black text-slate-800 uppercase italic">Delegado Sindical</h3>
-                  <a href="https://wa.me/34600000000" className="text-xs text-emerald-600 font-black flex items-center gap-1.5 mt-1 border-b border-emerald-100 w-fit pb-0.5"><MessageCircle size={14}/> Contactar WhatsApp</a>
+                  <h3 className="text-sm font-black text-slate-800 uppercase italic">Oscar - Delegado</h3>
+                  <p className="text-[11px] text-slate-600 font-black mt-0.5 tracking-wider">685 58 60 86</p>
+                  <a href="https://wa.me/34685586086" className="text-[10px] text-emerald-600 font-black flex items-center gap-1.5 mt-1 border-b border-emerald-100 w-fit pb-0.5 transition-colors hover:text-emerald-700">
+                    <MessageCircle size={10}/> Contactar WhatsApp
+                  </a>
                 </div>
               </div>
 
@@ -777,11 +809,12 @@ export default function App() {
           )}
         </main>
 
-        <nav className="h-20 bg-white/95 backdrop-blur-md border-t border-slate-100 flex justify-around items-center px-4 shrink-0 fixed bottom-0 left-0 right-0 z-50 pb-4">
+        <nav className="h-20 bg-white/95 backdrop-blur-md border-t border-slate-100 flex justify-around items-center px-2 shrink-0 fixed bottom-0 left-0 right-0 z-50 pb-4">
           <NavItem icon={<PieChart />} label="Resumen" isActive={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
           <NavItem icon={<Clock />} label="Fichar" isActive={activeTab === 'track'} onClick={() => setActiveTab('track')} />
           <NavItem icon={<CalendarIcon />} label="Agenda" isActive={activeTab === 'calendar'} onClick={() => setActiveTab('calendar')} />
-          <NavItem icon={<MessageCircle />} label="Ajustes" isActive={activeTab === 'support'} onClick={() => setActiveTab('support')} />
+          <NavItem icon={<FileText />} label="Licencias" isActive={activeTab === 'licencias'} onClick={() => setActiveTab('licencias')} />
+          <NavItem icon={<Settings />} label="Ajustes" isActive={activeTab === 'support'} onClick={() => setActiveTab('support')} />
         </nav>
 
         {showConfirmLogout && (
@@ -817,6 +850,7 @@ export default function App() {
             </div>
           </div>
         )}
+
       </div>
     </div>
   );
@@ -836,7 +870,7 @@ function StatBar({ label, currentValue, totalValue, percentage, color, large = f
     <div className="space-y-3">
       <div className="flex justify-between font-black uppercase tracking-widest items-end leading-none">
         <span className={large ? "text-sm text-slate-500 font-bold" : "text-[10px] text-slate-400"}>{label}</span>
-        <span className={`text-slate-900 ${large ? "text-3xl font-black" : "text-base"}`}>{currentValue} <span className={`${large ? "text-sm" : "text-[10px]"} text-slate-300 font-bold`}>/ {totalValue}</span></span>
+        <span className={`text-slate-900 ${large ? "text-2xl font-black" : "text-sm"}`}>{currentValue} <span className={`${large ? "text-sm" : "text-[8px]"} text-slate-400 font-bold`}>/ {totalValue}</span></span>
       </div>
       <div className={`w-full bg-slate-100 rounded-full overflow-hidden border border-slate-50 shadow-inner ${large ? "h-4" : "h-3.5"}`}>
         <div className={`${color} h-full transition-all duration-1000 shadow-sm`} style={{ width: `${Math.min(percentage, 100)}%` }}></div>
