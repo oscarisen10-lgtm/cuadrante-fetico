@@ -18,7 +18,7 @@ const CONFIG = {
 };
 
 // 👇 PON AQUÍ TU EMAIL REAL PARA SER EL ÚNICO ADMINISTRADOR 👇
-const ADMIN_EMAIL = "oscargarcia@fetico.es"; 
+const ADMIN_EMAIL = "oscar@fetico.es"; 
 
 const getFormattedDate = (date) => {
   const y = date.getFullYear();
@@ -203,22 +203,13 @@ export default function App() {
            setTimeout(() => setRecoveryError(""), 3000);
            return;
         }
-        
-        // VALIDACIÓN DEL CÓDIGO DE ACTIVACIÓN
-        const activationCode = formData.get('activationCode');
-        if (activationCode !== '2026') {
-           setRecoveryError("Código de activación incorrecto.");
-           setIsLoading(false);
-           setTimeout(() => setRecoveryError(""), 3000);
-           return;
-        }
 
         const res = await createUserWithEmailAndPassword(auth, emailInput, pass);
         const newUserProfile = {
           email: emailInput,
           fullName: formData.get('fullName') || 'Compañero/a',
           company: formData.get('company') || "Supercor",
-          store: formData.get('store') || "Supercor",
+          store: formData.get('store') || "Centro sin definir",
           rank: formData.get('rank') || "Personal base"
         };
         
@@ -368,6 +359,14 @@ export default function App() {
     saveToCloud({ shifts: newShifts });
   };
 
+  // NUEVA FUNCIÓN PARA BORRAR DÍAS
+  const deleteSelectedDates = () => {
+    const newShifts = shifts.filter(s => !selectedDates.includes(s.date));
+    setShifts(newShifts);
+    setSelectedDates([]);
+    saveToCloud({ shifts: newShifts });
+  };
+
   const formatTotalTime = (decimalHours) => {
     const totalMinutes = Math.round(decimalHours * 60);
     return `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
@@ -424,8 +423,8 @@ export default function App() {
                 <>
                   <InputGroup label="Nombre y Apellidos" name="fullName" small icon={<User size={14}/>} />
                   <InputGroup label="Email" name="email" type="email" small icon={<Mail size={14}/>} />
+                  
                   <div className="grid grid-cols-2 gap-2">
-                    <InputGroup label="Cód. Activación" name="activationCode" small icon={<KeyRound size={14}/>} />
                     <div className="space-y-0.5">
                       <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight">Empresa</label>
                       <select name="company" className="w-full bg-slate-50 border-none p-1.5 rounded-lg text-sm outline-none ring-1 ring-slate-200">
@@ -434,9 +433,6 @@ export default function App() {
                         <option>S. Express</option>
                       </select>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <InputGroup label="Centro / Tienda" name="store" small icon={<Store size={14}/>} />
                     <div className="space-y-0.5">
                       <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight">Rango</label>
                       <select name="rank" className="w-full bg-slate-50 border-none p-1.5 rounded-lg text-sm outline-none ring-1 ring-slate-200">
@@ -446,6 +442,8 @@ export default function App() {
                       </select>
                     </div>
                   </div>
+                  
+                  <InputGroup label="Centro / Tienda" name="store" small icon={<Store size={14}/>} />
                   <InputGroup label="Contraseña (mín. 6)" name="password" type="password" minLength={6} small icon={<Lock size={14}/>} />
                   <InputGroup label="Repetir Contraseña" name="confirmPassword" type="password" minLength={6} small icon={<ShieldCheck size={14}/>} />
                 </>
@@ -732,10 +730,11 @@ export default function App() {
                        </div>
                     </div>
 
-                    <div className="flex gap-3">
-                       <button onClick={() => markMulti('rest')} className="flex-1 bg-amber-500 text-white py-4 rounded-xl text-xs font-black uppercase tracking-widest shadow-md active:scale-95 transition-all">Librar</button>
-                       <button onClick={() => markMulti('vacation')} className="flex-1 bg-purple-500 text-white py-4 rounded-xl text-xs font-black uppercase tracking-widest shadow-md active:scale-95 transition-all">Vacas</button>
-                       <button onClick={() => openEditHours(dateStr)} className="flex-1 bg-blue-600 text-white py-4 rounded-xl text-xs font-black uppercase tracking-widest shadow-md active:scale-95 transition-all">Horas</button>
+                    <div className="flex gap-2">
+                       <button onClick={() => markMulti('rest')} className="flex-1 bg-amber-500 text-white py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all">Librar</button>
+                       <button onClick={() => markMulti('vacation')} className="flex-1 bg-purple-500 text-white py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all">Vacas</button>
+                       <button onClick={() => openEditHours(dateStr)} className="flex-1 bg-blue-600 text-white py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all">Horas</button>
+                       <button onClick={deleteSelectedDates} className="flex-1 bg-rose-500 text-white py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all">Borrar</button>
                     </div>
                   </div>
                 );
@@ -745,6 +744,7 @@ export default function App() {
                 <div className="flex gap-2 p-2 bg-slate-900 rounded-2xl shadow-xl mt-2">
                    <button onClick={() => markMulti('rest')} className="flex-1 bg-amber-500 text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest">Librar</button>
                    <button onClick={() => markMulti('vacation')} className="flex-1 bg-purple-500 text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest">Vacas</button>
+                   <button onClick={deleteSelectedDates} className="flex-1 bg-rose-500 text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest">Borrar</button>
                    <button onClick={() => setSelectedDates([])} className="bg-white/10 p-3 rounded-xl text-white"><X size={18}/></button>
                 </div>
               )}
@@ -763,14 +763,12 @@ export default function App() {
 
           {activeTab === 'support' && (
             <div className="flex flex-col space-y-5 animate-in fade-in duration-300 pb-20">
+              
               <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 flex items-center gap-5">
                 <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center border-2 border-white shadow-sm shrink-0"><User className="text-emerald-700" size={32}/></div>
                 <div className="flex-1">
-                  <h3 className="text-sm font-black text-slate-800 uppercase italic">Oscar - Delegado</h3>
-                  <p className="text-[11px] text-slate-600 font-black mt-0.5 tracking-wider">685 58 60 86</p>
-                  <a href="https://wa.me/34685586086" className="text-[10px] text-emerald-600 font-black flex items-center gap-1.5 mt-1 border-b border-emerald-100 w-fit pb-0.5 transition-colors hover:text-emerald-700">
-                    <MessageCircle size={10}/> Contactar WhatsApp
-                  </a>
+                  <h3 className="text-sm font-black text-slate-800 uppercase italic">Soporte Técnico</h3>
+                  <p className="text-[11px] text-slate-500 font-bold mt-1 tracking-wide leading-relaxed">Contacta con tu delegado de zona para consultas o sugerencias.</p>
                 </div>
               </div>
 
