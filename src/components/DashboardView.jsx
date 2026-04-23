@@ -15,13 +15,39 @@ export function DashboardView({ user, stats, newsList, addNews, deleteNews }) {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 1024 * 1024 * 2) { 
-        alert("La foto es demasiado grande (máx 2MB). Por favor, usa una foto más pequeña.");
+      if (file.size > 1024 * 1024 * 5) { 
+        alert("La foto es demasiado grande (máx 5MB). Por favor, usa una foto más pequeña.");
         e.target.value = null; 
         return;
       }
       const reader = new FileReader();
-      reader.onloadend = () => { setFormBase64Image(reader.result); };
+      reader.onloadend = () => { 
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const max_size = 800;
+          if (width > height) {
+            if (width > max_size) {
+              height *= max_size / width;
+              width = max_size;
+            }
+          } else {
+            if (height > max_size) {
+              width *= max_size / height;
+              height = max_size;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          setFormBase64Image(dataUrl);
+        };
+        img.src = reader.result;
+      };
       reader.onerror = () => { alert("Error leyendo la foto."); }
       reader.readAsDataURL(file); 
     }
@@ -50,7 +76,7 @@ export function DashboardView({ user, stats, newsList, addNews, deleteNews }) {
       alert("¡Noticia publicada con éxito! Ya se ve en todos los móviles.");
     } catch (error) {
       console.error("Error publicando:", error);
-      alert("Hubo un error al guardar la noticia en la nube.");
+      alert("Hubo un error al guardar la noticia en la nube. Detalle: " + error.message);
     }
     setIsLoading(false);
   };
