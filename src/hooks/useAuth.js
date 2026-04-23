@@ -38,6 +38,7 @@ export const useAuth = () => {
   }, []);
 
   const saveToCloud = async (updates) => {
+    if (updates.profile !== undefined) setUser((prev) => ({ ...prev, ...updates.profile }));
     if (updates.settings !== undefined) setSettings(updates.settings);
     if (updates.shifts !== undefined) setShifts(updates.shifts);
     if (updates.activeShift !== undefined) setActiveShift(updates.activeShift);

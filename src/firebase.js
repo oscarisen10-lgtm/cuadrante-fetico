@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getMessaging } from "firebase/messaging";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD3Fy7gpaQ-a4i8vBMItmsmZH_kfzQnpG4",
@@ -15,3 +16,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+let messagingInstance = null;
+try {
+  messagingInstance = getMessaging(app);
+} catch (e) {
+  console.warn("Firebase Messaging no soportado en este entorno");
+}
+export const messaging = messagingInstance;
+
+export const VAPID_KEY = "SLUM2BX7U3d3MXsmQZAi93UZQ4wUmukSgIqJaoSjnnA";

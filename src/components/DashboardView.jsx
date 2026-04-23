@@ -93,11 +93,17 @@ export function DashboardView({ user, stats, newsList, addNews, deleteNews }) {
         <h2 className="text-sm font-black text-slate-800 uppercase italic tracking-widest border-b border-slate-100 pb-3 flex items-center gap-2 mb-6 shrink-0">
           <PieChart size={18} className="text-emerald-600" /> Resumen Calendario
         </h2>
-        <div className="flex-1 flex flex-col justify-between py-2 space-y-7">
-          <StatBar label="Horas Anuales" currentValue={formatTotalTime(stats.horasTotales)} percentage={(stats.horasTotales/CONFIG.LIMITE_ANUAL_HORAS)*100} totalValue="1770h" color="bg-pink-300" large={true} />
-          <StatBar label="Días HA" currentValue={stats.contadorHA} percentage={(stats.contadorHA/CONFIG.MAX_DIAS_HA)*100} totalValue={CONFIG.MAX_DIAS_HA} color="bg-blue-500" large={true} />
-          <StatBar label="Calidad" currentValue={stats.findesCalidad} percentage={(stats.findesCalidad/CONFIG.MAX_FINES_CALIDAD)*100} totalValue={CONFIG.MAX_FINES_CALIDAD} color="bg-emerald-500" large={true} />
-          <StatBar label="DOMINGOS/FESTIVOS" currentValue={stats.domingosCount} percentage={(stats.domingosCount/CONFIG.MAX_DOMINGOS)*100} totalValue={CONFIG.MAX_DOMINGOS} color="bg-orange-400" large={true} />
+        <div className="flex-1 flex flex-col justify-between py-2 space-y-5">
+          <StatBar label="Horas Anuales" currentValue={formatTotalTime(stats.horasTotales)} percentage={(stats.horasTotales/(stats.targets?.horas || 1770))*100} totalValue={`${stats.targets?.horas || 1770}h`} color="bg-pink-300" large={true} />
+          <StatBar label="Días Trabajados" currentValue={stats.diasTrabajados} percentage={(stats.diasTrabajados/(stats.targets?.trabajados || 268))*100} totalValue={stats.targets?.trabajados || 268} color="bg-indigo-400" large={true} />
+          <StatBar label="Días Libres" currentValue={stats.diasLibres} percentage={(stats.diasLibres/(stats.targets?.libres || 76))*100} totalValue={stats.targets?.libres || 76} color="bg-amber-400" large={true} />
+          
+          {stats.targets?.ha > 0 && (
+             <StatBar label="Días HA" currentValue={stats.contadorHA} percentage={(stats.contadorHA/stats.targets.ha)*100} totalValue={stats.targets.ha} color="bg-blue-500" large={true} />
+          )}
+          
+          <StatBar label="Calidad" currentValue={stats.findesCalidad} percentage={(stats.findesCalidad/(stats.targets?.calidad || 10))*100} totalValue={stats.targets?.calidad || 10} color="bg-emerald-500" large={true} />
+          <StatBar label="DOMINGOS/FESTIVOS" currentValue={stats.domingosCount} percentage={(stats.domingosCount/(stats.targets?.domingos || 22))*100} totalValue={stats.targets?.domingos || 22} color="bg-orange-400" large={true} />
         </div>
       </div>
 
@@ -107,16 +113,31 @@ export function DashboardView({ user, stats, newsList, addNews, deleteNews }) {
               <Newspaper size={14}/> Noticias
           </h3>
           {user.email === ADMIN_EMAIL.toLowerCase() && (
-            <button onClick={() => setShowAddNewsModal(true)} className="bg-emerald-600 text-white px-3 py-1.5 rounded-xl hover:bg-emerald-500 active:scale-95 transition-all shadow-md flex items-center gap-1 font-black text-[10px] uppercase">
-               <Plus size={14}/> Nueva
-            </button>
+            <div className="flex gap-2">
+              <button onClick={() => {
+                 const title = prompt("Escribe el Título de la Alerta Push:");
+                 if(title) {
+                   const body = prompt("Escribe el Mensaje de la Alerta:");
+                   if(body) {
+                      // Save to Firestore so a backend/Cloud Function can pick it up
+                      addNews({ title, desc: body, tag: "ALERTA PUSH", date: "Ahora", imageUrl: null, isPushRequest: true })
+                      alert("Petición de Push guardada en la base de datos.");
+                   }
+                 }
+              }} className="bg-indigo-600 text-white px-3 py-1.5 rounded-xl hover:bg-indigo-500 active:scale-95 transition-all shadow-md flex items-center gap-1 font-black text-[10px] uppercase">
+                 Push
+              </button>
+              <button onClick={() => setShowAddNewsModal(true)} className="bg-emerald-600 text-white px-3 py-1.5 rounded-xl hover:bg-emerald-500 active:scale-95 transition-all shadow-md flex items-center gap-1 font-black text-[10px] uppercase">
+                 <Plus size={14}/> Nueva
+              </button>
+            </div>
           )}
         </div>
         <div className="space-y-4 overflow-y-auto pr-1 scrollbar-hide">
-            {newsList.length === 0 ? (
+            {newsList.filter(n => !n.isPushRequest).length === 0 ? (
                <p className="text-[10px] text-white/40 text-center italic py-6 uppercase font-bold">No hay noticias publicadas.</p>
             ) : (
-              newsList.map(news => (
+              newsList.filter(n => !n.isPushRequest).map(news => (
                   <div key={news.id} className="bg-white/5 p-4 rounded-2xl border border-white/5 flex flex-col">
                       <div className="flex justify-between items-center mb-3 border-b border-white/5 pb-2">
                           <div className="flex items-center gap-2">

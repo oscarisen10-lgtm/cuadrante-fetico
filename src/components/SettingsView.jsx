@@ -1,7 +1,11 @@
 import React from 'react';
-import { User, Settings } from 'lucide-react';
+import { User, Settings, Building2 } from 'lucide-react';
+import { COMPANY_RULES } from '../constants/config';
 
-export function SettingsView({ settings, saveToCloud, stopAlarm }) {
+export function SettingsView({ user, settings, saveToCloud, stopAlarm }) {
+  const currentCompany = user?.company || "Supercor";
+  const currentRank = user?.rank || "Personal de fresco";
+
   return (
     <div className="flex flex-col space-y-5 animate-in fade-in duration-300 pb-20">
       <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 flex items-center gap-5">
@@ -15,6 +19,40 @@ export function SettingsView({ settings, saveToCloud, stopAlarm }) {
       <div className="bg-slate-900 rounded-[2rem] p-6 flex flex-col">
         <h3 className="text-xs font-black text-white/50 uppercase tracking-widest mb-6 flex items-center gap-2 border-b border-white/5 pb-3"><Settings size={16}/> Preferencias</h3>
         <div className="space-y-6">
+          <div className="flex flex-col gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
+             <div className="flex items-center gap-2 mb-1">
+                <Building2 size={14} className="text-emerald-500" />
+                <span className="text-xs font-bold text-white uppercase leading-none">Mi Puesto</span>
+             </div>
+             
+             <div className="grid grid-cols-2 gap-3">
+               <div className="flex flex-col space-y-1">
+                  <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1">Empresa</span>
+                  <select 
+                    value={currentCompany} 
+                    onChange={(e) => {
+                      const newCompany = e.target.value;
+                      const firstRank = Object.keys(COMPANY_RULES[newCompany] || {})[0];
+                      saveToCloud({ profile: { ...user, company: newCompany, rank: firstRank } });
+                    }}
+                    className="w-full bg-white/10 border-none p-2 rounded-xl text-xs outline-none text-white appearance-none"
+                  >
+                    {Object.keys(COMPANY_RULES).map(c => <option key={c} value={c} className="text-slate-800">{c}</option>)}
+                  </select>
+               </div>
+               <div className="flex flex-col space-y-1">
+                  <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1">Rango</span>
+                  <select 
+                    value={currentRank} 
+                    onChange={(e) => saveToCloud({ profile: { ...user, rank: e.target.value } })}
+                    className="w-full bg-white/10 border-none p-2 rounded-xl text-xs outline-none text-white appearance-none"
+                  >
+                    {Object.keys(COMPANY_RULES[currentCompany] || {}).map(r => <option key={r} value={r} className="text-slate-800">{r}</option>)}
+                  </select>
+               </div>
+             </div>
+          </div>
+
           <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/5">
             <div className="flex flex-col">
                 <span className="text-xs font-bold text-white uppercase leading-none">Notificaciones</span>

@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { User, Lock, Mail, Store, ShieldCheck, KeyRound, X } from 'lucide-react';
 import { loginUser, registerUser, resetPassword } from '../services/firebaseService';
 import { InputGroup } from './UIComponents';
+import { COMPANY_RULES } from '../constants/config';
 
 export default function AuthView() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [recoveryError, setRecoveryError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [formCompany, setFormCompany] = useState("Supercor");
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -86,18 +88,14 @@ export default function AuthView() {
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-0.5">
                     <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight">Empresa</label>
-                    <select name="company" className="w-full bg-slate-50 border-none p-1.5 rounded-lg text-sm outline-none ring-1 ring-slate-200">
-                      <option>Supercor</option>
-                      <option>S. Romero</option>
-                      <option>S. Express</option>
+                    <select name="company" onChange={(e) => setFormCompany(e.target.value)} className="w-full bg-slate-50 border-none p-1.5 rounded-lg text-sm outline-none ring-1 ring-slate-200">
+                      {Object.keys(COMPANY_RULES).map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
                   <div className="space-y-0.5">
                     <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight">Rango</label>
                     <select name="rank" className="w-full bg-slate-50 border-none p-1.5 rounded-lg text-sm outline-none ring-1 ring-slate-200">
-                      <option>Base</option>
-                      <option>Prof.</option>
-                      <option>Coord.</option>
+                      {Object.keys(COMPANY_RULES[formCompany] || {}).map(r => <option key={r} value={r}>{r}</option>)}
                     </select>
                   </div>
                 </div>

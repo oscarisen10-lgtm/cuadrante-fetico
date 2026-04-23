@@ -4,6 +4,7 @@ import { useNews } from './hooks/useNews';
 import { useLicencias } from './hooks/useLicencias';
 import { useTimer } from './hooks/useTimer';
 import { useShifts } from './hooks/useShifts';
+import { useNotifications } from './hooks/useNotifications';
 import { Clock, Calendar as CalendarIcon, PieChart, FileText, Settings, LogOut } from 'lucide-react';
 import { getFormattedDate } from './utils/dateUtils';
 import { NavItem } from './components/UIComponents';
@@ -20,10 +21,13 @@ export default function App() {
     user, loading, logoutUser, saveToCloud,
     settings, shifts, activeShift, workTimeAccumulated, isBreakActive, breakStartTime 
   } = useAuth();
+  
+  useNotifications(user);
+  
   const { newsList, addNews, deleteNews, isLoading: isNewsLoading } = useNews();
   const { licenciasList, addLicencia, updateLicencia, deleteLicencia } = useLicencias();
   const { elapsed, breakTimeLeft, showBreakFinishedMsg, setShowBreakFinishedMsg, stopAlarm } = useTimer(activeShift, isBreakActive, workTimeAccumulated, breakStartTime, settings);
-  const { shiftsMap, stats } = useShifts(shifts);
+  const { shiftsMap, stats } = useShifts(shifts, user);
 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showConfirmLogout, setShowConfirmLogout] = useState(false);
@@ -117,7 +121,7 @@ export default function App() {
           )}
 
           {activeTab === 'support' && (
-             <SettingsView settings={settings} saveToCloud={saveToCloud} stopAlarm={stopAlarm} />
+             <SettingsView user={user} settings={settings} saveToCloud={saveToCloud} stopAlarm={stopAlarm} />
           )}
         </main>
 

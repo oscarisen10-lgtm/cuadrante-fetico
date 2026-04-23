@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { getFormattedDate } from '../utils/dateUtils';
-import { CONFIG } from '../constants/config';
+import { CONFIG, COMPANY_RULES } from '../constants/config';
 
-export const useShifts = (shifts) => {
+export const useShifts = (shifts, user) => {
   const shiftsMap = useMemo(() => {
     const map = {};
     shifts.forEach(s => { map[s.date] = s; });
@@ -15,9 +15,12 @@ export const useShifts = (shifts) => {
     let vacacionesCount = 0;
     let findesCalidad = 0;
     let domingosCount = 0;
+    let diasTrabajados = 0;
+    let diasLibres = 0;
 
     shifts.forEach(s => {
       if (s.type === 'work') {
+        diasTrabajados += 1;
         horasTotalesDecimal += s.hours;
         if (s.isHA) contadorHA += 1;
         const [y, m, d] = s.date.split('-');
@@ -26,6 +29,7 @@ export const useShifts = (shifts) => {
         if (dayOfWeek === 0 || isHoliday) domingosCount += 1;
       }
       if (s.type === 'vacation') vacacionesCount += 1;
+      if (s.type === 'rest') diasLibres += 1;
     });
 
     const year = new Date().getFullYear();
@@ -44,8 +48,22 @@ export const useShifts = (shifts) => {
       }
       current.setDate(current.getDate() + 1);
     }
-    return { horasTotales: horasTotalesDecimal, contadorHA, findesCalidad, vacacionesCount, domingosCount };
-  }, [shifts, shiftsMap]);
+
+    const company = user?.company || "Supercor";
+    const rank = user?.rank || "Personal de fresco";
+    const userRules = COMPANY_RULES[company]?.[rank] || COMPANY_RULES["Supercor"]["Personal de fresco"];
+
+    return { 
+      horasTotales: horasTotalesDecimal, 
+      contadorHA, 
+      findesCalidad, 
+      vacacionesCount, 
+      domingosCount, 
+      diasTrabajados, 
+      diasLibres,
+      targets: userRules
+    };
+  }, [shifts, shiftsMap, user]);
 
   return { shiftsMap, stats };
 };
