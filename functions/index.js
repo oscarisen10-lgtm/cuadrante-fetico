@@ -7,12 +7,12 @@ exports.sendPushNotification = functions.region("europe-west1").firestore
   .onCreate(async (snap, context) => {
     const data = snap.data();
 
-    // Solo reaccionar si es una petición de PUSH
+    // Solo reaccionar si es una peticion de PUSH
     if (data.isPushRequest !== true) {
       return null;
     }
 
-    const title = data.title || "Nueva notificación";
+    const title = data.title || "Nueva notificacion";
     const body = data.desc || "";
 
     // 1. Obtener todos los tokens de los usuarios
@@ -30,34 +30,36 @@ exports.sendPushNotification = functions.region("europe-west1").firestore
     const uniqueTokens = [...new Set(tokens)];
 
     if (uniqueTokens.length === 0) {
-      console.log("No hay tokens registrados para enviar la notificación.");
+      console.log("No hay tokens registrados para enviar la notificacion.");
       return null;
     }
 
-    // 2. Construir el mensaje V1
+    // 2. Construir el mensaje V1 (icon va en webpush, NO en notification)
     const message = {
       notification: {
         title: title,
         body: body,
-        icon: "/img/app.PNG",
+      },
+      webpush: {
+        notification: {
+          icon: "https://calendario-fetico.web.app/img/app.PNG",
+        },
       },
       tokens: uniqueTokens,
     };
 
-    // 3. Enviar a través de Firebase Admin (Usa la API V1 de forma segura)
+    // 3. Enviar a traves de Firebase Admin (Usa la API V1 de forma segura)
     try {
       const response = await admin.messaging().sendEachForMulticast(message);
-      console.log(response.successCount + " mensajes enviados con éxito.");
+      console.log(response.successCount + " mensajes enviados con exito.");
       
-      // Opcional: Eliminar tokens que ya no son válidos
+      // Registrar errores detallados de tokens fallidos
       if (response.failureCount > 0) {
-        const failedTokens = [];
         response.responses.forEach((resp, idx) => {
           if (!resp.success) {
-            failedTokens.push(uniqueTokens[idx]);
+            console.error("Token fallido [" + idx + "]:", resp.error?.code, resp.error?.message);
           }
         });
-        console.log("Tokens fallidos (para limpiar):", failedTokens);
       }
     } catch (error) {
       console.error("Error enviando notificaciones:", error);

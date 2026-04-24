@@ -15,14 +15,9 @@ firebase.initializeApp(firebaseConfig);
 
 const messaging = firebase.messaging();
 
+// onBackgroundMessage se dispara cuando la app esta en segundo plano.
+// FCM ya muestra la notificacion automaticamente si el mensaje tiene campo "notification".
+// Solo logueamos aqui para depuracion. NO llamamos a showNotification para evitar duplicados.
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Mensaje en segundo plano:', payload);
-  
-  const notificationTitle = payload.notification.title;
-  const notificationOptions = {
-    body: payload.notification.body,
-    icon: '/img/app.PNG'
-  };
-
-  self.registration.showNotification(notificationTitle, notificationOptions);
 });

@@ -1,20 +1,18 @@
 import React from 'react';
 import { User, Settings, Building2, Bell, RefreshCw } from 'lucide-react';
-import { useNotifications } from '../hooks/useNotifications';
 import { COMPANY_RULES } from '../constants/config';
 
-export function SettingsView({ user, settings, saveToCloud, stopAlarm }) {
-  const { token, tokenError } = useNotifications(user);
+export function SettingsView({ user, settings, saveToCloud, stopAlarm, pushToken, pushTokenError }) {
   const currentCompany = user?.company || "Supercor";
   const currentRank = user?.rank || "Personal de fresco";
 
-  const tokenStatus = token
+  const tokenStatus = pushToken
     ? "OK - GENERADO CON EXITO"
-    : tokenError
-    ? "ERROR: " + tokenError
+    : pushTokenError
+    ? "ERROR: " + pushTokenError
     : "Generando...";
 
-  const tokenColor = token ? '#4ade80' : tokenError ? '#f87171' : '#ffffff50';
+  const tokenColor = pushToken ? '#4ade80' : pushTokenError ? '#f87171' : '#ffffff50';
 
   return (
     <div className="flex flex-col space-y-5 animate-in fade-in duration-300 pb-20">
@@ -99,7 +97,7 @@ export function SettingsView({ user, settings, saveToCloud, stopAlarm }) {
              <div className="space-y-2">
                 <div className="flex justify-between items-center bg-white/5 p-2.5 rounded-xl">
                    <span className="text-[9px] text-white/50 uppercase font-bold">Permiso:</span>
-                   <span className="text-[9px] text-emerald-400 font-black uppercase">{Notification.permission}</span>
+                   <span className="text-[9px] text-emerald-400 font-black uppercase">{typeof Notification !== 'undefined' ? Notification.permission : 'N/A'}</span>
                 </div>
                 <div className="flex flex-col bg-white/5 p-2.5 rounded-xl gap-1">
                    <span className="text-[9px] text-white/50 uppercase font-bold">Token FCM:</span>
