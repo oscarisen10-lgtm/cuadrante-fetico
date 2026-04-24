@@ -10,6 +10,7 @@ export function CalendarView({ shifts, shiftsMap, saveToCloud }) {
   const [editingDay, setEditingDay] = useState(null); 
   const [editHH, setEditHH] = useState("0");
   const [editmm, setEditmm] = useState("0");
+  const [editTurn, setEditTurn] = useState("full");
 
   const openEditHours = (dateStr) => {
     const s = shiftsMap[dateStr];
@@ -17,13 +18,14 @@ export function CalendarView({ shifts, shiftsMap, saveToCloud }) {
     setEditingDay(dateStr);
     setEditHH(Math.floor(totalHoursDecimal).toString());
     setEditmm(Math.round((totalHoursDecimal % 1) * 60).toString());
+    setEditTurn(s?.turn || 'full');
     setSelectedDates([]); 
   };
 
   const saveEditedHours = () => {
     const hoursDecimal = (parseInt(editHH) || 0) + ((parseInt(editmm) || 0) / 60);
     const filtered = shifts.filter(s => s.date !== editingDay);
-    const newShifts = [...filtered, { id: Date.now(), date: editingDay, type: 'work', hours: hoursDecimal, isHA: (hoursDecimal * 60) >= CONFIG.UMBRAL_DIA_HA_MINUTOS }];
+    const newShifts = [...filtered, { id: Date.now(), date: editingDay, type: 'work', hours: hoursDecimal, isHA: (hoursDecimal * 60) >= CONFIG.UMBRAL_DIA_HA_MINUTOS, turn: editTurn }];
     
     setEditingDay(null);
     saveToCloud({ shifts: newShifts });
@@ -75,11 +77,28 @@ export function CalendarView({ shifts, shiftsMap, saveToCloud }) {
       
       const isHoliday = CONFIG.FESTIVOS?.includes(`${(targetMonth + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`);
       if (isHoliday) {
-        style = isSmall ? "bg-rose-200 text-rose-800 opacity-100" : "bg-rose-200 text-rose-800 hover:bg-rose-300 ring-1 ring-rose-300 ring-inset";
+        style = isSmall ? "bg-[repeating-linear-gradient(45deg,transparent,transparent_2px,#f1f5f9_2px,#f1f5f9_4px)] text-rose-600 opacity-100" : "bg-[repeating-linear-gradient(45deg,transparent,transparent_4px,#f1f5f9_4px,#f1f5f9_8px)] text-rose-600 hover:opacity-80 ring-1 ring-slate-100 ring-inset";
         label = isSmall ? "" : "Fes";
       }
-      if (s?.type === 'work') { style = s.isHA ? "bg-blue-600 text-white" : "bg-pink-200 text-pink-900"; label = isSmall ? "" : `${Math.floor(s.hours)}h`; }
-      else if (s?.type === 'vacation') { style = "bg-purple-200 text-purple-800"; label = isSmall ? "" : "Vac"; }
+      
+      if (s?.type === 'work') { 
+        const baseColor = s.isHA ? "bg-blue-600" : "bg-pink-200";
+        const textColor = s.isHA ? "text-white" : "text-pink-900";
+        if (s.turn === 'morning') {
+           const colorVal = s.isHA ? "#2563eb" : "#fbcfe8";
+           style = `text-slate-800 bg-[linear-gradient(to_top,${colorVal}_50%,transparent_50%)]`;
+        } else if (s.turn === 'afternoon') {
+           const colorVal = s.isHA ? "#2563eb" : "#fbcfe8";
+           style = `text-slate-800 bg-[linear-gradient(to_bottom,${colorVal}_50%,transparent_50%)]`;
+        } else {
+           style = `${baseColor} ${textColor}`;
+        }
+        label = isSmall ? "" : `${Math.floor(s.hours)}h`; 
+      }
+      else if (s?.type === 'vacation' || s?.type === 'sick') { 
+        style = "bg-purple-200 text-purple-800"; 
+        label = isSmall ? "" : (s.type === 'sick' ? "Baj" : "Vac"); 
+      }
       else if (s?.type === 'rest') {
         if (dayOfWeek === 6 || dayOfWeek === 0) {
           const isSat = dayOfWeek === 6;
@@ -181,6 +200,10 @@ export function CalendarView({ shifts, shiftsMap, saveToCloud }) {
             statusText = "VACACIONES";
             statusColor = "bg-purple-100 text-purple-700 border-purple-200";
             hoursText = "Libre";
+          } else if (s?.type === 'sick') {
+            statusText = "BAJA LABORAL";
+            statusColor = "bg-purple-100 text-purple-700 border-purple-200";
+            hoursText = "Baja";
           } else if (s?.type === 'rest') {
             statusText = isQuality ? "CALIDAD" : "DESCANSO";
             statusColor = isQuality ? "bg-green-100 text-green-700 border-green-200" : "bg-amber-100 text-amber-700 border-amber-200";
@@ -204,7 +227,10 @@ export function CalendarView({ shifts, shiftsMap, saveToCloud }) {
 
               <div className="grid grid-cols-2 gap-3">
                 <button onClick={() => markMulti('rest')} className="bg-amber-500 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all">Marcar Libre</button>
-                <button onClick={() => markMulti('vacation')} className="bg-purple-500 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all">Marcar Vacas</button>
+                <div className="grid grid-cols-2 gap-2">
+                   <button onClick={() => markMulti('vacation')} className="bg-purple-400 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all">Vacas</button>
+                   <button onClick={() => markMulti('sick')} className="bg-purple-600 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all">Baja</button>
+                </div>
                 <button onClick={() => openEditHours(dateStr)} className="bg-blue-600 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all">Ajustar Horas</button>
                 <button onClick={deleteSelectedDates} className="bg-rose-500 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all">Borrar Registro</button>
               </div>
@@ -215,7 +241,10 @@ export function CalendarView({ shifts, shiftsMap, saveToCloud }) {
         {selectedDates.length > 1 && (
           <div className="flex gap-2 p-2 bg-slate-900 rounded-2xl shadow-xl animate-in slide-in-from-bottom-5">
             <button onClick={() => markMulti('rest')} className="flex-1 bg-amber-500 text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all">Librar Todos</button>
-            <button onClick={() => markMulti('vacation')} className="flex-1 bg-purple-500 text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all">Vacas Todos</button>
+            <div className="flex-1 flex gap-1">
+               <button onClick={() => markMulti('vacation')} className="flex-1 bg-purple-400 text-white py-3 rounded-xl text-[8px] font-black uppercase tracking-widest active:scale-95 transition-all">Vacas</button>
+               <button onClick={() => markMulti('sick')} className="flex-1 bg-purple-600 text-white py-3 rounded-xl text-[8px] font-black uppercase tracking-widest active:scale-95 transition-all">Baja</button>
+            </div>
             <button onClick={deleteSelectedDates} className="flex-1 bg-rose-500 text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all">Borrar Todos</button>
             <button onClick={() => setSelectedDates([])} className="bg-white/10 p-3 rounded-xl text-white hover:bg-white/20"><X size={18}/></button>
           </div>
@@ -240,6 +269,13 @@ export function CalendarView({ shifts, shiftsMap, saveToCloud }) {
                   <input type="number" min="0" max="59" value={editmm} onChange={e=>handleMinutesChange(e.target.value)} className="w-20 bg-white border border-slate-200 p-3 rounded-2xl text-center text-3xl font-black outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 transition-all shadow-sm"/>
               </div>
             </div>
+            
+            <div className="flex justify-center gap-2 mb-6">
+               <button onClick={() => setEditTurn('morning')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${editTurn === 'morning' ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>Mañana</button>
+               <button onClick={() => setEditTurn('full')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${editTurn === 'full' ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>Completo</button>
+               <button onClick={() => setEditTurn('afternoon')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${editTurn === 'afternoon' ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>Tarde</button>
+            </div>
+
             <button onClick={saveEditedHours} className="w-full bg-rose-500 text-white py-4 rounded-2xl font-black text-xs uppercase shadow-xl active:scale-95 transition-all">GUARDAR CAMBIOS</button>
           </div>
         </div>
