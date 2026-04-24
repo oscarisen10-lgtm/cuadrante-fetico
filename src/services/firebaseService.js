@@ -94,3 +94,45 @@ export const updateLicencia = async (id, data) => {
 export const deleteLicencia = async (id) => {
   return await deleteDoc(doc(db, "licencias", id));
 };
+
+// --- NOTIFICACIONES PUSH ---
+
+export const getAllUserTokens = async () => {
+  const { getDocs, collection } = await import("firebase/firestore");
+  const querySnapshot = await getDocs(collection(db, "users"));
+  const tokens = [];
+  querySnapshot.forEach((doc) => {
+    const data = doc.data();
+    if (data.profile?.fcmToken) {
+      tokens.push(data.profile.fcmToken);
+    }
+  });
+  return [...new Set(tokens)]; // Eliminar duplicados
+};
+
+export const sendPushNotificationToAll = async (title, body, serverKey) => {
+  const tokens = await getAllUserTokens();
+  if (tokens.length === 0) return { success: false, error: "No hay dispositivos registrados." };
+
+  const message = {
+    registration_ids: tokens,
+    notification: {
+      title: title,
+      body: body,
+      icon: "/img/app.PNG",
+      click_action: window.location.origin
+    },
+    priority: "high"
+  };
+
+  const response = await fetch("https://fcm.googleapis.com/fcm/send", {
+    method: "POST",
+    headers: {
+      "Authorization": `key=${serverKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(message)
+  });
+
+  return response.ok ? { success: true } : { success: false, error: await response.text() };
+};

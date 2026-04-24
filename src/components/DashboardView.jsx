@@ -12,6 +12,11 @@ export function DashboardView({ user, stats, newsList, addNews, deleteNews }) {
   const [formBase64Image, setFormBase64Image] = useState(null); 
   const [isLoading, setIsLoading] = useState(false);
 
+  // Estados para Modal Push
+  const [showPushModal, setShowPushModal] = useState(false);
+  const [pushTitle, setPushTitle] = useState("");
+  const [pushBody, setPushBody] = useState("");
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -80,6 +85,39 @@ export function DashboardView({ user, stats, newsList, addNews, deleteNews }) {
     }
     setIsLoading(false);
   };
+
+  const handleSendPush = async (e) => {
+    e.preventDefault();
+    if (!pushTitle || !pushBody) {
+      alert("Título y mensaje son obligatorios.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Solo guardamos la petición en Firestore. 
+      // La Cloud Function en el servidor se encargará de enviarlo.
+      await addNews({ 
+        title: pushTitle, 
+        desc: pushBody, 
+        tag: "PUSH ENVIADO", 
+        date: "Ahora", 
+        imageUrl: null, 
+        isPushRequest: true,
+        createdAt: Date.now() 
+      });
+      
+      alert("¡Petición guardada! El servidor la enviará en unos segundos a todos los dispositivos.");
+      setPushTitle("");
+      setPushBody("");
+      setShowPushModal(false);
+    } catch (error) {
+      console.error("Error en el envío:", error);
+      alert("Error crítico al enviar: " + error.message);
+    }
+    setIsLoading(false);
+  };
+
   const handleDeleteNews = async (id) => {
     if (window.confirm("¿Seguro que quieres borrar esta noticia?")) {
       try { await deleteNews(id); } 
@@ -114,17 +152,7 @@ export function DashboardView({ user, stats, newsList, addNews, deleteNews }) {
           </h3>
           {user.email === ADMIN_EMAIL.toLowerCase() && (
             <div className="flex gap-2">
-              <button onClick={() => {
-                 const title = prompt("Escribe el Título de la Alerta Push:");
-                 if(title) {
-                   const body = prompt("Escribe el Mensaje de la Alerta:");
-                   if(body) {
-                      // Save to Firestore so a backend/Cloud Function can pick it up
-                      addNews({ title, desc: body, tag: "ALERTA PUSH", date: "Ahora", imageUrl: null, isPushRequest: true })
-                      alert("Petición de Push guardada en la base de datos.");
-                   }
-                 }
-              }} className="bg-indigo-600 text-white px-3 py-1.5 rounded-xl hover:bg-indigo-500 active:scale-95 transition-all shadow-md flex items-center gap-1 font-black text-[10px] uppercase">
+              <button onClick={() => setShowPushModal(true)} className="bg-indigo-600 text-white px-3 py-1.5 rounded-xl hover:bg-indigo-500 active:scale-95 transition-all shadow-md flex items-center gap-1 font-black text-[10px] uppercase">
                  Push
               </button>
               <button onClick={() => setShowAddNewsModal(true)} className="bg-emerald-600 text-white px-3 py-1.5 rounded-xl hover:bg-emerald-500 active:scale-95 transition-all shadow-md flex items-center gap-1 font-black text-[10px] uppercase">
@@ -207,6 +235,34 @@ export function DashboardView({ user, stats, newsList, addNews, deleteNews }) {
                     {isLoading ? 'PUBLICANDO EN LA NUBE...' : <><Plus size={16}/> PUBLICAR NOTICIA</>}
                   </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PARA LANZAR PUSH (Solo Admin) */}
+      {showPushModal && (
+        <div className="fixed inset-0 z-[120] bg-slate-900/95 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-[2.5rem] p-7 shadow-2xl w-full max-w-sm border border-indigo-50 animate-in zoom-in-95 flex flex-col">
+            <div className="flex justify-between items-center mb-6 shrink-0">
+              <div className="flex flex-col">
+                <h3 className="text-sm font-black text-indigo-700 uppercase italic tracking-widest">Lanzar Alerta Push</h3>
+                <span className="text-[8px] font-bold text-slate-400 uppercase mt-1">Se enviará a todos los dispositivos</span>
+              </div>
+              <button onClick={() => setShowPushModal(false)} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 text-slate-400"><X size={20}/></button>
+            </div>
+            
+            <form onSubmit={handleSendPush} className="space-y-4">
+               <InputGroup label="Título de la Alerta" name="push_title" small value={pushTitle} onChange={e=>setPushTitle(e.target.value)} placeholder="Ej: Nueva noticia disponible" />
+               
+               <div className="space-y-1.5 flex flex-col">
+                  <label className="text-[10px] font-black text-indigo-600 uppercase ml-1 tracking-tight">Mensaje a mostrar</label>
+                  <textarea value={pushBody} onChange={e=>setPushBody(e.target.value)} required rows={3} className="w-full bg-slate-50 border-none p-3 text-sm rounded-xl outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm text-slate-800" placeholder="Escribe aquí el contenido de la notificación..."></textarea>
+               </div>
+
+               <button type="submit" disabled={isLoading} className={`w-full bg-indigo-600 text-white font-black py-4 rounded-2xl uppercase text-xs active:scale-95 transition-all shadow-xl flex items-center justify-center gap-2 mt-2 ${isLoading ? 'opacity-70' : ''}`}>
+                 {isLoading ? 'ENVIANDO A DISPOSITIVOS...' : <><Newspaper size={16}/> LANZAR NOTIFICACIÓN</>}
+               </button>
             </form>
           </div>
         </div>

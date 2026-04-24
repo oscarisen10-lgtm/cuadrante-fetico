@@ -25,4 +25,4 @@ try {
 }
 export const messaging = messagingInstance;
 
-export const VAPID_KEY = "SLUM2BX7U3d3MXsmQZAi93UZQ4wUmukSgIqJaoSjnnA";
+export const VAPID_KEY = "BEYovLJVC-gnlNb_aJ4qkOTxh849wiUYVLwZzsuWs5ldZNm8IAqLX7H-Aa2O2BuVFs2Egl2OrG3GVP27N3Bf_Fg";
