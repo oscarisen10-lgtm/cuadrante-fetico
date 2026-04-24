@@ -1,8 +1,9 @@
 import React from 'react';
 import { User, Settings, Building2, Bell, RefreshCw } from 'lucide-react';
-import { COMPANY_RULES } from '../constants/config';
+import { COMPANY_RULES, ADMIN_EMAIL } from '../constants/config';
 
 export function SettingsView({ user, settings, saveToCloud, stopAlarm, pushToken, pushTokenError }) {
+  const isAdmin = user?.email === ADMIN_EMAIL.toLowerCase();
   const currentCompany = user?.company || "Supercor";
   const currentRank = user?.rank || "Personal de fresco";
 
@@ -88,7 +89,8 @@ export function SettingsView({ user, settings, saveToCloud, stopAlarm, pushToken
             </div>
           </div>
 
-          {/* Panel de diagnostico de Notificaciones Push */}
+          {/* Panel de diagnostico de Notificaciones Push - Solo Admin */}
+          {isAdmin && (
           <div className="bg-black/30 rounded-2xl p-4 border border-white/10 mt-2">
              <div className="flex items-center gap-2 mb-3">
                 <Bell size={14} className="text-emerald-400" />
@@ -113,6 +115,7 @@ export function SettingsView({ user, settings, saveToCloud, stopAlarm, pushToken
                 </button>
              </div>
           </div>
+          )}
         </div>
       </div>
     </div>
