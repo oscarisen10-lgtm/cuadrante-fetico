@@ -10,7 +10,7 @@ export function CalendarView({ shifts, shiftsMap, saveToCloud }) {
   const [editingDay, setEditingDay] = useState(null); 
   const [editHH, setEditHH] = useState("0");
   const [editmm, setEditmm] = useState("0");
-  const [editTurn, setEditTurn] = useState("full");
+  const [editTurn, setEditTurn] = useState("morning");
 
   const openEditHours = (dateStr) => {
     const s = shiftsMap[dateStr];
@@ -18,7 +18,7 @@ export function CalendarView({ shifts, shiftsMap, saveToCloud }) {
     setEditingDay(dateStr);
     setEditHH(Math.floor(totalHoursDecimal).toString());
     setEditmm(Math.round((totalHoursDecimal % 1) * 60).toString());
-    setEditTurn(s?.turn || 'full');
+    setEditTurn(s?.turn || 'morning');
     setSelectedDates([]); 
   };
 
@@ -73,11 +73,13 @@ export function CalendarView({ shifts, shiftsMap, saveToCloud }) {
       const s = shiftsMap[dStr];
       const dayOfWeek = new Date(targetYear, targetMonth, d).getDay();
       let style = isSmall ? "bg-slate-50 text-slate-400" : "bg-slate-50 text-slate-400 hover:bg-slate-100";
+      let inlineStyle = {};
       let label = "";
       
       const isHoliday = CONFIG.FESTIVOS?.includes(`${(targetMonth + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`);
       if (isHoliday) {
-        style = isSmall ? "bg-[repeating-linear-gradient(45deg,transparent,transparent_2px,#f1f5f9_2px,#f1f5f9_4px)] text-rose-600 opacity-100" : "bg-[repeating-linear-gradient(45deg,transparent,transparent_4px,#f1f5f9_4px,#f1f5f9_8px)] text-rose-600 hover:opacity-80 ring-1 ring-slate-100 ring-inset";
+        style = isSmall ? "text-rose-600 opacity-100" : "text-rose-600 hover:opacity-80 ring-1 ring-slate-100 ring-inset";
+        inlineStyle = { background: isSmall ? "repeating-linear-gradient(45deg, transparent, transparent 2px, #f1f5f9 2px, #f1f5f9 4px)" : "repeating-linear-gradient(45deg, transparent, transparent 4px, #f1f5f9 4px, #f1f5f9 8px)" };
         label = isSmall ? "" : "Fes";
       }
       
@@ -86,10 +88,12 @@ export function CalendarView({ shifts, shiftsMap, saveToCloud }) {
         const textColor = s.isHA ? "text-white" : "text-pink-900";
         if (s.turn === 'morning') {
            const colorVal = s.isHA ? "#2563eb" : "#fbcfe8";
-           style = `text-slate-800 bg-[linear-gradient(to_top,${colorVal}_50%,transparent_50%)]`;
+           style = "text-slate-800";
+           inlineStyle = { background: `linear-gradient(to top, ${colorVal} 50%, transparent 50%)` };
         } else if (s.turn === 'afternoon') {
            const colorVal = s.isHA ? "#2563eb" : "#fbcfe8";
-           style = `text-slate-800 bg-[linear-gradient(to_bottom,${colorVal}_50%,transparent_50%)]`;
+           style = "text-slate-800";
+           inlineStyle = { background: `linear-gradient(to bottom, ${colorVal} 50%, transparent 50%)` };
         } else {
            style = `${baseColor} ${textColor}`;
         }
@@ -111,12 +115,13 @@ export function CalendarView({ shifts, shiftsMap, saveToCloud }) {
       }
       days.push(
         isSmall ? (
-          <div key={d} className={`flex items-center justify-center rounded-[2px] ${style} h-3.5 w-full opacity-90 text-[6px]`}>
+          <div key={d} className={`flex items-center justify-center rounded-[2px] ${style} h-3.5 w-full opacity-90 text-[6px]`} style={inlineStyle}>
             {d}
           </div>
         ) : (
           <button key={d} onClick={() => handleDayClick(dStr)} onDoubleClick={() => openEditHours(dStr)}
-            className={`flex flex-col items-center justify-center rounded-xl font-bold relative transition-all active:scale-95 ${selectedDates.includes(dStr) ? 'ring-4 ring-emerald-400 bg-white scale-90 z-10 shadow-lg' : style} h-11 sm:h-12 w-full text-[11px]`}>
+            className={`flex flex-col items-center justify-center rounded-xl font-bold relative transition-all active:scale-95 ${selectedDates.includes(dStr) ? 'ring-4 ring-emerald-400 bg-white scale-90 z-10 shadow-lg' : style} h-11 sm:h-12 w-full text-[11px]`}
+            style={selectedDates.includes(dStr) ? {} : inlineStyle}>
             {d}
             <span className="text-[6px] uppercase leading-none mt-0.5 font-bold">{label}</span>
           </button>
@@ -227,10 +232,15 @@ export function CalendarView({ shifts, shiftsMap, saveToCloud }) {
 
               <div className="grid grid-cols-2 gap-3">
                 <button onClick={() => markMulti('rest')} className="bg-amber-500 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all">Marcar Libre</button>
-                <div className="grid grid-cols-2 gap-2">
-                   <button onClick={() => markMulti('vacation')} className="bg-purple-400 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all">Vacas</button>
-                   <button onClick={() => markMulti('sick')} className="bg-purple-600 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all">Baja</button>
-                </div>
+                <select 
+                   onChange={(e) => { if(e.target.value) { markMulti(e.target.value); e.target.value=""; } }}
+                   className="bg-purple-500 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md transition-all text-center appearance-none cursor-pointer outline-none"
+                   defaultValue=""
+                >
+                   <option value="" disabled className="text-center hidden">AUSENCIA ▼</option>
+                   <option value="vacation" className="text-slate-800 bg-white font-bold">Marcar Vacaciones</option>
+                   <option value="sick" className="text-slate-800 bg-white font-bold">Marcar Baja Laboral</option>
+                </select>
                 <button onClick={() => openEditHours(dateStr)} className="bg-blue-600 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all">Ajustar Horas</button>
                 <button onClick={deleteSelectedDates} className="bg-rose-500 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all">Borrar Registro</button>
               </div>
@@ -241,10 +251,15 @@ export function CalendarView({ shifts, shiftsMap, saveToCloud }) {
         {selectedDates.length > 1 && (
           <div className="flex gap-2 p-2 bg-slate-900 rounded-2xl shadow-xl animate-in slide-in-from-bottom-5">
             <button onClick={() => markMulti('rest')} className="flex-1 bg-amber-500 text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all">Librar Todos</button>
-            <div className="flex-1 flex gap-1">
-               <button onClick={() => markMulti('vacation')} className="flex-1 bg-purple-400 text-white py-3 rounded-xl text-[8px] font-black uppercase tracking-widest active:scale-95 transition-all">Vacas</button>
-               <button onClick={() => markMulti('sick')} className="flex-1 bg-purple-600 text-white py-3 rounded-xl text-[8px] font-black uppercase tracking-widest active:scale-95 transition-all">Baja</button>
-            </div>
+            <select 
+               onChange={(e) => { if(e.target.value) { markMulti(e.target.value); e.target.value=""; } }}
+               className="flex-1 bg-purple-500 text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-center appearance-none cursor-pointer outline-none"
+               defaultValue=""
+            >
+               <option value="" disabled className="text-center hidden">Ausencia ▼</option>
+               <option value="vacation" className="text-slate-800 bg-white font-bold">Vacaciones Todos</option>
+               <option value="sick" className="text-slate-800 bg-white font-bold">Baja Todos</option>
+            </select>
             <button onClick={deleteSelectedDates} className="flex-1 bg-rose-500 text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all">Borrar Todos</button>
             <button onClick={() => setSelectedDates([])} className="bg-white/10 p-3 rounded-xl text-white hover:bg-white/20"><X size={18}/></button>
           </div>
@@ -272,7 +287,6 @@ export function CalendarView({ shifts, shiftsMap, saveToCloud }) {
             
             <div className="flex justify-center gap-2 mb-6">
                <button onClick={() => setEditTurn('morning')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${editTurn === 'morning' ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>Mañana</button>
-               <button onClick={() => setEditTurn('full')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${editTurn === 'full' ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>Completo</button>
                <button onClick={() => setEditTurn('afternoon')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${editTurn === 'afternoon' ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>Tarde</button>
             </div>
 
