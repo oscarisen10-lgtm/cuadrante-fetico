@@ -100,6 +100,17 @@ export default function App() {
         </header>
 
         <main className="flex-1 p-4 overflow-y-auto scrollbar-hide flex flex-col min-h-0 relative z-0">
+          
+          {permissionState !== 'granted' && (
+            <div className="absolute inset-0 z-[-1] flex items-center justify-center pointer-events-none overflow-hidden opacity-[0.04]">
+              <div className="transform -rotate-45 text-center flex flex-col gap-2">
+                 <span className="text-7xl font-black uppercase leading-none tracking-tighter">Activa</span>
+                 <span className="text-7xl font-black uppercase leading-none tracking-tighter text-emerald-600">Alertas</span>
+                 <span className="text-7xl font-black uppercase leading-none tracking-tighter">Push</span>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'dashboard' && (
              <DashboardView user={user} stats={stats} newsList={newsList} addNews={addNews} deleteNews={deleteNews} />
           )}

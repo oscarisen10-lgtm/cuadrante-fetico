@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, Settings, Building2, Bell, RefreshCw, Smartphone } from 'lucide-react';
+import { User, Settings, Building2, Bell, RefreshCw, Smartphone, Download } from 'lucide-react';
 import { COMPANY_RULES, ADMIN_EMAIL } from '../constants/config';
 
 export function SettingsView({ user, settings, saveToCloud, stopAlarm, pushToken, pushTokenError, permissionState, requestTokenManually }) {
@@ -28,6 +28,16 @@ export function SettingsView({ user, settings, saveToCloud, stopAlarm, pushToken
       <div className="bg-slate-900 rounded-[2rem] p-6 flex flex-col">
         <h3 className="text-xs font-black text-white/50 uppercase tracking-widest mb-6 flex items-center gap-2 border-b border-white/5 pb-3"><Settings size={16}/> Preferencias</h3>
         <div className="space-y-6">
+          <div className="flex justify-between items-center bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20">
+             <div className="flex flex-col">
+                <span className="text-xs font-bold text-emerald-400 uppercase leading-none">Versión App</span>
+                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Fuerza la descarga de novedades</span>
+             </div>
+             <button onClick={() => window.location.reload()} className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase active:scale-95 shadow-md flex items-center gap-1.5">
+                <Download size={14}/> Actualizar
+             </button>
+          </div>
+
           <div className="flex flex-col gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
              <div className="flex items-center gap-2 mb-1">
                 <Building2 size={14} className="text-emerald-500" />
