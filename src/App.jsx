@@ -102,10 +102,10 @@ export default function App() {
         <main className="flex-1 p-4 overflow-y-auto scrollbar-hide flex flex-col min-h-0 relative z-0">
           
           {permissionState !== 'granted' && (
-            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 w-[90%] max-w-[320px] z-[100] pointer-events-none">
-              <div className="bg-rose-600 text-white p-4 rounded-[2rem] shadow-[0_10px_40px_rgba(225,29,72,0.6)] border-4 border-rose-300 flex flex-col items-center text-center animate-bounce">
-                 <span className="text-xl font-black uppercase mb-1.5 tracking-widest animate-pulse">¡ATENCIÓN!</span>
-                 <span className="text-[11px] font-bold leading-tight">Activa las ALERTAS PUSH en la pestaña de Ajustes para quitar este cartel.</span>
+            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 w-[80%] max-w-[280px] z-[100] pointer-events-none">
+              <div className="bg-emerald-600 text-white p-3 rounded-[1.5rem] shadow-[0_10px_30px_rgba(5,150,105,0.5)] border-2 border-emerald-300 flex flex-col items-center text-center animate-bounce">
+                 <span className="text-sm font-black uppercase mb-1 tracking-widest animate-pulse">¡Actualiza!</span>
+                 <span className="text-[10px] font-bold leading-tight">Activa las ALERTAS PUSH en la pestaña de Ajustes para quitar este cartel.</span>
               </div>
             </div>
           )}
