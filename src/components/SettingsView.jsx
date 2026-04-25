@@ -64,14 +64,14 @@ export function SettingsView({ user, settings, saveToCloud, stopAlarm, pushToken
 
           <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/5">
              <div className="flex flex-col">
-                <span className="text-xs font-bold text-white uppercase leading-none flex items-center gap-1.5"><Smartphone size={14} className="text-emerald-500"/> Alertas Push</span>
-                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Recibe avisos y noticias urgentes</span>
+                <span className="text-xs font-bold text-white uppercase leading-none flex items-center gap-1.5"><RefreshCw size={14} className="text-emerald-500"/> Sincronización</span>
+                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Sincroniza las noticias y avisos</span>
              </div>
              {permissionState === 'granted' ? (
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-3 py-1.5 rounded-lg font-black uppercase">Activadas</span>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-3 py-1.5 rounded-lg font-black uppercase">Activada</span>
              ) : (
                 <button onClick={requestTokenManually} className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase active:scale-95 shadow-md">
-                   Permitir Noticias
+                   Permitir
                 </button>
              )}
           </div>

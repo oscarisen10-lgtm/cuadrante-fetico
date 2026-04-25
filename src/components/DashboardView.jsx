@@ -147,18 +147,6 @@ export function DashboardView({ user, stats, newsList, addNews, deleteNews, perm
         </div>
       </div>
 
-      {permissionState !== 'granted' && (
-        <div className="px-2">
-          <button 
-            onClick={requestTokenManually}
-            className="w-full bg-emerald-600 text-white p-4 rounded-[2rem] shadow-[0_10px_30px_rgba(5,150,105,0.4)] border-2 border-emerald-300 flex flex-col items-center text-center animate-bounce mb-2"
-          >
-             <span className="text-base font-black uppercase mb-1 tracking-widest animate-pulse">¡Actualiza!</span>
-             <span className="text-[10px] font-bold leading-tight px-4">Activa las ALERTAS PUSH aquí mismo para quitar este cartel y recibir noticias.</span>
-          </button>
-        </div>
-      )}
-
       <div className="bg-slate-900 rounded-[2rem] p-6 flex flex-col min-h-[350px]">
         <div className="flex justify-between items-center mb-6 shrink-0 border-b border-white/5 pb-3">
           <h3 className="text-xs font-black text-white/50 uppercase tracking-widest flex items-center gap-2">
