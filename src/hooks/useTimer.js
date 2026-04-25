@@ -1,11 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 
-export const useTimer = (activeShift, isBreakActive, workTimeAccumulated, breakStartTime, settings, alarmUrl = 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg') => {
+export const useTimer = (activeShift, isBreakActive, workTimeAccumulated, breakStartTime, settings, alarmUrl = 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3') => {
   const [elapsed, setElapsed] = useState(0); 
   const [breakTimeLeft, setBreakTimeLeft] = useState(settings.breakDuration * 60); 
   const [showBreakFinishedMsg, setShowBreakFinishedMsg] = useState(false);
   
-  const alarmRef = useRef(typeof Audio !== 'undefined' ? new Audio(alarmUrl) : null);
+  const alarmRef = useRef(null);
+
+  // Inicializar audio solo en cliente
+  useEffect(() => {
+    if (typeof Audio !== 'undefined' && !alarmRef.current) {
+      alarmRef.current = new Audio(alarmUrl);
+      alarmRef.current.preload = 'auto';
+    }
+  }, [alarmUrl]);
 
   useEffect(() => {
     let interval;
@@ -16,6 +24,17 @@ export const useTimer = (activeShift, isBreakActive, workTimeAccumulated, breakS
       }, 1000);
     } else if (activeShift && isBreakActive) {
       setElapsed(workTimeAccumulated);
+
+      // Intentar "desbloquear" el audio al entrar en modo descanso
+      if (alarmRef.current) {
+        alarmRef.current.play().then(() => {
+          alarmRef.current.pause();
+          alarmRef.current.currentTime = 0;
+        }).catch(() => {
+          console.log("Audio esperando interacción");
+        });
+      }
+
       interval = setInterval(() => {
         const secondsInBreak = Math.floor((Date.now() - breakStartTime) / 1000);
         const totalBreakSeconds = settings.breakDuration * 60;
@@ -27,10 +46,9 @@ export const useTimer = (activeShift, isBreakActive, workTimeAccumulated, breakS
           if (settings.notifications) {
             if (alarmRef.current) {
               alarmRef.current.loop = true; 
-              alarmRef.current.play().catch(e => console.log("Sonido bloqueado", e));
+              alarmRef.current.play().catch(e => console.log("Sonido bloqueado por el sistema", e));
             }
-            if ("vibrate" in navigator) {
-              // Vibrate sequence: on, off, on, off, on
+            if (typeof navigator !== 'undefined' && "vibrate" in navigator) {
               navigator.vibrate([1000, 500, 1000, 500, 1000]);
             }
           }
@@ -47,8 +65,8 @@ export const useTimer = (activeShift, isBreakActive, workTimeAccumulated, breakS
       alarmRef.current.pause();
       alarmRef.current.currentTime = 0;
     }
-    if ("vibrate" in navigator) {
-      navigator.vibrate(0); // Stop any ongoing vibration
+    if (typeof navigator !== 'undefined' && "vibrate" in navigator) {
+      navigator.vibrate(0);
     }
   };
 
