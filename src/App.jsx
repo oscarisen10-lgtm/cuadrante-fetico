@@ -22,7 +22,7 @@ export default function App() {
     settings, shifts, activeShift, workTimeAccumulated, isBreakActive, breakStartTime 
   } = useAuth();
   
-  const { token: pushToken, tokenError: pushTokenError } = useNotifications(user);
+  const { token: pushToken, tokenError: pushTokenError, permissionState, requestTokenManually } = useNotifications(user);
   
   const { newsList, addNews, deleteNews, isLoading: isNewsLoading } = useNews();
   const { licenciasList, addLicencia, updateLicencia, deleteLicencia } = useLicencias();
@@ -121,7 +121,7 @@ export default function App() {
           )}
 
           {activeTab === 'support' && (
-             <SettingsView user={user} settings={settings} saveToCloud={saveToCloud} stopAlarm={stopAlarm} pushToken={pushToken} pushTokenError={pushTokenError} />
+             <SettingsView user={user} settings={settings} saveToCloud={saveToCloud} stopAlarm={stopAlarm} pushToken={pushToken} pushTokenError={pushTokenError} permissionState={permissionState} requestTokenManually={requestTokenManually} />
           )}
         </main>
 

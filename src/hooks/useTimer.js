@@ -24,9 +24,15 @@ export const useTimer = (activeShift, isBreakActive, workTimeAccumulated, breakS
         
         if (remaining === 0 && !showBreakFinishedMsg) {
           setShowBreakFinishedMsg(true);
-          if (alarmRef.current && settings.notifications) {
-            alarmRef.current.loop = true; 
-            alarmRef.current.play().catch(e => console.log("Sonido bloqueado", e));
+          if (settings.notifications) {
+            if (alarmRef.current) {
+              alarmRef.current.loop = true; 
+              alarmRef.current.play().catch(e => console.log("Sonido bloqueado", e));
+            }
+            if ("vibrate" in navigator) {
+              // Vibrate sequence: on, off, on, off, on
+              navigator.vibrate([1000, 500, 1000, 500, 1000]);
+            }
           }
         }
       }, 1000);
@@ -40,6 +46,9 @@ export const useTimer = (activeShift, isBreakActive, workTimeAccumulated, breakS
     if (alarmRef.current) {
       alarmRef.current.pause();
       alarmRef.current.currentTime = 0;
+    }
+    if ("vibrate" in navigator) {
+      navigator.vibrate(0); // Stop any ongoing vibration
     }
   };
 
