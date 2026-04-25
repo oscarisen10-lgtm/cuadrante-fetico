@@ -101,17 +101,8 @@ export default function App() {
 
         <main className="flex-1 p-4 overflow-y-auto scrollbar-hide flex flex-col min-h-0 relative z-0">
           
-          {permissionState !== 'granted' && (
-            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 w-[80%] max-w-[280px] z-[100] pointer-events-none">
-              <div className="bg-emerald-600 text-white p-3 rounded-[1.5rem] shadow-[0_10px_30px_rgba(5,150,105,0.5)] border-2 border-emerald-300 flex flex-col items-center text-center animate-bounce">
-                 <span className="text-sm font-black uppercase mb-1 tracking-widest animate-pulse">¡Actualiza!</span>
-                 <span className="text-[10px] font-bold leading-tight">Activa las ALERTAS PUSH en la pestaña de Ajustes para quitar este cartel.</span>
-              </div>
-            </div>
-          )}
-
           {activeTab === 'dashboard' && (
-             <DashboardView user={user} stats={stats} newsList={newsList} addNews={addNews} deleteNews={deleteNews} />
+             <DashboardView user={user} stats={stats} newsList={newsList} addNews={addNews} deleteNews={deleteNews} permissionState={permissionState} requestTokenManually={requestTokenManually} />
           )}
 
           {activeTab === 'track' && (

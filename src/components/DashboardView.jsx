@@ -4,8 +4,10 @@ import { StatBar, InputGroup } from './UIComponents';
 import { formatTotalTime } from '../utils/dateUtils';
 import { CONFIG, ADMIN_EMAIL } from '../constants/config';
 
-export function DashboardView({ user, stats, newsList, addNews, deleteNews }) {
+export function DashboardView({ user, stats, newsList, addNews, deleteNews, permissionState, requestTokenManually }) {
   const [showAddNewsModal, setShowAddNewsModal] = useState(false);
+// ... (omitting lines for brevity in instruction, will provide full block in replacement)
+
   const [formTitle, setFormTitle] = useState("");
   const [formDesc, setFormDesc] = useState("");
   const [formTag, setFormTag] = useState("Fetico");
@@ -144,6 +146,18 @@ export function DashboardView({ user, stats, newsList, addNews, deleteNews }) {
           <StatBar label="DOMINGOS/FESTIVOS" currentValue={stats.domingosCount} percentage={(stats.domingosCount/(stats.targets?.domingos || 22))*100} totalValue={stats.targets?.domingos || 22} color="bg-orange-400" large={true} />
         </div>
       </div>
+
+      {permissionState !== 'granted' && (
+        <div className="px-2">
+          <button 
+            onClick={requestTokenManually}
+            className="w-full bg-emerald-600 text-white p-4 rounded-[2rem] shadow-[0_10px_30px_rgba(5,150,105,0.4)] border-2 border-emerald-300 flex flex-col items-center text-center animate-bounce mb-2"
+          >
+             <span className="text-base font-black uppercase mb-1 tracking-widest animate-pulse">¡Actualiza!</span>
+             <span className="text-[10px] font-bold leading-tight px-4">Activa las ALERTAS PUSH aquí mismo para quitar este cartel y recibir noticias.</span>
+          </button>
+        </div>
+      )}
 
       <div className="bg-slate-900 rounded-[2rem] p-6 flex flex-col min-h-[350px]">
         <div className="flex justify-between items-center mb-6 shrink-0 border-b border-white/5 pb-3">
