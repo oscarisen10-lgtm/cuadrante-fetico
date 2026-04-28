@@ -147,53 +147,59 @@ export function DashboardView({ user, stats, newsList, addNews, deleteNews, perm
         </div>
       </div>
 
-      <div className="bg-slate-900 rounded-[2rem] p-6 flex flex-col min-h-[350px]">
-        <div className="flex justify-between items-center mb-6 shrink-0 border-b border-white/5 pb-3">
-          <h3 className="text-xs font-black text-white/50 uppercase tracking-widest flex items-center gap-2">
-              <Newspaper size={14}/> Noticias
-          </h3>
-          {user.email === ADMIN_EMAIL.toLowerCase() && (
-            <div className="flex gap-2">
-              <button onClick={() => setShowPushModal(true)} className="bg-indigo-600 text-white px-3 py-1.5 rounded-xl hover:bg-indigo-500 active:scale-95 transition-all shadow-md flex items-center gap-1 font-black text-[10px] uppercase">
-                 Push
-              </button>
-              <button onClick={() => setShowAddNewsModal(true)} className="bg-emerald-600 text-white px-3 py-1.5 rounded-xl hover:bg-emerald-500 active:scale-95 transition-all shadow-md flex items-center gap-1 font-black text-[10px] uppercase">
-                 <Plus size={14}/> Nueva
-              </button>
-            </div>
-          )}
-        </div>
-        <div className="space-y-4 overflow-y-auto pr-1 scrollbar-hide">
-            {newsList.filter(n => !n.isPushRequest).length === 0 ? (
-               <p className="text-[10px] text-white/40 text-center italic py-6 uppercase font-bold">No hay noticias publicadas.</p>
-            ) : (
-              newsList.filter(n => !n.isPushRequest).map(news => (
-                  <div key={news.id} className="bg-white/5 p-4 rounded-2xl border border-white/5 flex flex-col">
-                      <div className="flex justify-between items-center mb-3 border-b border-white/5 pb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[9px] font-black text-emerald-400 uppercase tracking-tighter bg-emerald-400/10 px-2 py-0.5 rounded-md">{news.tag}</span>
-                            <span className="text-[8px] text-white/40">{news.date}</span>
-                          </div>
-                          {user.email === ADMIN_EMAIL.toLowerCase() && (
-                            <button onClick={() => handleDeleteNews(news.id)} className="text-rose-400 p-2 bg-rose-400/10 hover:bg-rose-500/20 rounded-xl transition-colors">
-                              <Trash2 size={14} />
-                            </button>
-                          )}
-                      </div>
-                      {news.imageUrl && <img src={news.imageUrl} alt="Noticia" className="w-full h-auto rounded-xl mb-4 border border-white/10 shadow-sm animate-in fade-in" />}
-                      
-                      <h4 className="text-sm font-black text-white uppercase leading-tight mb-2 tracking-tight">{news.title}</h4>
-                      <p className="text-xs text-white/60 leading-relaxed whitespace-pre-wrap">{news.desc}</p>
-                      {news.linkUrl && (
-                        <a href={news.linkUrl} target="_blank" rel="noopener noreferrer" className="mt-4 bg-white/10 hover:bg-white/20 transition-colors text-white py-3 px-3 rounded-xl text-[10px] font-bold uppercase text-center flex items-center justify-center gap-2">
-                          <Link size={14}/> Ver más información
-                        </a>
-                      )}
-                  </div>
-              ))
+      {/* Sección de Noticias (Solo visible si hay noticias o si el usuario es Admin) */}
+      {(newsList.filter(n => !n.isPushRequest).length > 0 || user.email === ADMIN_EMAIL.toLowerCase()) && (
+        <div className="bg-slate-900 rounded-[2rem] p-6 flex flex-col min-h-[350px]">
+          <div className="flex justify-between items-center mb-6 shrink-0 border-b border-white/5 pb-3">
+            <h3 className="text-xs font-black text-white/50 uppercase tracking-widest flex items-center gap-2">
+                <Newspaper size={14}/> Noticias
+            </h3>
+            {user.email === ADMIN_EMAIL.toLowerCase() && (
+              <div className="flex gap-2">
+                <button onClick={() => setShowPushModal(true)} className="bg-indigo-600 text-white px-3 py-1.5 rounded-xl hover:bg-indigo-500 active:scale-95 transition-all shadow-md flex items-center gap-1 font-black text-[10px] uppercase">
+                  Push
+                </button>
+                <button onClick={() => setShowAddNewsModal(true)} className="bg-emerald-600 text-white px-3 py-1.5 rounded-xl hover:bg-emerald-500 active:scale-95 transition-all shadow-md flex items-center gap-1 font-black text-[10px] uppercase">
+                  <Plus size={14}/> Nueva
+                </button>
+              </div>
             )}
+          </div>
+          <div className="space-y-4 overflow-y-auto pr-1 scrollbar-hide">
+              {newsList.filter(n => !n.isPushRequest).length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center py-10 opacity-30">
+                  <Newspaper size={40} className="text-white mb-3" />
+                  <p className="text-[10px] text-white text-center italic uppercase font-bold tracking-widest">No hay noticias publicadas</p>
+                </div>
+              ) : (
+                newsList.filter(n => !n.isPushRequest).map(news => (
+                    <div key={news.id} className="bg-white/5 p-4 rounded-2xl border border-white/5 flex flex-col">
+                        <div className="flex justify-between items-center mb-3 border-b border-white/5 pb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[9px] font-black text-emerald-400 uppercase tracking-tighter bg-emerald-400/10 px-2 py-0.5 rounded-md">{news.tag}</span>
+                              <span className="text-[8px] text-white/40">{news.date}</span>
+                            </div>
+                            {user.email === ADMIN_EMAIL.toLowerCase() && (
+                              <button onClick={() => handleDeleteNews(news.id)} className="text-rose-400 p-2 bg-rose-400/10 hover:bg-rose-500/20 rounded-xl transition-colors">
+                                <Trash2 size={14} />
+                              </button>
+                            )}
+                        </div>
+                        {news.imageUrl && <img src={news.imageUrl} alt="Noticia" className="w-full h-auto rounded-xl mb-4 border border-white/10 shadow-sm animate-in fade-in" />}
+                        
+                        <h4 className="text-sm font-black text-white uppercase leading-tight mb-2 tracking-tight">{news.title}</h4>
+                        <p className="text-xs text-white/60 leading-relaxed whitespace-pre-wrap">{news.desc}</p>
+                        {news.linkUrl && (
+                          <a href={news.linkUrl} target="_blank" rel="noopener noreferrer" className="mt-4 bg-white/10 hover:bg-white/20 transition-colors text-white py-3 px-3 rounded-xl text-[10px] font-bold uppercase text-center flex items-center justify-center gap-2">
+                            <Link size={14}/> Ver más información
+                          </a>
+                        )}
+                    </div>
+                ))
+              )}
+          </div>
         </div>
-      </div>
+      )}
 
       {showAddNewsModal && (
         <div className="fixed inset-0 z-[110] bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in overflow-hidden">
