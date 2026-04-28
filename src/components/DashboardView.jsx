@@ -134,16 +134,16 @@ export function DashboardView({ user, stats, newsList, addNews, deleteNews, perm
           <PieChart size={18} className="text-emerald-600" /> Resumen Calendario
         </h2>
         <div className="flex-1 flex flex-col justify-between py-2 space-y-5">
-          <StatBar label="Horas Anuales" currentValue={formatTotalTime(stats.horasTotales)} percentage={(stats.horasTotales/(stats.targets?.horas || 1770))*100} totalValue={`${stats.targets?.horas || 1770}h`} color="bg-emerald-400" large={true} />
+          <StatBar label="Horas Anuales" currentValue={formatTotalTime(stats.horasTotales)} percentage={(stats.horasTotales/(stats.targets?.horas || 1770))*100} totalValue={`${stats.targets?.horas || 1770}h`} color="bg-emerald-500" large={true} />
           <StatBar label="Días Trabajados" currentValue={stats.diasTrabajados} percentage={(stats.diasTrabajados/(stats.targets?.trabajados || 268))*100} totalValue={stats.targets?.trabajados || 268} color="bg-emerald-600" large={true} />
-          <StatBar label="Días Libres" currentValue={stats.diasLibres} percentage={(stats.diasLibres/(stats.targets?.libres || 76))*100} totalValue={stats.targets?.libres || 76} color="bg-amber-400" large={true} />
+          <StatBar label="Días Libres" currentValue={stats.diasLibres} percentage={(stats.diasLibres/(stats.targets?.libres || 76))*100} totalValue={stats.targets?.libres || 76} color="bg-emerald-400" large={true} />
           
           {stats.targets?.ha > 0 && (
-             <StatBar label="Días HA" currentValue={stats.contadorHA} percentage={(stats.contadorHA/stats.targets.ha)*100} totalValue={stats.targets.ha} color="bg-cyan-500" large={true} />
+             <StatBar label="Días HA" currentValue={stats.contadorHA} percentage={(stats.contadorHA/stats.targets.ha)*100} totalValue={stats.targets.ha} color="bg-emerald-500" large={true} />
           )}
           
-          <StatBar label="Calidad" currentValue={stats.findesCalidad} percentage={(stats.findesCalidad/(stats.targets?.calidad || 10))*100} totalValue={stats.targets?.calidad || 10} color="bg-emerald-500" large={true} />
-          <StatBar label="DOMINGOS/FESTIVOS" currentValue={stats.domingosCount} percentage={(stats.domingosCount/(stats.targets?.domingos || 22))*100} totalValue={stats.targets?.domingos || 22} color="bg-orange-400" large={true} />
+          <StatBar label="Calidad" currentValue={stats.findesCalidad} percentage={(stats.findesCalidad/(stats.targets?.calidad || 10))*100} totalValue={stats.targets?.calidad || 10} color="bg-emerald-600" large={true} />
+          <StatBar label="DOMINGOS/FESTIVOS" currentValue={stats.domingosCount} percentage={(stats.domingosCount/(stats.targets?.domingos || 22))*100} totalValue={stats.targets?.domingos || 22} color="bg-emerald-500" large={true} />
         </div>
       </div>
 
