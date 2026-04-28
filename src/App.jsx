@@ -25,7 +25,6 @@ export default function App() {
   const { token: pushToken, tokenError: pushTokenError, permissionState, requestTokenManually } = useNotifications(user);
   
   const { newsList, addNews, deleteNews, isLoading: isNewsLoading } = useNews();
-  const { licenciasList, addLicencia, updateLicencia, deleteLicencia } = useLicencias();
   const { elapsed, breakTimeLeft, showBreakFinishedMsg, setShowBreakFinishedMsg, stopAlarm } = useTimer(activeShift, isBreakActive, workTimeAccumulated, breakStartTime, settings);
   const { shiftsMap, stats } = useShifts(shifts, user);
 
@@ -118,7 +117,7 @@ export default function App() {
           )}
 
           {activeTab === 'licencias' && (
-             <LicenciasView user={user} licenciasList={licenciasList} addLicencia={addLicencia} updateLicencia={updateLicencia} deleteLicencia={deleteLicencia} />
+             <LicenciasView />
           )}
 
           {activeTab === 'support' && (

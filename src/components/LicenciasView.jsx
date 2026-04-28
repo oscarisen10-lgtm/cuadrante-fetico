@@ -1,156 +1,147 @@
 import React, { useState } from 'react';
-import { FileText, Plus, Edit3, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
-import { ADMIN_EMAIL } from '../constants/config';
+import { FileText, ChevronDown, ChevronUp, Info, Users, Clock, ClipboardCheck } from 'lucide-react';
+import { LICENCIAS_CATEGORIES, GRADOS_CONSANGUINIDAD } from '../constants/licenciasData';
 
-export function LicenciasView({ user, licenciasList, addLicencia, updateLicencia, deleteLicencia }) {
+export function LicenciasView() {
   const [expandedLicencia, setExpandedLicencia] = useState(null);
+  const [showGrados, setShowGrados] = useState(false);
 
-  const loadDefaultLicencias = async () => {
-    const defaults = [
-      { order: 1, title: "Accidente grave/Hospitalización familiar", desc: "REGLAS:\n• 5 días naturales (según RDL 5/2023) por hospitalización o enfermedad grave de familiares hasta 2º grado.\nDOCUMENTACIÓN:\n• Justificante médico de ingreso o gravedad." },
-      { order: 2, title: "Concurrencia exámenes finales", desc: "REGLAS:\n• Tiempo indispensable para la realización de exámenes finales en centros oficiales.\nDOCUMENTACIÓN:\n• Justificante de asistencia sellado." },
-      { order: 3, title: "Consulta médica externa", desc: "REGLAS:\n• Tiempo necesario para asistir a consultas de médicos especialistas de la Seguridad Social.\nDOCUMENTACIÓN:\n• Cita previa y justificante de asistencia." },
-      { order: 4, title: "Enfermedad grave diagnosticada familiar", desc: "REGLAS:\n• 5 días naturales por enfermedad grave diagnosticada de familiares hasta 2º grado.\nDOCUMENTACIÓN:\n• Informe médico acreditando diagnóstico 'grave'." },
-      { order: 5, title: "Examen carnet de conducir", desc: "REGLAS:\n• Tiempo indispensable para exámenes teórico y práctico del permiso de conducir.\nDOCUMENTACIÓN:\n• Justificante de la autoescuela o la DGT." },
-      { order: 6, title: "Exámenes prenatales tec. prep. parto", desc: "REGLAS:\n• Tiempo indispensable para exámenes prenatales coincidente con jornada.\nDOCUMENTACIÓN:\n• Justificante médico." },
-      { order: 7, title: "Fallecimiento familiar hasta 2º grado", desc: "REGLAS:\n• 2 días naturales (4 si requiere desplazamiento fuera de la provincia).\nDOCUMENTACIÓN:\n• Certificado de defunción y libro de familia." },
-      { order: 8, title: "Fenómeno meteorológico adverso", desc: "REGLAS:\n• Pendiente de acuerdo de empresa o fuerza mayor acreditada." },
-      { order: 9, title: "Firma notarial adquisición de vivienda", desc: "REGLAS:\n• Tiempo indispensable para la firma de la vivienda habitual.\nDOCUMENTACIÓN:\n• Justificante de notaría." },
-      { order: 10, title: "Matrimonio / Pareja de hecho", desc: "REGLAS:\n• 15 días naturales continuados por matrimonio o registro oficial.\nDOCUMENTACIÓN:\n• Acta de matrimonio o certificado de registro." },
-      { order: 11, title: "Matrimonio parientes hasta 2º grado", desc: "REGLAS:\n• 1 día natural (el día de la boda).\nDOCUMENTACIÓN:\n• Justificante del evento." },
-      { order: 12, title: "Permiso acompañamiento reproducción asistida", desc: "PLAN DE IGUALDAD:\n• Redactar aquí las horas/días acordados en el plan específico." }
-    ];
-
-    if (window.confirm("¿Crear la lista base con los textos del BOE actualizados?")) {
-      for (const item of defaults) {
-         await addLicencia(item);
-      }
-      alert("¡Lista creada!");
-    }
-  };
-
-  const handleAddLicencia = async () => {
-    const title = prompt("Escribe la CABECERA (título) de la nueva licencia:");
-    if (!title) return;
-    const desc = prompt("Escribe la EXPLICACIÓN o reglas:");
-    if (!desc) return;
-    
-    try {
-      await addLicencia({
-        order: licenciasList.length + 1,
-        title: title,
-        desc: desc
-      });
-    } catch (error) {
-      alert("Error añadiendo licencia: " + error.message);
-    }
-  };
-
-  const handleEditTitleLicencia = async (lic) => {
-    const newTitle = prompt(`Escribe la NUEVA CABECERA para esta licencia:`, lic.title);
-    if (newTitle !== null && newTitle.trim() !== "") {
-      try {
-        await updateLicencia(lic.id, { title: newTitle });
-      } catch (error) {
-        alert("Error actualizando título: " + error.message);
-      }
-    }
-  };
-
-  const handleEditLicencia = async (lic) => {
-    const newDesc = prompt(`Explicación para:\n${lic.title}`, lic.desc);
-    if (newDesc !== null && newDesc.trim() !== "") {
-      try {
-        await updateLicencia(lic.id, { desc: newDesc });
-      } catch (error) {
-        alert("Error actualizando texto: " + error.message);
-      }
-    }
-  };
-
-  const handleDeleteLicencia = async (id) => {
-    if (window.confirm("¿Seguro que quieres borrar esta licencia definitivamente?")) {
-      try { await deleteLicencia(id); } 
-      catch (error) { alert("Error borrando licencia: " + error.message); }
-    }
+  const toggleLicencia = (id) => {
+    setExpandedLicencia(expandedLicencia === id ? null : id);
   };
 
   return (
-    <div className="flex flex-col animate-in fade-in duration-300 gap-4 pb-20">
-      <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 flex flex-col min-h-[300px]">
-        <div className="flex justify-between items-center mb-6 shrink-0 border-b border-slate-100 pb-3">
-          <h2 className="text-sm font-black text-slate-800 uppercase italic tracking-widest flex items-center gap-2">
-            <FileText size={18} className="text-emerald-600" /> Permisos & Licencias
-          </h2>
-          
-          {user.email === ADMIN_EMAIL.toLowerCase() && (
-             <div className="flex gap-2">
-               {licenciasList.length === 0 && (
-                 <button onClick={loadDefaultLicencias} className="bg-slate-200 text-slate-700 px-3 py-1.5 rounded-xl font-black text-[10px] uppercase shadow-sm active:scale-95">
-                   Base
-                 </button>
-               )}
-               <button onClick={handleAddLicencia} className="bg-emerald-600 text-white px-3 py-1.5 rounded-xl font-black text-[10px] uppercase shadow-md active:scale-95 flex items-center gap-1">
-                 <Plus size={14}/> Nueva
-               </button>
-             </div>
-          )}
+    <div className="flex flex-col animate-in fade-in duration-500 gap-6 pb-24">
+      {/* Header Informativo */}
+      <div className="bg-emerald-50 border border-emerald-100 rounded-[2rem] p-5 flex items-start gap-4 shadow-sm">
+        <div className="bg-emerald-600 p-2.5 rounded-2xl text-white shadow-md shrink-0">
+          <Info size={20} />
         </div>
+        <div>
+          <h2 className="text-[13px] font-black text-emerald-900 uppercase italic leading-tight tracking-tight">Catálogo Oficial de Licencias</h2>
+          <p className="text-[10px] text-emerald-700/80 mt-1 font-bold uppercase tracking-wider leading-relaxed">
+            Consulta tus derechos según el convenio colectivo vigente. Estas licencias son fijas y no editables.
+          </p>
+        </div>
+      </div>
 
-        <div className="space-y-3 overflow-y-auto pr-1 scrollbar-hide">
-          {licenciasList.map(lic => (
-            <div key={lic.id} className="border border-slate-100 rounded-2xl bg-slate-50 overflow-hidden transition-all">
-              <div 
-                className={`flex justify-between items-center p-3 cursor-pointer hover:bg-slate-100 transition-colors ${expandedLicencia === lic.id ? 'bg-slate-100' : ''}`}
-                onClick={() => setExpandedLicencia(expandedLicencia === lic.id ? null : lic.id)}
-              >
-                <h3 className="flex-1 text-[11px] font-black text-slate-800 uppercase leading-snug pr-2 tracking-tight">{lic.title}</h3>
-                
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {user.email === ADMIN_EMAIL.toLowerCase() && (
-                    <>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleEditTitleLicencia(lic); }} 
-                        className="text-blue-500 p-1.5 bg-white hover:bg-blue-50 rounded-lg transition-colors border border-slate-200 shadow-sm"
-                        title="Editar Título"
-                      >
-                        <Edit3 size={14} />
-                      </button>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleEditLicencia(lic); }} 
-                        className="text-emerald-600 p-1.5 bg-white hover:bg-emerald-50 rounded-lg transition-colors border border-slate-200 shadow-sm"
-                        title="Editar Texto"
-                      >
-                        <FileText size={14} />
-                      </button>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleDeleteLicencia(lic.id); }} 
-                        className="text-rose-500 p-1.5 bg-white hover:bg-rose-50 rounded-lg transition-colors border border-slate-200 shadow-sm"
-                        title="Borrar Licencia"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </>
-                  )}
-                  <div className="text-slate-400 bg-white p-1.5 rounded-lg border border-slate-200 ml-1">
-                    {expandedLicencia === lic.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+      {/* Botón Grados de Consanguinidad */}
+      <button 
+        onClick={() => setShowGrados(!showGrados)}
+        className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${
+          showGrados ? 'bg-slate-800 border-slate-800 text-white' : 'bg-white border-slate-100 text-slate-700 hover:bg-slate-50'
+        } shadow-sm group`}
+      >
+        <div className="flex items-center gap-3">
+          <Users size={18} className={showGrados ? 'text-emerald-400' : 'text-emerald-600'} />
+          <span className="text-[11px] font-black uppercase italic tracking-widest">Guía de Grados de Parentesco</span>
+        </div>
+        {showGrados ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+      </button>
+
+      {/* Tabla de Grados (Condicional) */}
+      {showGrados && (
+        <div className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-xl animate-in slide-in-from-top-4 duration-300">
+          <div className="p-4 bg-slate-50 border-b border-slate-100">
+            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Referencia para Licencias Familiares</p>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {GRADOS_CONSANGUINIDAD.map((g, idx) => (
+              <div key={idx} className="p-4 flex flex-col gap-2 hover:bg-slate-50/50 transition-colors">
+                <div className="flex items-center gap-2">
+                  <span className="bg-emerald-100 text-emerald-700 text-[9px] font-black px-2 py-0.5 rounded-full uppercase">{g.grado}</span>
+                </div>
+                <div className="grid grid-cols-1 gap-2">
+                  <div>
+                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Consanguinidad (Sangre)</p>
+                    <p className="text-[11px] text-slate-700 font-bold leading-tight mt-0.5">{g.consanguinidad}</p>
                   </div>
+                  {g.afinidad && (
+                    <div>
+                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Afinidad (Familia Política)</p>
+                      <p className="text-[11px] text-slate-700 font-bold leading-tight mt-0.5">{g.afinidad}</p>
+                    </div>
+                  )}
                 </div>
               </div>
-              
-              {expandedLicencia === lic.id && (
-                <div className="px-4 pb-5 pt-2 text-xs text-slate-600 font-medium whitespace-pre-wrap animate-in slide-in-from-top-2 border-t border-slate-200 mt-1 bg-white leading-relaxed tracking-wide">
-                  {lic.desc}
-                </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Categorías de Licencias */}
+      <div className="space-y-8">
+        {LICENCIAS_CATEGORIES.map((cat) => (
+          <div key={cat.id} className="flex flex-col gap-4">
+            <div className="px-2">
+              <h3 className="text-[12px] font-black text-slate-800 uppercase italic tracking-wider flex items-center gap-2">
+                <div className="w-1.5 h-4 bg-emerald-600 rounded-full"></div>
+                {cat.title}
+              </h3>
+              {cat.subtitle && (
+                <p className="text-[10px] text-slate-500 font-bold italic mt-1 pl-3.5 leading-tight">{cat.subtitle}</p>
               )}
             </div>
-          ))}
-          
-          {licenciasList.length === 0 && (
-            <p className="text-[10px] text-slate-400 text-center italic py-10 uppercase font-bold tracking-widest">Aún no hay licencias cargadas.</p>
-          )}
-        </div>
+
+            <div className="grid gap-3">
+              {cat.items.map((lic, idx) => {
+                const itemId = `${cat.id}-${idx}`;
+                const isExpanded = expandedLicencia === itemId;
+                
+                return (
+                  <div key={idx} className={`bg-white border rounded-2xl overflow-hidden transition-all duration-300 ${isExpanded ? 'border-emerald-200 shadow-md ring-1 ring-emerald-50' : 'border-slate-100 shadow-sm'}`}>
+                    <div 
+                      className={`p-4 cursor-pointer flex justify-between items-center gap-4 ${isExpanded ? 'bg-emerald-50/30' : 'hover:bg-slate-50'}`}
+                      onClick={() => toggleLicencia(itemId)}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${isExpanded ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200' : 'bg-slate-100 text-slate-500'}`}>
+                          <FileText size={16} />
+                        </div>
+                        <h4 className="text-[11px] font-black text-slate-800 uppercase leading-snug tracking-tight">{lic.title}</h4>
+                      </div>
+                      <div className={`p-1.5 rounded-lg border transition-all ${isExpanded ? 'bg-white border-emerald-200 text-emerald-600 rotate-180' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
+                        <ChevronDown size={14} />
+                      </div>
+                    </div>
+
+                    {isExpanded && (
+                      <div className="px-5 pb-6 pt-2 border-t border-emerald-100 animate-in slide-in-from-top-2">
+                        <div className="grid gap-4 mt-2">
+                          <div className="flex gap-3">
+                            <div className="bg-amber-50 p-2 rounded-xl text-amber-600 h-fit"><Clock size={14} /></div>
+                            <div>
+                              <p className="text-[8px] font-black text-amber-600 uppercase tracking-widest">Duración</p>
+                              <p className="text-[11px] text-slate-700 font-bold leading-tight mt-0.5">{lic.duracion}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex gap-3">
+                            <div className="bg-blue-50 p-2 rounded-xl text-blue-600 h-fit"><Info size={14} /></div>
+                            <div>
+                              <p className="text-[8px] font-black text-blue-600 uppercase tracking-widest">Requisito</p>
+                              <p className="text-[11px] text-slate-700 font-bold leading-tight mt-0.5">{lic.requisito}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-3">
+                            <div className="bg-emerald-50 p-2 rounded-xl text-emerald-600 h-fit"><ClipboardCheck size={14} /></div>
+                            <div>
+                              <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">Documentación Necesaria</p>
+                              <p className="text-[11px] text-slate-700 font-bold leading-tight mt-0.5">{lic.documentacion}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
+
