@@ -20,7 +20,7 @@ export function LicenciasView() {
         <div>
           <h2 className="text-[13px] font-black text-emerald-900 uppercase italic leading-tight tracking-tight">Catálogo Oficial de Licencias</h2>
           <p className="text-[10px] text-emerald-700/80 mt-1 font-bold uppercase tracking-wider leading-relaxed">
-            Consulta tus derechos según el convenio colectivo vigente. Estas licencias son fijas y no editables.
+            Consulta tus derechos según convenio colectivo vigente. Estas licencias están en vigor hasta 31 diciembre 2026.
           </p>
         </div>
       </div>
