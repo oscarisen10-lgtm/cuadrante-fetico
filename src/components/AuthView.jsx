@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
-import { User, Lock, Mail, Store, ShieldCheck, KeyRound, X } from 'lucide-react';
-import { loginUser, registerUser, resetPassword } from '../services/firebaseService';
+import React, { useState, useMemo } from 'react';
+import { User, Lock, Mail, Store, ShieldCheck, KeyRound, X, UserCheck, ChevronDown } from 'lucide-react';
+import { loginUser, registerUser, resetPassword, loginAsGuest } from '../services/firebaseService';
 import { InputGroup } from './UIComponents';
 import { COMPANY_RULES } from '../constants/config';
+import { STORES } from '../constants/stores';
+
+// ⚠️ MODO TESTERS: Cambiar a `true` para reactivar el registro público
+const ALLOW_REGISTRATION = true;
 
 export default function AuthView() {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -10,6 +14,10 @@ export default function AuthView() {
   const [recoveryError, setRecoveryError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [formCompany, setFormCompany] = useState("Supercor");
+
+  const sortedStores = useMemo(() => {
+    return [...STORES].sort((a, b) => a.name.localeCompare(b.name));
+  }, []);
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -53,6 +61,18 @@ export default function AuthView() {
     setIsLoading(false);
   };
 
+  const handleGuestLogin = async () => {
+    setIsLoading(true);
+    setRecoveryError("");
+    try {
+      await loginAsGuest();
+    } catch (error) {
+      setRecoveryError("Error al entrar como invitado. Inténtalo de nuevo.");
+      setTimeout(() => setRecoveryError(""), 3000);
+    }
+    setIsLoading(false);
+  };
+
   const handleRecovery = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
@@ -75,13 +95,13 @@ export default function AuthView() {
           <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center mx-auto mb-1 shadow-inner shrink-0">
             <span className="text-emerald-600 font-black text-xl italic leading-none">F</span>
           </div>
-          <h1 className="text-base font-black italic uppercase tracking-tight leading-none">Mi Cuadrante Nube</h1>
-          <p className="text-emerald-100 text-[8px] uppercase font-bold tracking-widest mt-1">Fetico • ANGED</p>
+          <h1 className="text-base font-black italic uppercase tracking-tight leading-none">Mi Calendario</h1>
+          <p className="text-emerald-100 text-[8px] uppercase font-bold tracking-widest mt-1">Registro Horario</p>
         </div>
 
         <form onSubmit={handleAuth} className="p-4 flex flex-col overflow-hidden relative z-0">
           <div className="space-y-3 overflow-y-auto pr-1 scrollbar-hide flex-1 pb-2">
-            {isRegistering ? (
+            {isRegistering && ALLOW_REGISTRATION ? (
               <>
                 <InputGroup label="Nombre Apellidos" name="fullName" small icon={<User size={14}/>} />
                 <InputGroup label="Email" name="email" type="email" small icon={<Mail size={14}/>} />
@@ -99,7 +119,30 @@ export default function AuthView() {
                     </select>
                   </div>
                 </div>
-                <InputGroup label="Centro / Tienda" name="store" small icon={<Store size={14}/>} />
+                {formCompany === "Supercor" ? (
+                  <div className="space-y-0.5">
+                    <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight flex items-center gap-1">
+                      <Store size={10}/> Centro / Tienda
+                    </label>
+                    <div className="relative">
+                      <select 
+                        name="store" 
+                        className="w-full bg-slate-50 border-none p-1.5 pr-8 rounded-lg text-sm outline-none ring-1 ring-slate-200 appearance-none font-medium"
+                        required
+                      >
+                        <option value="" disabled selected>Selecciona tu tienda...</option>
+                        {sortedStores.map(s => (
+                          <option key={s.name} value={s.name}>{s.name}</option>
+                        ))}
+                      </select>
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                        <ChevronDown size={14} />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <InputGroup label="Centro / Tienda" name="store" small icon={<Store size={14}/>} />
+                )}
                 <InputGroup label="Contraseña (mín. 6)" name="password" type="password" minLength={6} small icon={<Lock size={14}/>} />
                 <InputGroup label="Repetir Contraseña" name="confirmPassword" type="password" minLength={6} small icon={<ShieldCheck size={14}/>} />
               </>
@@ -116,11 +159,24 @@ export default function AuthView() {
           </div>
           <div className="mt-4 space-y-2 shrink-0">
             <button type="submit" disabled={isLoading} className={`w-full bg-emerald-600 text-white font-black py-2.5 rounded-xl uppercase text-sm active:scale-95 transition-all shadow-md ${isLoading ? 'opacity-70' : ''}`}>
-              {isLoading ? 'CONECTANDO...' : (isRegistering ? 'CREAR CUENTA' : 'ENTRAR')}
+              {isLoading ? 'CONECTANDO...' : (isRegistering && ALLOW_REGISTRATION ? 'CREAR CUENTA' : 'ENTRAR')}
             </button>
-            <button type="button" onClick={() => { setIsRegistering(!isRegistering); setRecoveryError(""); }} className="w-full text-center text-xs font-black text-emerald-700 uppercase tracking-widest leading-none mt-2">
-              {isRegistering ? 'Volver atrás' : '¿Eres nuevo? Regístrate'}
+
+            {/* Botón de Modo Invitado — Visible siempre para testers */}
+            <button 
+              type="button" 
+              onClick={handleGuestLogin} 
+              disabled={isLoading}
+              className={`w-full bg-slate-800 text-white font-black py-3 rounded-xl uppercase text-xs active:scale-95 transition-all shadow-md flex items-center justify-center gap-2 ${isLoading ? 'opacity-70' : ''}`}
+            >
+              <UserCheck size={16} /> ENTRAR COMO INVITADO
             </button>
+
+            {ALLOW_REGISTRATION && (
+              <button type="button" onClick={() => { setIsRegistering(!isRegistering); setRecoveryError(""); }} className="w-full text-center text-xs font-black text-emerald-700 uppercase tracking-widest leading-none mt-2">
+                {isRegistering ? 'Volver atrás' : '¿Eres nuevo? Regístrate'}
+              </button>
+            )}
           </div>
         </form>
       </div>

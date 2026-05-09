@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "calendario-fetico"
-  }
+    "default": "mi-calendario-fe"
+  },
+  "targets": {},
+  "etags": {}
 }

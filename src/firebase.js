@@ -1,28 +1,25 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getMessaging } from "firebase/messaging";
+import { initializeFirestore, persistentLocalCache } from "firebase/firestore";
+import { getMessaging, getToken, onMessage } from "firebase/messaging";
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD3Fy7gpaQ-a4i8vBMItmsmZH_kfzQnpG4",
-  authDomain: "calendario-fetico.firebaseapp.com",
-  projectId: "calendario-fetico",
-  storageBucket: "calendario-fetico.firebasestorage.app",
-  messagingSenderId: "1059161577815",
-  appId: "1:1059161577815:web:4e4f4ac98d7c39f292c612",
-  measurementId: "G-0LN23ZLESB"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache()
+});
+export const messaging = getMessaging(app);
+export const storage = getStorage(app);
 
-let messagingInstance = null;
-try {
-  messagingInstance = getMessaging(app);
-} catch (e) {
-  console.warn("Firebase Messaging no soportado en este entorno");
-}
-export const messaging = messagingInstance;
-
-export const VAPID_KEY = "BEYovLJVC-gnlNb_aJ4qkOTxh849wiUYVLwZzsuWs5ldZNm8IAqLX7H-Aa2O2BuVFs2Egl2OrG3GVP27N3Bf_Fg";
+export const VAPID_KEY = "BEYovLJVC-gnlNb_aJ4qkOTxh849wiUY_3Y5p9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z";

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Mi Calendario</string>
+    <string name="title_activity_main">Mi Calendario</string>
+    <string name="package_name">app.netlify.guileless_malabi_40bf81.twa</string>
+    <string name="custom_url_scheme">app.netlify.guileless_malabi_40bf81.twa</string>
+</resources>

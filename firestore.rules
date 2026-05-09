@@ -1,0 +1,41 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    function isAdmin() {
+      return request.auth != null && request.auth.token != null && request.auth.token.email == "oscargarcia@fetico.es";
+    }
+
+    // Reglas para la colección de usuarios
+    match /users/{userId} {
+      // El usuario puede leer y escribir sus propios datos
+      // El admin puede leer todos los perfiles si fuera necesario
+      allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      
+      // Reglas para la subcolección de turnos
+      match /shifts/{shiftId} {
+        allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      }
+    }
+
+    // Reglas para noticias
+    match /noticias/{noticiaId} {
+      // Todo el mundo puede leer noticias
+      allow read: if true;
+      // Solo el admin puede crear, editar o borrar noticias
+      allow write: if isAdmin();
+    }
+
+    // Reglas para licencias (si se guardan en BD)
+    match /licencias/{licenciaId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Por defecto, denegar todo lo demás para mayor seguridad
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

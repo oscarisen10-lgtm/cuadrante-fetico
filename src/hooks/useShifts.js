@@ -25,7 +25,7 @@ export const useShifts = (shifts, user) => {
         if (s.isHA) contadorHA += 1;
         const [y, m, d] = s.date.split('-');
         const dayOfWeek = new Date(y, m - 1, d).getDay();
-        const isHoliday = CONFIG.FESTIVOS?.includes(`${m}-${d}`);
+        const isHoliday = Boolean(CONFIG.FESTIVOS?.[`${m}-${d}`]);
         if (dayOfWeek === 0 || isHoliday) domingosCount += 1;
       }
       if (s.type === 'vacation') vacacionesCount += 1;

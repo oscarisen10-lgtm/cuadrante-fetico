@@ -1,69 +1,118 @@
-const functions = require("firebase-functions");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 admin.initializeApp();
 
-exports.sendPushNotification = functions.region("europe-west1").firestore
-  .document("noticias/{docId}")
-  .onCreate(async (snap, context) => {
-    const data = snap.data();
+/**
+ * Cloud Function (Gen 2): sendPushNotification
+ * Triggers when a new document is created in the 'noticias' collection.
+ */
+exports.sendPushNotification = onDocumentCreated("noticias/{docId}", async (event) => {
+  const data = event.data.data();
 
-    // Solo reaccionar si es una peticion de PUSH
-    if (data.isPushRequest !== true) {
-      return null;
+  // Only react to explicit PUSH requests from admin
+  if (data.isPushRequest !== true) {
+    return null;
+  }
+
+  const title = data.title || "Nueva notificación";
+  const body = data.desc || "";
+
+  // 1. Collect all FCM tokens from registered users
+  const usersSnapshot = await admin.firestore().collection("users").get();
+  const tokenToUidMap = new Map(); // Map token -> uid for cleanup
+
+  usersSnapshot.forEach((doc) => {
+    const profile = doc.data().profile;
+    if (profile && profile.fcmToken) {
+      tokenToUidMap.set(profile.fcmToken, doc.id);
     }
+  });
 
-    const title = data.title || "Nueva notificacion";
-    const body = data.desc || "";
+  const uniqueTokens = [...tokenToUidMap.keys()];
 
-    // 1. Obtener todos los tokens de los usuarios
-    const usersSnapshot = await admin.firestore().collection("users").get();
-    const tokens = [];
-    
-    usersSnapshot.forEach((doc) => {
-      const profile = doc.data().profile;
-      if (profile && profile.fcmToken) {
-        tokens.push(profile.fcmToken);
-      }
-    });
+  if (uniqueTokens.length === 0) {
+    console.log("No hay tokens registrados para enviar la notificación.");
+    return null;
+  }
 
-    // Eliminar tokens duplicados
-    const uniqueTokens = [...new Set(tokens)];
+  console.log(`Enviando push a ${uniqueTokens.length} dispositivos...`);
 
-    if (uniqueTokens.length === 0) {
-      console.log("No hay tokens registrados para enviar la notificacion.");
-      return null;
-    }
-
-    // 2. Construir el mensaje V1 (icon va en webpush, NO en notification)
-    const message = {
+  // 2. Build the multicast message
+  const message = {
+    notification: {
+      title: title,
+      body: body,
+    },
+    webpush: {
       notification: {
-        title: title,
-        body: body,
+        icon: "https://calendario-fetico.web.app/img/app.PNG",
+        badge: "https://calendario-fetico.web.app/img/app.PNG",
       },
-      webpush: {
-        notification: {
-          icon: "https://calendario-fetico.web.app/img/app.PNG",
+      fcmOptions: {
+        link: "https://calendario-fetico.web.app",
+      },
+    },
+    android: {
+      priority: "high",
+      notification: {
+        channelId: "default",
+        icon: "ic_launcher",
+        color: "#059669",
+        sound: "default",
+      },
+    },
+    apns: {
+      payload: {
+        aps: {
+          badge: 1,
+          sound: "default",
+          "content-available": 1,
         },
       },
-      tokens: uniqueTokens,
-    };
+    },
+    tokens: uniqueTokens,
+  };
 
-    // 3. Enviar a traves de Firebase Admin (Usa la API V1 de forma segura)
-    try {
-      const response = await admin.messaging().sendEachForMulticast(message);
-      console.log(response.successCount + " mensajes enviados con exito.");
-      
-      // Registrar errores detallados de tokens fallidos
-      if (response.failureCount > 0) {
-        response.responses.forEach((resp, idx) => {
-          if (!resp.success) {
-            console.error("Token fallido [" + idx + "]:", resp.error?.code, resp.error?.message);
+  // 3. Send via Firebase Admin SDK
+  try {
+    const response = await admin.messaging().sendEachForMulticast(message);
+    console.log(`${response.successCount} mensajes enviados con éxito.`);
+
+    // 4. Clean up invalid/expired tokens
+    if (response.failureCount > 0) {
+      const tokensToRemove = [];
+      response.responses.forEach((resp, idx) => {
+        if (!resp.success) {
+          const errorCode = resp.error?.code;
+          console.error(`Token fallido [${idx}]:`, errorCode, resp.error?.message);
+
+          if (
+            errorCode === "messaging/invalid-registration-token" ||
+            errorCode === "messaging/registration-token-not-registered"
+          ) {
+            tokensToRemove.push(uniqueTokens[idx]);
+          }
+        }
+      });
+
+      if (tokensToRemove.length > 0) {
+        console.log(`Limpiando ${tokensToRemove.length} tokens inválidos...`);
+        const batch = admin.firestore().batch();
+        tokensToRemove.forEach((deadToken) => {
+          const uid = tokenToUidMap.get(deadToken);
+          if (uid) {
+            batch.update(admin.firestore().doc(`users/${uid}`), {
+              "profile.fcmToken": admin.firestore.FieldValue.delete(),
+            });
           }
         });
+        await batch.commit();
+        console.log("Tokens inválidos eliminados correctamente.");
       }
-    } catch (error) {
-      console.error("Error enviando notificaciones:", error);
     }
+  } catch (error) {
+    console.error("Error enviando notificaciones:", error);
+  }
 
-    return null;
-  });
+  return null;
+});

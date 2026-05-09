@@ -6,24 +6,20 @@ export const CONFIG = {
   MAX_DOMINGOS: 22,
   TARGET_DIAS_TRABAJADOS: 268,
   TARGET_DIAS_LIBRES: 76,
-  FESTIVOS: [
-    // Festivos Nacionales (8 fijos)
-    "01-01", // Año Nuevo
-    "01-06", // Epifanía del Señor (Reyes)
-    "05-01", // Fiesta del Trabajo
-    "08-15", // Asunción de la Virgen
-    "10-12", // Fiesta Nacional de España
-    "11-01", // Todos los Santos
-    "12-06", // Día de la Constitución
-    "12-08", // Inmaculada Concepción
-    "12-25", // Natividad del Señor
-    
-    // Festivos Regionales / Locales (4 ejemplos que puedes cambiar)
-    "03-19", // San José (Ejemplo)
-    "03-28", // Jueves Santo (Ejemplo - Varía cada año)
-    "03-29", // Viernes Santo (Ejemplo - Varía cada año)
-    "05-02", // Día de la Comunidad de Madrid (Ejemplo)
-  ]
+  FESTIVOS: {
+    "01-01": "Año Nuevo",
+    "01-06": "Epifanía del Señor",
+    "04-02": "Jueves Santo",
+    "04-03": "Viernes Santo",
+    "05-01": "Fiesta del Trabajo",
+    "05-02": "Fiesta de la Comunidad de Madrid",
+    "08-15": "Asunción de la Virgen",
+    "10-12": "Fiesta Nacional de España",
+    "11-02": "Traslado de Todos los Santos",
+    "12-07": "Traslado del Día de la Constitución",
+    "12-08": "Día de la Inmaculada Concepción",
+    "12-25": "Natividad del Señor"
+  }
 };
 
 export const COMPANY_RULES = {
@@ -57,4 +53,4 @@ export const COMPANY_RULES = {
 };
 
 // 👇 EMAIL DE ADMINISTRADOR 👇
-export const ADMIN_EMAIL = "oscargarcia@fetico.es";
+export const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || "";

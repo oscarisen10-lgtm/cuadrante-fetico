@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { subscribeToNews, addNews as apiAddNews, deleteNews as apiDeleteNews } from '../services/firebaseService';
 
 export const useNews = () => {
@@ -12,7 +12,7 @@ export const useNews = () => {
     return () => unsubNews();
   }, []);
 
-  const addNews = async (newsData) => {
+  const addNews = useCallback(async (newsData) => {
     setIsLoading(true);
     try {
       await apiAddNews({
@@ -22,11 +22,11 @@ export const useNews = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const deleteNews = async (id) => {
+  const deleteNews = useCallback(async (id) => {
     await apiDeleteNews(id);
-  };
+  }, []);
 
   return { newsList, addNews, deleteNews, isLoading };
 };

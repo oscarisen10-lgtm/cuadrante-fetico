@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { FileText, ChevronDown, ChevronUp, Info, Users, Clock, ClipboardCheck } from 'lucide-react';
 import { LICENCIAS_CATEGORIES, GRADOS_CONSANGUINIDAD } from '../constants/licenciasData';
 
-export function LicenciasView() {
+export const LicenciasView = React.memo(function LicenciasView() {
   const [expandedLicencia, setExpandedLicencia] = useState(null);
   const [showGrados, setShowGrados] = useState(false);
 
@@ -143,5 +143,5 @@ export function LicenciasView() {
       </div>
     </div>
   );
-}
+});
 
