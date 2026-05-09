@@ -30,6 +30,14 @@ workflows:
           sed -i '' "s/PRODUCT_BUNDLE_IDENTIFIER = .*/PRODUCT_BUNDLE_IDENTIFIER = $IOS_BUNDLE_ID;/" "$XCODE_PROJECT/project.pbxproj"
           echo "Bundle ID set to: $IOS_BUNDLE_ID"
           grep "PRODUCT_BUNDLE_IDENTIFIER" "$XCODE_PROJECT/project.pbxproj"
+      - name: Increment build number
+        script: |
+          export APP_STORE_CONNECT_ISSUER_ID="$APP_STORE_APPLE_ISSUER_ID"
+          export APP_STORE_CONNECT_KEY_IDENTIFIER="$APP_STORE_APPLE_KEY_ID"
+          export APP_STORE_CONNECT_PRIVATE_KEY="$APP_STORE_APPLE_PRIVATE_KEY"
+          LATEST_BUILD=$(app-store-connect get-latest-testflight-build-number "$IOS_BUNDLE_ID" 2>/dev/null || echo 0)
+          cd ios/App
+          agvtool new-version -all $((LATEST_BUILD + 1))
       - name: Set up code signing
         script: |
           # Map user credentials to the standard names Codemagic CLI expects
@@ -52,14 +60,6 @@ workflows:
           ls ~/Library/MobileDevice/Provisioning\ Profiles/ 2>/dev/null || echo "No profiles found!"
 
           xcode-project use-profiles --project "$XCODE_PROJECT"
-      - name: Increment build number
-        script: |
-          export APP_STORE_CONNECT_ISSUER_ID="$APP_STORE_APPLE_ISSUER_ID"
-          export APP_STORE_CONNECT_KEY_IDENTIFIER="$APP_STORE_APPLE_KEY_ID"
-          export APP_STORE_CONNECT_PRIVATE_KEY="$APP_STORE_APPLE_PRIVATE_KEY"
-          LATEST_BUILD=$(app-store-connect get-latest-testflight-build-number "$IOS_BUNDLE_ID" 2>/dev/null || echo 0)
-          cd ios/App
-          agvtool new-version -all $((LATEST_BUILD + 1))
       - name: Build iOS App
         script: |
           xcode-project build-ipa \
