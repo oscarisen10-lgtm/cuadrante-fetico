@@ -38,7 +38,4 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
-        issuer_id: $APP_STORE_APPLE_ISSUER_ID
-        key_id: $APP_STORE_APPLE_KEY_ID
-        private_key: $APP_STORE_APPLE_PRIVATE_KEY
         submit_to_testflight: true
