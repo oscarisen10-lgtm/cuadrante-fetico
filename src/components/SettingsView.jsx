@@ -1,11 +1,29 @@
-import React from 'react';
-import { User, Settings, Building2, Bell, RefreshCw, Smartphone, Download } from 'lucide-react';
+import React, { useState } from 'react';
+import { User, Settings, Building2, Bell, RefreshCw, Smartphone, Download, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown } from 'lucide-react';
 import { COMPANY_RULES, ADMIN_EMAIL } from '../constants/config';
+import { STORES } from '../constants/stores';
+import { deleteUserAccount } from '../services/firebaseService';
+import { toast } from './Toast';
 
-export function SettingsView({ user, settings, saveToCloud, stopAlarm, pushToken, pushTokenError, permissionState, requestTokenManually }) {
+export const SettingsView = React.memo(function SettingsView({ user, settings, saveToCloud, stopAlarm, pushToken, pushTokenError, permissionState, requestTokenManually }) {
   const isAdmin = user?.email === ADMIN_EMAIL.toLowerCase();
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteUserAccount();
+      // Auth state will automatically redirect to login
+    } catch (error) {
+      toast('Error al eliminar la cuenta: ' + error.message, 'error');
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+    }
+  };
   const currentCompany = user?.company || "Supercor";
   const currentRank = user?.rank || "Personal de fresco";
+  const currentStore = user?.store || "";
 
   const tokenStatus = pushToken
     ? "OK - GENERADO CON EXITO"
@@ -14,6 +32,8 @@ export function SettingsView({ user, settings, saveToCloud, stopAlarm, pushToken
     : "Generando...";
 
   const tokenColor = pushToken ? '#4ade80' : pushTokenError ? '#f87171' : '#ffffff50';
+
+  const sortedStores = [...STORES].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div className="flex flex-col space-y-5 animate-in fade-in duration-300 pb-20">
@@ -60,6 +80,29 @@ export function SettingsView({ user, settings, saveToCloud, stopAlarm, pushToken
                   </select>
                </div>
              </div>
+
+             {currentCompany === "Supercor" && (
+                <div className="flex flex-col space-y-1 mt-1">
+                  <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1 flex items-center gap-1">
+                    <Store size={10} className="text-emerald-500"/> Centro / Tienda
+                  </span>
+                  <div className="relative">
+                    <select 
+                      value={currentStore} 
+                      onChange={(e) => saveToCloud({ profile: { ...user, store: e.target.value } })}
+                      className="w-full bg-white/10 border-none p-2.5 pr-8 rounded-xl text-xs outline-none text-white appearance-none font-medium"
+                    >
+                      <option value="" disabled className="text-slate-800">Selecciona tu tienda...</option>
+                      {sortedStores.map(s => (
+                        <option key={s.name} value={s.name} className="text-slate-800">{s.name}</option>
+                      ))}
+                    </select>
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-white/30">
+                      <ChevronDown size={14} />
+                    </div>
+                  </div>
+                </div>
+             )}
           </div>
 
           <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/5">
@@ -87,6 +130,19 @@ export function SettingsView({ user, settings, saveToCloud, stopAlarm, pushToken
                 if(!newSettings.notifications) stopAlarm();
             }} className={`w-12 h-6 rounded-full relative transition-colors ${settings.notifications ? 'bg-emerald-500' : 'bg-white/20'}`}>
                <div className={`absolute top-1 size-4 bg-white rounded-full transition-all ${settings.notifications ? 'left-7' : 'left-1'}`}></div>
+            </button>
+          </div>
+
+          <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/5">
+            <div className="flex flex-col">
+                <span className="text-xs font-bold text-white uppercase leading-none flex items-center gap-1.5"><Fingerprint size={14} className="text-emerald-500"/> Bloqueo Biométrico</span>
+                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Exigir FaceID/Huella al abrir app</span>
+            </div>
+            <button onClick={() => {
+                const newSettings = {...settings, useBiometric: !settings.useBiometric};
+                saveToCloud({settings: newSettings});
+            }} className={`w-12 h-6 rounded-full relative transition-colors ${settings?.useBiometric ? 'bg-emerald-500' : 'bg-white/20'}`}>
+               <div className={`absolute top-1 size-4 bg-white rounded-full transition-all ${settings?.useBiometric ? 'left-7' : 'left-1'}`}></div>
             </button>
           </div>
 
@@ -140,8 +196,36 @@ export function SettingsView({ user, settings, saveToCloud, stopAlarm, pushToken
              </div>
           </div>
           )}
+
+           {/* Zona peligrosa — Eliminar cuenta (Requisito Apple App Store) */}
+           <div className="flex justify-between items-center bg-rose-500/10 p-4 rounded-2xl border border-rose-500/20 mt-2">
+              <div className="flex flex-col">
+                 <span className="text-xs font-bold text-rose-400 uppercase leading-none">Eliminar Cuenta</span>
+                 <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Borrar todos tus datos permanentemente</span>
+              </div>
+              <button onClick={() => setShowDeleteModal(true)} className="bg-rose-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase active:scale-95 shadow-md flex items-center gap-1.5">
+                 <Trash2 size={14}/> Eliminar
+              </button>
+           </div>
         </div>
       </div>
+
+      {/* Modal de confirmación de eliminación */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-[110] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in">
+          <div className="bg-white rounded-[2rem] p-6 shadow-2xl w-full max-w-xs text-center border border-rose-50 animate-in zoom-in-95">
+            <div className="mb-4 text-rose-500 flex justify-center"><AlertTriangle size={40}/></div>
+            <h3 className="text-base font-black text-slate-800 mb-2 uppercase italic leading-none tracking-tight">¿Eliminar tu cuenta?</h3>
+            <p className="text-[10px] text-slate-500 mb-6 uppercase font-bold tracking-widest leading-relaxed">Esta acción es irreversible.<br/>Se borrarán todos tus datos,<br/>turnos y configuración.</p>
+            <div className="flex gap-3">
+              <button onClick={handleDeleteAccount} disabled={isDeleting} className={`flex-1 bg-rose-500 text-white py-3.5 rounded-xl font-black text-xs uppercase shadow-md active:scale-95 transition-all ${isDeleting ? 'opacity-70' : ''}`}>
+                {isDeleting ? 'ELIMINANDO...' : 'SÍ, ELIMINAR'}
+              </button>
+              <button onClick={() => setShowDeleteModal(false)} className="flex-1 bg-slate-100 text-slate-600 py-3.5 rounded-xl font-black text-xs uppercase active:scale-95 transition-all hover:bg-slate-200">CANCELAR</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-}
+});

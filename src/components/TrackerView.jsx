@@ -1,12 +1,39 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Play, Square, Timer, Coffee } from 'lucide-react';
 import { formatTime, formatCountdown } from '../utils/dateUtils';
 import { CONFIG } from '../constants/config';
 
-export function TrackerView({ 
-  activeShift, isBreakActive, elapsed, breakTimeLeft, 
+export const TrackerView = React.memo(function TrackerView({ 
+  activeShift, isBreakActive, workTimeAccumulated, breakStartTime,
   showBreakFinishedMsg, settings, cerrarTurno, toggleDescanso, iniciarTurno 
 }) {
+  const [elapsed, setElapsed] = useState(0);
+  const [breakTimeLeft, setBreakTimeLeft] = useState(settings?.breakDuration * 60 || 0);
+
+  useEffect(() => {
+    let interval;
+    if (activeShift && !isBreakActive) {
+      const tick = () => {
+        const currentSessionSeconds = Math.floor((Date.now() - activeShift.startTime) / 1000);
+        setElapsed((workTimeAccumulated || 0) + currentSessionSeconds);
+      };
+      tick();
+      interval = setInterval(tick, 1000);
+    } else if (activeShift && isBreakActive) {
+      setElapsed(workTimeAccumulated || 0);
+      const tick = () => {
+        const secondsInBreak = Math.floor((Date.now() - breakStartTime) / 1000);
+        const totalBreakSeconds = (settings?.breakDuration || 15) * 60;
+        setBreakTimeLeft(Math.max(0, totalBreakSeconds - secondsInBreak));
+      };
+      tick();
+      interval = setInterval(tick, 1000);
+    } else {
+      setElapsed(0);
+    }
+    return () => clearInterval(interval);
+  }, [activeShift, isBreakActive, workTimeAccumulated, breakStartTime, settings?.breakDuration]);
+
   return (
     <div className="flex flex-col items-center justify-center space-y-10 py-6 animate-in fade-in duration-300 pb-24 h-full">
       <div className="text-center">
@@ -18,8 +45,13 @@ export function TrackerView({
 
       <button 
         onClick={() => {
-          if (activeShift) cerrarTurno((elapsed/60)>=CONFIG.UMBRAL_DIA_HA_MINUTOS);
-          else iniciarTurno();
+          if (activeShift) {
+             const currentSessionSeconds = isBreakActive ? 0 : Math.floor((Date.now() - activeShift.startTime) / 1000);
+             const totalElapsed = (workTimeAccumulated || 0) + currentSessionSeconds;
+             cerrarTurno((totalElapsed/60)>=CONFIG.UMBRAL_DIA_HA_MINUTOS, totalElapsed);
+          } else {
+             iniciarTurno();
+          }
         }} 
         className={`w-44 h-44 rounded-full flex flex-col items-center justify-center shadow-2xl transition-all active:scale-90 border-[8px] shrink-0 ${activeShift ? 'bg-rose-500 border-rose-100 shadow-rose-200' : 'bg-emerald-600 border-emerald-100 shadow-emerald-200'}`}
       >
@@ -53,4 +85,4 @@ export function TrackerView({
       </div>
     </div>
   );
-}
+});

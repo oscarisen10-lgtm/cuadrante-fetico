@@ -1,11 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 export const useTimer = (activeShift, isBreakActive, workTimeAccumulated, breakStartTime, settings, alarmUrl = 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3') => {
-  const [elapsed, setElapsed] = useState(0); 
-  const [breakTimeLeft, setBreakTimeLeft] = useState(settings.breakDuration * 60); 
   const [showBreakFinishedMsg, setShowBreakFinishedMsg] = useState(false);
   
   const alarmRef = useRef(null);
+  const intervalRef = useRef(null);
+  const breakFinishedRef = useRef(false);
+
+  // Keep ref in sync with state to avoid stale closures
+  breakFinishedRef.current = showBreakFinishedMsg;
 
   // Inicializar audio solo en cliente
   useEffect(() => {
@@ -16,15 +19,13 @@ export const useTimer = (activeShift, isBreakActive, workTimeAccumulated, breakS
   }, [alarmUrl]);
 
   useEffect(() => {
-    let interval;
-    if (activeShift && !isBreakActive) {
-      interval = setInterval(() => {
-        const currentSessionSeconds = Math.floor((Date.now() - activeShift.startTime) / 1000);
-        setElapsed(workTimeAccumulated + currentSessionSeconds);
-      }, 1000);
-    } else if (activeShift && isBreakActive) {
-      setElapsed(workTimeAccumulated);
+    // Clear any existing interval first
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
 
+    if (activeShift && isBreakActive) {
       // Intentar "desbloquear" el audio al entrar en modo descanso
       if (alarmRef.current) {
         alarmRef.current.play().then(() => {
@@ -35,13 +36,12 @@ export const useTimer = (activeShift, isBreakActive, workTimeAccumulated, breakS
         });
       }
 
-      interval = setInterval(() => {
+      const tick = () => {
         const secondsInBreak = Math.floor((Date.now() - breakStartTime) / 1000);
         const totalBreakSeconds = settings.breakDuration * 60;
         const remaining = Math.max(0, totalBreakSeconds - secondsInBreak);
-        setBreakTimeLeft(remaining);
         
-        if (remaining === 0 && !showBreakFinishedMsg) {
+        if (remaining === 0 && !breakFinishedRef.current) {
           setShowBreakFinishedMsg(true);
           if (settings.notifications) {
             if (alarmRef.current) {
@@ -53,14 +53,20 @@ export const useTimer = (activeShift, isBreakActive, workTimeAccumulated, breakS
             }
           }
         }
-      }, 1000);
-    } else {
-      setElapsed(0);
+      };
+      tick();
+      intervalRef.current = setInterval(tick, 1000);
     }
-    return () => clearInterval(interval);
-  }, [activeShift, isBreakActive, workTimeAccumulated, breakStartTime, showBreakFinishedMsg, settings]);
 
-  const stopAlarm = () => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [activeShift, isBreakActive, breakStartTime, settings.breakDuration, settings.notifications]);
+
+  const stopAlarm = useCallback(() => {
     if (alarmRef.current) {
       alarmRef.current.pause();
       alarmRef.current.currentTime = 0;
@@ -68,7 +74,7 @@ export const useTimer = (activeShift, isBreakActive, workTimeAccumulated, breakS
     if (typeof navigator !== 'undefined' && "vibrate" in navigator) {
       navigator.vibrate(0);
     }
-  };
+  }, []);
 
-  return { elapsed, breakTimeLeft, showBreakFinishedMsg, setShowBreakFinishedMsg, stopAlarm };
+  return { showBreakFinishedMsg, setShowBreakFinishedMsg, stopAlarm };
 };

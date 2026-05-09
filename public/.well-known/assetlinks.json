@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.netlify.guileless_malabi_40bf81.twa",
+      "sha256_cert_fingerprints": [
+        "15:68:76:94:5F:3A:14:0E:26:25:EF:39:84:60:00:B0:1C:E8:85:A9:D5:2A:57:1C:BA:28:5D:DE:3C:A9:09:A0:F3:33:41"
+      ]
+    }
+  }
+]

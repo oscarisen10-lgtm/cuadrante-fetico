@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "484679385374",
+    "project_id": "mi-calendario-fe",
+    "storage_bucket": "mi-calendario-fe.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:484679385374:android:f08c792d29d22e107f890f",
+        "android_client_info": {
+          "package_name": "app.netlify.guileless_malabi_40bf81.twa"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "484679385374-6pmhfbl9r3h6fam3vugnkqomsregqur3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCYUE9STK9ZC7EX5j_l_PHjOKH7sSZg_A0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "484679385374-6pmhfbl9r3h6fam3vugnkqomsregqur3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

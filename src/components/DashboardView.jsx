@@ -3,15 +3,18 @@ import { PieChart, Newspaper, Plus, Trash2, Link, X, Upload } from 'lucide-react
 import { StatBar, InputGroup } from './UIComponents';
 import { formatTotalTime } from '../utils/dateUtils';
 import { CONFIG, ADMIN_EMAIL } from '../constants/config';
+import { toast, confirm } from './Toast';
+import { storage } from '../firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
-export function DashboardView({ user, stats, newsList, addNews, deleteNews, permissionState, requestTokenManually }) {
+export const DashboardView = React.memo(function DashboardView({ user, stats, newsList, addNews, deleteNews, permissionState, requestTokenManually }) {
   const [showAddNewsModal, setShowAddNewsModal] = useState(false);
-// ... (omitting lines for brevity in instruction, will provide full block in replacement)
 
   const [formTitle, setFormTitle] = useState("");
   const [formDesc, setFormDesc] = useState("");
   const [formTag, setFormTag] = useState("Fetico");
-  const [formBase64Image, setFormBase64Image] = useState(null); 
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null); 
   const [isLoading, setIsLoading] = useState(false);
 
   // Estados para Modal Push
@@ -23,54 +26,36 @@ export function DashboardView({ user, stats, newsList, addNews, deleteNews, perm
     const file = e.target.files[0];
     if (file) {
       if (file.size > 1024 * 1024 * 5) { 
-        alert("La foto es demasiado grande (máx 5MB). Por favor, usa una foto más pequeña.");
+        toast("La foto es demasiado grande (máx 5MB). Por favor, usa una foto más pequeña.", "warning");
         e.target.value = null; 
         return;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => { 
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          const max_size = 800;
-          if (width > height) {
-            if (width > max_size) {
-              height *= max_size / width;
-              width = max_size;
-            }
-          } else {
-            if (height > max_size) {
-              width *= max_size / height;
-              height = max_size;
-            }
-          }
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-          setFormBase64Image(dataUrl);
-        };
-        img.src = reader.result;
-      };
-      reader.onerror = () => { alert("Error leyendo la foto."); }
-      reader.readAsDataURL(file); 
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
     }
   };
 
   const handleSubmitNewsForm = async (e) => {
     e.preventDefault();
-    if (!formTitle || !formDesc) { alert("Título y Texto son obligatorios."); return; }
+    if (!formTitle || !formDesc) { toast("Título y Texto son obligatorios.", "warning"); return; }
     
     setIsLoading(true);
     try {
+      let imageUrl = null;
+      
+      // Upload image to Firebase Storage if one was selected
+      if (selectedFile) {
+        const fileName = `noticias/${Date.now()}_${selectedFile.name}`;
+        const storageRef = ref(storage, fileName);
+        await uploadBytes(storageRef, selectedFile);
+        imageUrl = await getDownloadURL(storageRef);
+      }
+
       await addNews({
         title: formTitle,
         desc: formDesc,
         tag: formTag,
-        imageUrl: formBase64Image, 
+        imageUrl: imageUrl, 
         linkUrl: null, 
         date: "Hoy",
         createdAt: Date.now()
@@ -78,12 +63,13 @@ export function DashboardView({ user, stats, newsList, addNews, deleteNews, perm
       setFormTitle("");
       setFormDesc("");
       setFormTag("Fetico");
-      setFormBase64Image(null);
+      setSelectedFile(null);
+      setPreviewUrl(null);
       setShowAddNewsModal(false);
-      alert("¡Noticia publicada con éxito! Ya se ve en todos los móviles.");
+      toast("¡Noticia publicada con éxito!", "success");
     } catch (error) {
       console.error("Error publicando:", error);
-      alert("Hubo un error al guardar la noticia en la nube. Detalle: " + error.message);
+      toast("Hubo un error al guardar la noticia. " + error.message, "error");
     }
     setIsLoading(false);
   };
@@ -91,7 +77,7 @@ export function DashboardView({ user, stats, newsList, addNews, deleteNews, perm
   const handleSendPush = async (e) => {
     e.preventDefault();
     if (!pushTitle || !pushBody) {
-      alert("Título y mensaje son obligatorios.");
+      toast("Título y mensaje son obligatorios.", "warning");
       return;
     }
 
@@ -109,21 +95,22 @@ export function DashboardView({ user, stats, newsList, addNews, deleteNews, perm
         createdAt: Date.now() 
       });
       
-      alert("¡Petición guardada! El servidor la enviará en unos segundos a todos los dispositivos.");
+      toast("¡Petición guardada! El servidor la enviará en unos segundos.", "success");
       setPushTitle("");
       setPushBody("");
       setShowPushModal(false);
     } catch (error) {
       console.error("Error en el envío:", error);
-      alert("Error crítico al enviar: " + error.message);
+      toast("Error crítico al enviar: " + error.message, "error");
     }
     setIsLoading(false);
   };
 
   const handleDeleteNews = async (id) => {
-    if (window.confirm("¿Seguro que quieres borrar esta noticia?")) {
-      try { await deleteNews(id); } 
-      catch (error) { alert("Error: " + error.message); }
+    const ok = await confirm("¿Seguro que quieres borrar esta noticia?");
+    if (ok) {
+      try { await deleteNews(id); toast("Noticia eliminada.", "success"); } 
+      catch (error) { toast("Error: " + error.message, "error"); }
     }
   };
 
@@ -206,7 +193,7 @@ export function DashboardView({ user, stats, newsList, addNews, deleteNews, perm
           <div className="bg-white rounded-[2.5rem] p-6 shadow-2xl w-full max-w-sm border border-emerald-50 animate-in zoom-in-95 flex flex-col max-h-[90dvh]">
             <div className="flex justify-between items-center mb-5 shrink-0 border-b border-slate-100 pb-3">
               <h3 className="text-sm font-black text-emerald-700 uppercase italic tracking-widest">Nueva Noticia</h3>
-              <button onClick={() => { setShowAddNewsModal(false); setFormBase64Image(null); }} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 text-slate-400"><X size={20}/></button>
+              <button onClick={() => { setShowAddNewsModal(false); setSelectedFile(null); setPreviewUrl(null); }} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 text-slate-400"><X size={20}/></button>
             </div>
             
             <form onSubmit={handleSubmitNewsForm} className="flex-1 flex flex-col space-y-4 overflow-hidden">
@@ -224,16 +211,16 @@ export function DashboardView({ user, stats, newsList, addNews, deleteNews, perm
                    <div className="space-y-1.5 flex flex-col">
                      <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Foto (Opcional)</label>
                      <label className="bg-slate-100 border border-slate-200 text-slate-600 rounded-xl p-3 flex items-center justify-center gap-2 cursor-pointer hover:bg-slate-200 active:scale-95 transition-all text-xs font-bold shadow-inner">
-                        <Upload size={16}/> {formBase64Image ? "Cambiar" : "Subir"}
+                        <Upload size={16}/> {selectedFile ? "Cambiar" : "Subir"}
                         <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} className="hidden" />
                      </label>
                    </div>
                  </div>
 
-                 {formBase64Image && (
+                 {previewUrl && (
                     <div className="mt-3 relative border-2 border-emerald-100 rounded-2xl p-1 bg-emerald-50 animate-in fade-in">
-                        <img src={formBase64Image} alt="Preview" className="w-full h-32 object-cover rounded-xl" />
-                        <button type="button" onClick={()=>setFormBase64Image(null)} className="absolute top-2 right-2 bg-rose-500 text-white p-1.5 rounded-full shadow-lg hover:bg-rose-600"><X size={14}/></button>
+                        <img src={previewUrl} alt="Preview" className="w-full h-32 object-cover rounded-xl" />
+                        <button type="button" onClick={()=>{ setSelectedFile(null); setPreviewUrl(null); }} className="absolute top-2 right-2 bg-rose-500 text-white p-1.5 rounded-full shadow-lg hover:bg-rose-600"><X size={14}/></button>
                     </div>
                  )}
               </div>
@@ -277,4 +264,4 @@ export function DashboardView({ user, stats, newsList, addNews, deleteNews, perm
       )}
     </div>
   );
-}
+});

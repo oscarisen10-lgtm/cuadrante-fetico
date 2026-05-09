@@ -1,10 +1,12 @@
 import { auth, db } from '../firebase';
 import { 
   onAuthStateChanged, signOut, signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, sendPasswordResetEmail 
+  createUserWithEmailAndPassword, sendPasswordResetEmail,
+  signInAnonymously, deleteUser
 } from "firebase/auth";
 import { 
-  doc, setDoc, onSnapshot, collection, addDoc, deleteDoc 
+  doc, setDoc, getDoc, onSnapshot, collection, addDoc, deleteDoc,
+  query, getDocs, writeBatch, orderBy
 } from "firebase/firestore";
 
 // --- AUTH & USER ---
@@ -17,8 +19,117 @@ export const subscribeToUserDoc = (uid, callback) => {
   return onSnapshot(doc(db, "users", uid), callback);
 };
 
+/**
+ * Subscribe to the shifts subcollection for a user.
+ * Shifts are stored in users/{uid}/shifts/{shiftId} for scalability.
+ */
+export const subscribeToShifts = (uid, callback) => {
+  const shiftsRef = collection(db, "users", uid, "shifts");
+  return onSnapshot(shiftsRef, (snapshot) => {
+    const arr = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    callback(arr);
+  });
+};
+
+/**
+ * Save a single shift to the subcollection.
+ * Uses the date string as the document ID for easy upserts.
+ */
+export const saveShift = async (uid, shift) => {
+  if (!uid || !shift.date) return;
+  await setDoc(doc(db, "users", uid, "shifts", shift.date), shift, { merge: true });
+};
+
+/**
+ * Save multiple shifts in a batch (max 500 per batch).
+ */
+export const saveShiftsBatch = async (uid, shiftsArray) => {
+  if (!uid || !shiftsArray.length) return;
+  const batch = writeBatch(db);
+  shiftsArray.forEach(shift => {
+    if (shift.date) {
+      batch.set(doc(db, "users", uid, "shifts", shift.date), shift, { merge: true });
+    }
+  });
+  await batch.commit();
+};
+
+/**
+ * Delete a shift from the subcollection.
+ */
+export const deleteShift = async (uid, dateStr) => {
+  if (!uid || !dateStr) return;
+  await deleteDoc(doc(db, "users", uid, "shifts", dateStr));
+};
+
+/**
+ * Delete multiple shifts in a batch.
+ */
+export const deleteShiftsBatch = async (uid, dateStrings) => {
+  if (!uid || !dateStrings.length) return;
+  const batch = writeBatch(db);
+  dateStrings.forEach(dateStr => {
+    batch.delete(doc(db, "users", uid, "shifts", dateStr));
+  });
+  await batch.commit();
+};
+
+/**
+ * One-time migration: Move shifts[] array from user doc to subcollection.
+ * Safe to run multiple times — it won't duplicate data.
+ */
+export const migrateShiftsToSubcollection = async (uid, shiftsArray) => {
+  if (!uid || !shiftsArray || shiftsArray.length === 0) return;
+  
+  const batch = writeBatch(db);
+  shiftsArray.forEach(shift => {
+    if (shift.date) {
+      batch.set(doc(db, "users", uid, "shifts", shift.date), {
+        date: shift.date,
+        type: shift.type || 'work',
+        hours: shift.hours || 0,
+        isHA: shift.isHA || false,
+        turn: shift.turn || 'morning',
+      });
+    }
+  });
+  
+  // Remove the array from the user doc
+  batch.update(doc(db, "users", uid), { shifts: [] });
+  
+  await batch.commit();
+  console.log(`Migrated ${shiftsArray.length} shifts to subcollection for user ${uid}`);
+};
+
 export const loginUser = async (email, password) => {
   return await signInWithEmailAndPassword(auth, email, password);
+};
+
+export const loginAsGuest = async () => {
+  const res = await signInAnonymously(auth);
+  
+  // Create default profile for guest if it doesn't exist
+  const userDoc = await getDoc(doc(db, "users", res.user.uid));
+  if (!userDoc.exists()) {
+    await setDoc(doc(db, "users", res.user.uid), {
+      profile: {
+        email: "invitado@demo.fetico.es",
+        fullName: "Tester Invitado",
+        company: "Supercor",
+        store: "Demo",
+        rank: "Personal de fresco",
+        isGuest: true
+      },
+      settings: { notifications: true, breakDuration: 15 },
+      shifts: [],
+      activeShift: null,
+      workTimeAccumulated: 0,
+      isBreakActive: false,
+      breakStartTime: null
+    });
+  }
+  
+  return res;
 };
 
 export const registerUser = async (email, password, profileData) => {
@@ -45,13 +156,28 @@ export const logoutUser = async () => {
   return await signOut(auth);
 };
 
+export const deleteUserAccount = async () => {
+  if (auth.currentUser) {
+    const uid = auth.currentUser.uid;
+    
+    // Delete all shifts in subcollection first
+    const shiftsSnap = await getDocs(collection(db, "users", uid, "shifts"));
+    if (shiftsSnap.size > 0) {
+      const batch = writeBatch(db);
+      shiftsSnap.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    }
+    
+    // Delete user data from Firestore
+    await deleteDoc(doc(db, "users", uid));
+    // Then delete the Firebase Auth account
+    await deleteUser(auth.currentUser);
+  }
+};
+
 export const saveUserData = async (updates) => {
   if (auth.currentUser) {
-    try {
-      await setDoc(doc(db, "users", auth.currentUser.uid), updates, { merge: true });
-    } catch (error) {
-      console.error("Error guardando:", error);
-    }
+    await setDoc(doc(db, "users", auth.currentUser.uid), updates, { merge: true });
   }
 };
 
@@ -93,46 +219,4 @@ export const updateLicencia = async (id, data) => {
 
 export const deleteLicencia = async (id) => {
   return await deleteDoc(doc(db, "licencias", id));
-};
-
-// --- NOTIFICACIONES PUSH ---
-
-export const getAllUserTokens = async () => {
-  const { getDocs, collection } = await import("firebase/firestore");
-  const querySnapshot = await getDocs(collection(db, "users"));
-  const tokens = [];
-  querySnapshot.forEach((doc) => {
-    const data = doc.data();
-    if (data.profile?.fcmToken) {
-      tokens.push(data.profile.fcmToken);
-    }
-  });
-  return [...new Set(tokens)]; // Eliminar duplicados
-};
-
-export const sendPushNotificationToAll = async (title, body, serverKey) => {
-  const tokens = await getAllUserTokens();
-  if (tokens.length === 0) return { success: false, error: "No hay dispositivos registrados." };
-
-  const message = {
-    registration_ids: tokens,
-    notification: {
-      title: title,
-      body: body,
-      icon: "/img/app.PNG",
-      click_action: window.location.origin
-    },
-    priority: "high"
-  };
-
-  const response = await fetch("https://fcm.googleapis.com/fcm/send", {
-    method: "POST",
-    headers: {
-      "Authorization": `key=${serverKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(message)
-  });
-
-  return response.ok ? { success: true } : { success: false, error: await response.text() };
 };
