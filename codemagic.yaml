@@ -8,7 +8,7 @@ workflows:
         - apple_credentials
       vars:
         XCODE_SCHEME: "App"
-        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        XCODE_PROJECT: "ios/App/App.xcodeproj"
       node: latest
       xcode: latest
       cocoapods: default
@@ -31,7 +31,7 @@ workflows:
       - name: Build iOS App
         script: |
           xcode-project build-ipa \
-            --workspace "$XCODE_WORKSPACE" \
+            --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
     artifacts:
       - build/ios/ipa/*.ipa
