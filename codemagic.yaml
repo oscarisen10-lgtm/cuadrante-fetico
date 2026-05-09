@@ -9,6 +9,7 @@ workflows:
       vars:
         XCODE_SCHEME: "App"
         XCODE_PROJECT: "ios/App/App.xcodeproj"
+        IOS_BUNDLE_ID: "com.cuadrantefetico.app"
       node: latest
       xcode: latest
       cocoapods: default
@@ -22,21 +23,41 @@ workflows:
       - name: Sync Capacitor iOS
         script: |
           npx cap sync ios
+      - name: Fix iOS bundle identifier
+        script: |
+          # iOS does NOT allow underscores in bundle IDs
+          # Override the bundle ID that Capacitor sets from capacitor.config.json
+          sed -i '' "s/PRODUCT_BUNDLE_IDENTIFIER = .*/PRODUCT_BUNDLE_IDENTIFIER = $IOS_BUNDLE_ID;/" "$XCODE_PROJECT/project.pbxproj"
+          echo "Bundle ID set to: $IOS_BUNDLE_ID"
+          grep "PRODUCT_BUNDLE_IDENTIFIER" "$XCODE_PROJECT/project.pbxproj"
       - name: Set up code signing
         script: |
+          # Map user credentials to the standard names Codemagic CLI expects
+          export APP_STORE_CONNECT_ISSUER_ID="$APP_STORE_APPLE_ISSUER_ID"
+          export APP_STORE_CONNECT_KEY_IDENTIFIER="$APP_STORE_APPLE_KEY_ID"
+          export APP_STORE_CONNECT_PRIVATE_KEY="$APP_STORE_APPLE_PRIVATE_KEY"
+
           keychain initialize
+
+          # Fetch signing files using standard env vars (auto-detected by CLI)
           app-store-connect fetch-signing-files \
-            "$BUNDLE_ID" \
+            "$IOS_BUNDLE_ID" \
             --type IOS_APP_STORE \
-            --issuer-id "$APP_STORE_APPLE_ISSUER_ID" \
-            --key-id "$APP_STORE_APPLE_KEY_ID" \
-            --private-key "$APP_STORE_APPLE_PRIVATE_KEY" \
             --create
+
           keychain add-certificates
+
+          # Show downloaded profiles for debugging
+          echo "Downloaded profiles:"
+          ls ~/Library/MobileDevice/Provisioning\ Profiles/ 2>/dev/null || echo "No profiles found!"
+
           xcode-project use-profiles --project "$XCODE_PROJECT"
       - name: Increment build number
         script: |
-          LATEST_BUILD=$(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" --issuer-id "$APP_STORE_APPLE_ISSUER_ID" --key-id "$APP_STORE_APPLE_KEY_ID" --private-key "$APP_STORE_APPLE_PRIVATE_KEY" 2>/dev/null || echo 0)
+          export APP_STORE_CONNECT_ISSUER_ID="$APP_STORE_APPLE_ISSUER_ID"
+          export APP_STORE_CONNECT_KEY_IDENTIFIER="$APP_STORE_APPLE_KEY_ID"
+          export APP_STORE_CONNECT_PRIVATE_KEY="$APP_STORE_APPLE_PRIVATE_KEY"
+          LATEST_BUILD=$(app-store-connect get-latest-testflight-build-number "$IOS_BUNDLE_ID" 2>/dev/null || echo 0)
           cd ios/App
           agvtool new-version -all $((LATEST_BUILD + 1))
       - name: Build iOS App
