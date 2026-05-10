@@ -57,24 +57,29 @@ workflows:
           # List and revoke existing API-generated certificates AND profiles
           echo "Deep cleaning Apple Developer portal for $IOS_BUNDLE_ID..."
           
-          # Delete Certificates
+          # Delete Certificates - Try to list ALL certificates by being less specific
           app-store-connect certificates list > certs.json || true
           if [ -f certs.json ]; then
-            for cert_id in $(cat certs.json | jq -r '.[].id'); do
+            # Use jq to iterate over all certificates regardless of type
+            for cert_id in $(cat certs.json | jq -r '.[] | .id'); do
               echo "Deleting certificate $cert_id..."
               app-store-connect certificates delete "$cert_id" || true
             done
           fi
 
           # Delete Provisioning Profiles for this Bundle ID
-          app-store-connect profiles list --bundle-id "$IOS_BUNDLE_ID" > profiles.json || true
+          # We list all and filter manually with jq because --bundle-id flag is not supported in list
+          app-store-connect profiles list > profiles.json || true
           if [ -f profiles.json ]; then
-            for profile_id in $(cat profiles.json | jq -r '.[].id'); do
+            for profile_id in $(cat profiles.json | jq -r --arg BUNDLE "$IOS_BUNDLE_ID" '.[] | select(.attributes.name | contains($BUNDLE)) | .id'); do
               echo "Deleting profile $profile_id..."
               app-store-connect profiles delete "$profile_id" || true
             done
           fi
 
+          # Clear any local cached files that might interfere
+          rm -rf /Users/builder/Library/MobileDevice/Provisioning\ Profiles/*
+          
           # Running with minimal flags to avoid version conflicts
           app-store-connect fetch-signing-files "$IOS_BUNDLE_ID" --type IOS_APP_STORE --create
 
