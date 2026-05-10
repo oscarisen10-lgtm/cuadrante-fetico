@@ -35,9 +35,17 @@ workflows:
           grep "PRODUCT_BUNDLE_IDENTIFIER" "$XCODE_PROJECT/project.pbxproj"
       - name: Increment build number
         script: |
+          echo "Fetching latest TestFlight build number for $IOS_BUNDLE_ID..."
           LATEST_BUILD=$(app-store-connect get-latest-testflight-build-number "$IOS_BUNDLE_ID" 2>/dev/null || echo 0)
+          echo "Latest TestFlight build: $LATEST_BUILD"
+          NEW_BUILD=$((LATEST_BUILD + 1))
+          # Ensure minimum build number of 10 to skip any previously uploaded builds
+          if [ "$NEW_BUILD" -lt 10 ]; then
+            NEW_BUILD=10
+          fi
+          echo "Setting new build number to: $NEW_BUILD"
           cd ios/App
-          agvtool new-version -all $((LATEST_BUILD + 1))
+          agvtool new-version -all "$NEW_BUILD"
       - name: Set up code signing settings on Xcode project
         script: |
           xcode-project use-profiles --project "$XCODE_PROJECT"
