@@ -56,7 +56,7 @@ workflows:
           echo "Fetching/Creating signing files for $IOS_BUNDLE_ID..."
           # List and revoke existing API-generated certificates that we lost the private key for
           echo "Revoking orphaned certificates..."
-          app-store-connect certificates list --type IOS_DISTRIBUTION > certs.json || true
+          app-store-connect certificates list > certs.json || true
           cat certs.json || true
           
           # Delete certificates using jq to parse the IDs
