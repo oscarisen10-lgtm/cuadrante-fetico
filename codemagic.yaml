@@ -54,16 +54,24 @@ workflows:
           app-store-connect bundle-ids list || echo "Could not list bundle IDs"
 
           echo "Fetching/Creating signing files for $IOS_BUNDLE_ID..."
-          # List and revoke existing API-generated certificates that we lost the private key for
-          echo "Revoking orphaned certificates..."
-          app-store-connect certificates list > certs.json || true
-          cat certs.json || true
+          # List and revoke existing API-generated certificates AND profiles
+          echo "Deep cleaning Apple Developer portal for $IOS_BUNDLE_ID..."
           
-          # Delete certificates using jq to parse the IDs
+          # Delete Certificates
+          app-store-connect certificates list > certs.json || true
           if [ -f certs.json ]; then
             for cert_id in $(cat certs.json | jq -r '.[].id'); do
               echo "Deleting certificate $cert_id..."
               app-store-connect certificates delete "$cert_id" || true
+            done
+          fi
+
+          # Delete Provisioning Profiles for this Bundle ID
+          app-store-connect profiles list --bundle-id "$IOS_BUNDLE_ID" > profiles.json || true
+          if [ -f profiles.json ]; then
+            for profile_id in $(cat profiles.json | jq -r '.[].id'); do
+              echo "Deleting profile $profile_id..."
+              app-store-connect profiles delete "$profile_id" || true
             done
           fi
 
