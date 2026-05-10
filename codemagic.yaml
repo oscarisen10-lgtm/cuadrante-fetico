@@ -54,6 +54,19 @@ workflows:
           app-store-connect bundle-ids list || echo "Could not list bundle IDs"
 
           echo "Fetching/Creating signing files for $IOS_BUNDLE_ID..."
+          # List and revoke existing API-generated certificates that we lost the private key for
+          echo "Revoking orphaned certificates..."
+          app-store-connect certificates list --type IOS_DISTRIBUTION > certs.json || true
+          cat certs.json || true
+          
+          # Delete certificates using jq to parse the IDs
+          if [ -f certs.json ]; then
+            for cert_id in $(cat certs.json | jq -r '.[].id'); do
+              echo "Deleting certificate $cert_id..."
+              app-store-connect certificates delete "$cert_id" || true
+            done
+          fi
+
           # Running with minimal flags to avoid version conflicts
           app-store-connect fetch-signing-files "$IOS_BUNDLE_ID" --type IOS_APP_STORE --create
 
