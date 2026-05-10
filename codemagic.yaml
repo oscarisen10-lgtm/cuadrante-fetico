@@ -40,6 +40,17 @@ workflows:
           agvtool new-version -all $((LATEST_BUILD + 1))
       - name: Set up code signing
         script: |
+          # DIAGNOSTIC: Check if variables are set (printing only length for security)
+          echo "Diagnostic: Checking credentials..."
+          echo "Issuer ID length: ${#APP_STORE_APPLE_ISSUER_ID}"
+          echo "Key ID length: ${#APP_STORE_APPLE_KEY_ID}"
+          echo "Private Key length: ${#APP_STORE_APPLE_PRIVATE_KEY}"
+
+          if [ ${#APP_STORE_APPLE_PRIVATE_KEY} -lt 10 ]; then
+            echo "ERROR: APP_STORE_APPLE_PRIVATE_KEY seems to be empty or too short!"
+            exit 1
+          fi
+
           # Map user credentials to the standard names Codemagic CLI expects
           export APP_STORE_CONNECT_ISSUER_ID="$APP_STORE_APPLE_ISSUER_ID"
           export APP_STORE_CONNECT_KEY_IDENTIFIER="$APP_STORE_APPLE_KEY_ID"
@@ -47,11 +58,15 @@ workflows:
 
           keychain initialize
 
-          # Fetch signing files using standard env vars (auto-detected by CLI)
+          echo "Fetching signing files for $IOS_BUNDLE_ID..."
+          # We use explicit flags to ensure credentials are used
           app-store-connect fetch-signing-files \
             "$IOS_BUNDLE_ID" \
             --type IOS_APP_STORE \
-            --create
+            --create \
+            --issuer-id "$APP_STORE_APPLE_ISSUER_ID" \
+            --key-id "$APP_STORE_APPLE_KEY_ID" \
+            --private-key "$APP_STORE_APPLE_PRIVATE_KEY"
 
           keychain add-certificates
 
