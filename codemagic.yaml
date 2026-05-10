@@ -46,7 +46,6 @@ workflows:
           xcode-project build-ipa \
             --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME" \
-            --archive-flags "-allowProvisioningUpdates" \
             --export-method app-store
     artifacts:
       - build/ios/ipa/*.ipa
