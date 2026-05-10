@@ -40,36 +40,39 @@ workflows:
           agvtool new-version -all $((LATEST_BUILD + 1))
       - name: Set up code signing
         script: |
-          # DIAGNOSTIC: Check if variables are set
-          echo "Diagnostic: Validating credentials format..."
+          echo "Diagnostic: Validating credentials and Team ID L8UHDP647X..."
           
-          # Create a clean private key file (ensures no shell escaping issues)
+          # Save key to file
           echo "$APP_STORE_APPLE_PRIVATE_KEY" > /tmp/apple_key.p8
           
-          # Map user credentials
+          # Map credentials
           export APP_STORE_CONNECT_ISSUER_ID="$APP_STORE_APPLE_ISSUER_ID"
           export APP_STORE_CONNECT_KEY_IDENTIFIER="$APP_STORE_APPLE_KEY_ID"
           export APP_STORE_CONNECT_PRIVATE_KEY_PATH="/tmp/apple_key.p8"
 
           keychain initialize
 
+          echo "Listing existing certificates for Team L8UHDP647X (debug)..."
+          app-store-connect list-certificates --team-id L8UHDP647X || echo "Could not list certificates"
+
           echo "Fetching/Creating signing files for $IOS_BUNDLE_ID..."
-          # Using --create to ensure we generate a new one if missing
           app-store-connect fetch-signing-files \
             "$IOS_BUNDLE_ID" \
             --type IOS_APP_STORE \
             --create \
+            --team-id L8UHDP647X \
             --issuer-id "$APP_STORE_APPLE_ISSUER_ID" \
             --key-id "$APP_STORE_APPLE_KEY_ID" \
             --private-key "$(cat /tmp/apple_key.p8)"
 
           keychain add-certificates
 
-          # Force use of the downloaded profiles and set bundle ID
+          # Force use of profiles
           xcode-project use-profiles \
             --project "$XCODE_PROJECT" \
             --bundle-id "$IOS_BUNDLE_ID" \
-            --type ios-app-store
+            --type ios-app-store \
+            --team-id L8UHDP647X
 
       - name: Build iOS App
         script: |
