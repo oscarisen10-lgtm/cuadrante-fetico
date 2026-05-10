@@ -40,46 +40,44 @@ workflows:
           agvtool new-version -all $((LATEST_BUILD + 1))
       - name: Set up code signing
         script: |
-          # DIAGNOSTIC: Check if variables are set (printing only length for security)
-          echo "Diagnostic: Checking credentials..."
-          echo "Issuer ID length: ${#APP_STORE_APPLE_ISSUER_ID}"
-          echo "Key ID length: ${#APP_STORE_APPLE_KEY_ID}"
-          echo "Private Key length: ${#APP_STORE_APPLE_PRIVATE_KEY}"
-
-          if [ ${#APP_STORE_APPLE_PRIVATE_KEY} -lt 10 ]; then
-            echo "ERROR: APP_STORE_APPLE_PRIVATE_KEY seems to be empty or too short!"
-            exit 1
-          fi
-
-          # Map user credentials to the standard names Codemagic CLI expects
+          # DIAGNOSTIC: Check if variables are set
+          echo "Diagnostic: Validating credentials format..."
+          
+          # Create a clean private key file (ensures no shell escaping issues)
+          echo "$APP_STORE_APPLE_PRIVATE_KEY" > /tmp/apple_key.p8
+          
+          # Map user credentials
           export APP_STORE_CONNECT_ISSUER_ID="$APP_STORE_APPLE_ISSUER_ID"
           export APP_STORE_CONNECT_KEY_IDENTIFIER="$APP_STORE_APPLE_KEY_ID"
-          export APP_STORE_CONNECT_PRIVATE_KEY="$APP_STORE_APPLE_PRIVATE_KEY"
+          export APP_STORE_CONNECT_PRIVATE_KEY_PATH="/tmp/apple_key.p8"
 
           keychain initialize
 
-          echo "Fetching signing files for $IOS_BUNDLE_ID..."
-          # We use explicit flags to ensure credentials are used
+          echo "Fetching/Creating signing files for $IOS_BUNDLE_ID..."
+          # Using --create to ensure we generate a new one if missing
           app-store-connect fetch-signing-files \
             "$IOS_BUNDLE_ID" \
             --type IOS_APP_STORE \
             --create \
             --issuer-id "$APP_STORE_APPLE_ISSUER_ID" \
             --key-id "$APP_STORE_APPLE_KEY_ID" \
-            --private-key "$APP_STORE_APPLE_PRIVATE_KEY"
+            --private-key "$(cat /tmp/apple_key.p8)"
 
           keychain add-certificates
 
-          # Show downloaded profiles for debugging
-          echo "Downloaded profiles:"
-          ls ~/Library/MobileDevice/Provisioning\ Profiles/ 2>/dev/null || echo "No profiles found!"
+          # Force use of the downloaded profiles and set bundle ID
+          xcode-project use-profiles \
+            --project "$XCODE_PROJECT" \
+            --bundle-id "$IOS_BUNDLE_ID" \
+            --type ios-app-store
 
-          xcode-project use-profiles --project "$XCODE_PROJECT"
       - name: Build iOS App
         script: |
           xcode-project build-ipa \
             --project "$XCODE_PROJECT" \
-            --scheme "$XCODE_SCHEME"
+            --scheme "$XCODE_SCHEME" \
+            --archive-flags "-allowProvisioningUpdates" \
+            --export-method app-store
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
