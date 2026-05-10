@@ -40,39 +40,27 @@ workflows:
           agvtool new-version -all $((LATEST_BUILD + 1))
       - name: Set up code signing
         script: |
-          echo "Diagnostic: Validating credentials and Team ID L8UHDP647X..."
+          echo "Diagnostic: Using environment variables for Team L8UHDP647X..."
           
-          # Save key to file
-          echo "$APP_STORE_APPLE_PRIVATE_KEY" > /tmp/apple_key.p8
-          
-          # Map credentials
+          # Set standard environment variables for the CLI
+          export APP_STORE_CONNECT_TEAM_ID="L8UHDP647X"
           export APP_STORE_CONNECT_ISSUER_ID="$APP_STORE_APPLE_ISSUER_ID"
           export APP_STORE_CONNECT_KEY_IDENTIFIER="$APP_STORE_APPLE_KEY_ID"
-          export APP_STORE_CONNECT_PRIVATE_KEY_PATH="/tmp/apple_key.p8"
+          export APP_STORE_CONNECT_PRIVATE_KEY="$APP_STORE_APPLE_PRIVATE_KEY"
 
           keychain initialize
 
-          echo "Listing existing certificates for Team L8UHDP647X (debug)..."
-          app-store-connect list-certificates --team-id L8UHDP647X || echo "Could not list certificates"
+          echo "Listing available Bundle IDs (debug)..."
+          app-store-connect bundle-ids list || echo "Could not list bundle IDs"
 
           echo "Fetching/Creating signing files for $IOS_BUNDLE_ID..."
-          app-store-connect fetch-signing-files \
-            "$IOS_BUNDLE_ID" \
-            --type IOS_APP_STORE \
-            --create \
-            --team-id L8UHDP647X \
-            --issuer-id "$APP_STORE_APPLE_ISSUER_ID" \
-            --key-id "$APP_STORE_APPLE_KEY_ID" \
-            --private-key "$(cat /tmp/apple_key.p8)"
+          # Running with minimal flags to avoid version conflicts
+          app-store-connect fetch-signing-files "$IOS_BUNDLE_ID" --type IOS_APP_STORE --create
 
           keychain add-certificates
 
-          # Force use of profiles
-          xcode-project use-profiles \
-            --project "$XCODE_PROJECT" \
-            --bundle-id "$IOS_BUNDLE_ID" \
-            --type ios-app-store \
-            --team-id L8UHDP647X
+          # Simplified profile usage
+          xcode-project use-profiles --project "$XCODE_PROJECT"
 
       - name: Build iOS App
         script: |
