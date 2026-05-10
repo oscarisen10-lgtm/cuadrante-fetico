@@ -13,6 +13,9 @@ workflows:
       node: latest
       xcode: latest
       cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.cuadrantefetico.app
     scripts:
       - name: Install dependencies
         script: |
@@ -32,62 +35,12 @@ workflows:
           grep "PRODUCT_BUNDLE_IDENTIFIER" "$XCODE_PROJECT/project.pbxproj"
       - name: Increment build number
         script: |
-          export APP_STORE_CONNECT_ISSUER_ID="$APP_STORE_APPLE_ISSUER_ID"
-          export APP_STORE_CONNECT_KEY_IDENTIFIER="$APP_STORE_APPLE_KEY_ID"
-          export APP_STORE_CONNECT_PRIVATE_KEY="$APP_STORE_APPLE_PRIVATE_KEY"
           LATEST_BUILD=$(app-store-connect get-latest-testflight-build-number "$IOS_BUNDLE_ID" 2>/dev/null || echo 0)
           cd ios/App
           agvtool new-version -all $((LATEST_BUILD + 1))
-      - name: Set up code signing
+      - name: Set up code signing settings on Xcode project
         script: |
-          echo "Diagnostic: Using environment variables for Team L8UHDP647X..."
-          
-          # Set standard environment variables for the CLI
-          export APP_STORE_CONNECT_TEAM_ID="L8UHDP647X"
-          export APP_STORE_CONNECT_ISSUER_ID="$APP_STORE_APPLE_ISSUER_ID"
-          export APP_STORE_CONNECT_KEY_IDENTIFIER="$APP_STORE_APPLE_KEY_ID"
-          export APP_STORE_CONNECT_PRIVATE_KEY="$APP_STORE_APPLE_PRIVATE_KEY"
-
-          keychain initialize
-
-          echo "Listing available Bundle IDs (debug)..."
-          app-store-connect bundle-ids list || echo "Could not list bundle IDs"
-
-          echo "Fetching/Creating signing files for $IOS_BUNDLE_ID..."
-          # List and revoke existing API-generated certificates AND profiles
-          echo "Deep cleaning Apple Developer portal for $IOS_BUNDLE_ID..."
-          
-          # Delete Certificates - Try to list ALL certificates by being less specific
-          app-store-connect certificates list > certs.json || true
-          if [ -f certs.json ]; then
-            # Use jq to iterate over all certificates regardless of type
-            for cert_id in $(cat certs.json | jq -r '.[] | .id'); do
-              echo "Deleting certificate $cert_id..."
-              app-store-connect certificates delete "$cert_id" || true
-            done
-          fi
-
-          # Delete Provisioning Profiles for this Bundle ID
-          # We list all and filter manually with jq because --bundle-id flag is not supported in list
-          app-store-connect profiles list > profiles.json || true
-          if [ -f profiles.json ]; then
-            for profile_id in $(cat profiles.json | jq -r --arg BUNDLE "$IOS_BUNDLE_ID" '.[] | select(.attributes.name | contains($BUNDLE)) | .id'); do
-              echo "Deleting profile $profile_id..."
-              app-store-connect profiles delete "$profile_id" || true
-            done
-          fi
-
-          # Clear any local cached files that might interfere
-          rm -rf /Users/builder/Library/MobileDevice/Provisioning\ Profiles/*
-          
-          # Running with minimal flags to avoid version conflicts
-          app-store-connect fetch-signing-files "$IOS_BUNDLE_ID" --type IOS_APP_STORE --create
-
-          keychain add-certificates
-
-          # Simplified profile usage
           xcode-project use-profiles --project "$XCODE_PROJECT"
-
       - name: Build iOS App
         script: |
           xcode-project build-ipa \
