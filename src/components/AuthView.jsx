@@ -95,7 +95,7 @@ export default function AuthView() {
           <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center mx-auto mb-1 shadow-inner shrink-0">
             <span className="text-emerald-600 font-black text-xl italic leading-none">F</span>
           </div>
-          <h1 className="text-base font-black italic uppercase tracking-tight leading-none">Mi Calendario</h1>
+          <h1 className="text-base font-black italic uppercase tracking-tight leading-none">Mi Cuadrante</h1>
           <p className="text-emerald-100 text-[8px] uppercase font-bold tracking-widest mt-1">Registro Horario</p>
         </div>
 

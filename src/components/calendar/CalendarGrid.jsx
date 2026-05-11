@@ -22,9 +22,12 @@ export const DayCell = memo(function DayCell({ d, targetYear, targetMonth, shift
     label = isSmall ? "" : "Fes";
   }
   
+  // --- Determine the shift type and visual representation ---
   let colorBottom = "";
   let colorTop = "";
   let isQuality = false;
+  let isRest = false; // NEW: flag to render rest as a bar instead of filled bg
+  let restBarColor = ""; // NEW: the color for the rest bar
   
   if (s?.type === 'work') { 
     if (s.isHA) {
@@ -49,58 +52,85 @@ export const DayCell = memo(function DayCell({ d, targetYear, targetMonth, shift
       const isSat = dayOfWeek === 6;
       const partner = shiftsMap[getFormattedDate(new Date(targetYear, targetMonth, isSat ? d+1 : d-1))];
       if (partner?.type === 'rest') { 
+        // QUALITY WEEKEND — solid fill with the old "rest" yellow color, NO stripes
         isQuality = true;
-        colorBottom = colorTop = "#e6ccb2";
+        colorBottom = colorTop = "#fef08a";
         label = isSmall ? "" : "Cal"; 
       }
       else { 
-        colorBottom = colorTop = "#fef08a";
+        // Regular rest on weekend — render as bar
+        isRest = true;
+        restBarColor = "#fbbf24"; // amber bar matching calidad style
         label = isSmall ? "" : "Lib"; 
       }
     } else {
-      colorBottom = colorTop = "#fef08a";
+      // Rest on weekday — render as bar
+      isRest = true;
+      restBarColor = "#fbbf24"; // amber bar matching calidad style
       label = isSmall ? "" : "Lib";
     }
     style = "text-slate-800";
   }
 
-  if (colorBottom && !isDayHoliday && !isQuality) {
+  // --- Build inline styles for filled backgrounds (work, vacation, quality) ---
+  if (!isRest && colorBottom && !isDayHoliday && !isQuality) {
     inlineStyle = { background: `linear-gradient(to top, ${colorBottom} 0%, ${colorTop} 50%, transparent 100%)` };
-  } else if (colorBottom && (isDayHoliday || isQuality)) {
-    const stripeColor = isQuality && !isDayHoliday ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.5)";
+  } else if (!isRest && colorBottom && isDayHoliday) {
+    // Holiday + shift overlap: stripes
+    const stripeColor = "rgba(255,255,255,0.5)";
     const stripeSize = isSmall ? "2px" : "4px";
     inlineStyle = { 
       background: `repeating-linear-gradient(45deg, transparent, transparent ${stripeSize}, ${stripeColor} ${stripeSize}, ${stripeColor} ${parseInt(stripeSize)*2}px), linear-gradient(to top, ${colorBottom} 0%, ${colorTop} 50%, transparent 100%)`
     };
+  } else if (!isRest && colorBottom && isQuality) {
+    // Quality weekend: solid fill, NO stripes
+    inlineStyle = { background: `linear-gradient(to top, ${colorBottom} 0%, ${colorTop} 50%, transparent 100%)` };
   }
 
   const isSelected = selectedDates?.includes(dStr);
   const dayNumber = dayOfWeek === 0 ? <span className="text-rose-600">{d}</span> : d;
 
+  // --- SMALL (yearly view) ---
   if (isSmall) {
     return (
       <div 
-        className={`flex items-center justify-center rounded-[2px] ${style} ${isDayHoliday ? 'ring-1 ring-slate-300 ring-inset' : ''} h-3.5 w-full opacity-90 text-[6px]`} 
-        style={inlineStyle}
+        className={`flex flex-col items-center justify-center rounded-[2px] ${style} ${isDayHoliday ? 'ring-1 ring-slate-300 ring-inset' : ''} h-3.5 w-full opacity-90 text-[6px] relative`} 
+        style={isRest ? {} : inlineStyle}
         aria-label={`Día ${d}, ${s?.type || 'sin registro'}`}
       >
         {dayNumber}
+        {/* Rest bar for small view */}
+        {isRest && (
+          <div 
+            className="absolute bottom-0 left-[15%] right-[15%] rounded-full" 
+            style={{ height: '1.5px', backgroundColor: restBarColor }}
+          />
+        )}
       </div>
     );
   }
 
+  // --- NORMAL (monthly view) ---
   return (
     <button 
       onClick={() => onDayClick(dStr)} 
       onDoubleClick={() => onDayDoubleClick(dStr)}
       className={`flex flex-col items-center justify-center rounded-xl font-bold relative transition-all active:scale-95 ${isSelected ? 'ring-4 ring-emerald-400 bg-white scale-90 z-10 shadow-lg' : style} ${isDayHoliday && !isSelected ? 'ring-2 ring-slate-300 ring-inset' : ''} h-11 sm:h-12 w-full text-[11px]`}
-      style={isSelected ? {} : inlineStyle}
+      style={isSelected ? {} : (isRest ? {} : inlineStyle)}
       aria-label={`Día ${d}, ${label || 'sin registro'}. ${isSelected ? 'Seleccionado' : ''}`}
       aria-pressed={isSelected}
       role="gridcell"
     >
       {dayNumber}
-      <span className="text-[6px] uppercase leading-none mt-0.5 font-bold">{label}</span>
+      {/* Label for non-rest shifts */}
+      {!isRest && <span className="text-[6px] uppercase leading-none mt-0.5 font-bold">{label}</span>}
+      {/* Rest bar — a colored line below the number */}
+      {isRest && !isSelected && (
+        <div 
+          className="absolute bottom-1.5 left-[12%] right-[12%] rounded-full" 
+          style={{ height: '3.5px', backgroundColor: restBarColor }}
+        />
+      )}
     </button>
   );
 });

@@ -23,6 +23,7 @@
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.6.0",
     "react-router-dom": "^6.30.3",
+    "sharp": "^0.34.5",
     "tailwind-merge": "^2.5.5"
   },
   "devDependencies": {
