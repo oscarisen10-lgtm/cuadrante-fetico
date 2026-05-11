@@ -159,7 +159,7 @@ function AppContent({ user, authHook }) {
                 <CalendarView shifts={shifts} shiftsMap={shiftsMap} saveToCloud={saveToCloud} user={user} />
               } />
               <Route path="/licencias" element={
-                <LicenciasView />
+                <LicenciasView user={user} />
               } />
               <Route path="/settings" element={
                 <SettingsView user={user} settings={settings} saveToCloud={saveToCloud} stopAlarm={stopAlarm} pushToken={pushToken} pushTokenError={pushTokenError} permissionState={permissionState} requestTokenManually={requestTokenManually} />
@@ -218,7 +218,7 @@ export default function App() {
       const result = await NativeBiometric.isAvailable();
       if (result.isAvailable) {
         await NativeBiometric.verifyIdentity({
-          reason: "Desbloquea Mi Calendario",
+          reason: "Desbloquea Mi Cuadrante",
           title: "Inicio de Sesión Biométrico",
         });
         setIsUnlocked(true);

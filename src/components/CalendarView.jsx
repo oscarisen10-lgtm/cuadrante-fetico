@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { CONFIG } from '../constants/config';
-import { getMonthHolidays } from '../utils/holidayUtils';
 import { MonthGrid, WeekdayHeader } from './calendar/CalendarGrid';
 import { DateDetailPanel } from './calendar/DateDetailPanel';
 import { HoursEditor } from './calendar/HoursEditor';
@@ -120,30 +119,7 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
                     userStore={userStore}
                   />
                 </div>
-                {(() => {
-                  const holidays = getMonthHolidays(currentDate.getFullYear(), currentDate.getMonth(), userStore);
-                  if (holidays.length === 0) return null;
-                  
-                  return (
-                    <div className="px-4 pb-3 flex flex-col gap-1.5 mt-2">
-                      <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 italic">Festivos de este mes</div>
-                      {holidays.map(({ date, name, type }) => {
-                        const day = parseInt(date.split('-')[2]);
-                        return (
-                          <div key={date} className={`flex items-center gap-2 text-xs p-2.5 rounded-xl border-2 transition-all ${type === 'local' ? 'text-amber-700 bg-amber-50/50 border-amber-100 shadow-sm shadow-amber-900/5' : 'text-rose-700 bg-rose-50/50 border-rose-100 shadow-sm shadow-rose-900/5'}`}>
-                            <div className={`flex flex-col items-center justify-center min-w-[32px] h-[32px] rounded-lg ${type === 'local' ? 'bg-amber-100' : 'bg-rose-100'}`}>
-                              <span className="font-black text-[14px] leading-none">{day}</span>
-                              <span className="text-[7px] uppercase font-bold">{currentDate.toLocaleDateString('es-ES', { month: 'short' }).replace('.', '')}</span>
-                            </div>
-                            <span className="font-bold flex-1 leading-tight">
-                              {name} {type === 'local' ? <span className="text-[9px] bg-amber-200/50 px-1.5 py-0.5 rounded ml-1 uppercase tracking-tighter">Local</span> : <span className="text-[9px] bg-rose-200/50 px-1.5 py-0.5 rounded ml-1 uppercase tracking-tighter">Regional</span>}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
+
               </div>
             ) : (
               <div className="p-3 grid grid-cols-3 gap-x-2 gap-y-4 pb-4" role="grid" aria-label="Calendario anual">

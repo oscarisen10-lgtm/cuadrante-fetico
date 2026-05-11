@@ -1,10 +1,50 @@
-import React, { useState } from 'react';
-import { FileText, ChevronDown, ChevronUp, Info, Users, Clock, ClipboardCheck } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { FileText, ChevronDown, ChevronUp, Info, Users, Clock, ClipboardCheck, CalendarDays } from 'lucide-react';
 import { LICENCIAS_CATEGORIES, GRADOS_CONSANGUINIDAD } from '../constants/licenciasData';
+import { CONFIG } from '../constants/config';
+import { STORES, MUNICIPAL_HOLIDAYS } from '../constants/stores';
 
-export const LicenciasView = React.memo(function LicenciasView() {
+/**
+ * getAllYearHolidays — Collects all common + municipal holidays for the year.
+ */
+function getAllYearHolidays(userStoreName) {
+  const holidays = [];
+
+  // Common holidays (Madrid region)
+  Object.entries(CONFIG.FESTIVOS || {}).forEach(([dateStr, name]) => {
+    holidays.push({ date: dateStr, name, type: 'common' });
+  });
+
+  // Municipal holidays based on the user's store city
+  if (userStoreName) {
+    const store = STORES.find(s => s.name === userStoreName);
+    if (store && store.city && MUNICIPAL_HOLIDAYS[store.city]) {
+      Object.entries(MUNICIPAL_HOLIDAYS[store.city]).forEach(([dateStr, name]) => {
+        if (!holidays.find(h => h.date === dateStr)) {
+          holidays.push({ date: dateStr, name, type: 'local' });
+        }
+      });
+    }
+  }
+
+  // Sort by month-day
+  return holidays.sort((a, b) => {
+    const [am, ad] = a.date.split('-').map(Number);
+    const [bm, bd] = b.date.split('-').map(Number);
+    return am !== bm ? am - bm : ad - bd;
+  });
+}
+
+const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+export const LicenciasView = React.memo(function LicenciasView({ user }) {
   const [expandedLicencia, setExpandedLicencia] = useState(null);
   const [showGrados, setShowGrados] = useState(false);
+  const [showFestivos, setShowFestivos] = useState(false);
+
+  const userStore = user?.store;
+
+  const holidays = useMemo(() => getAllYearHolidays(userStore), [userStore]);
 
   const toggleLicencia = (id) => {
     setExpandedLicencia(expandedLicencia === id ? null : id);
@@ -24,6 +64,56 @@ export const LicenciasView = React.memo(function LicenciasView() {
           </p>
         </div>
       </div>
+
+      {/* Botón Festivos del Año */}
+      <button 
+        onClick={() => setShowFestivos(!showFestivos)}
+        className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${
+          showFestivos ? 'bg-rose-600 border-rose-600 text-white' : 'bg-white border-slate-100 text-slate-700 hover:bg-slate-50'
+        } shadow-sm group`}
+      >
+        <div className="flex items-center gap-3">
+          <CalendarDays size={18} className={showFestivos ? 'text-rose-200' : 'text-rose-500'} />
+          <span className="text-[11px] font-black uppercase italic tracking-widest">Calendario de Festivos {new Date().getFullYear()}</span>
+        </div>
+        {showFestivos ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+      </button>
+
+      {/* Lista de Festivos (Condicional) */}
+      {showFestivos && (
+        <div className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-xl animate-in slide-in-from-top-4 duration-300">
+          <div className="p-4 bg-slate-50 border-b border-slate-100">
+            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">
+              Festivos Nacionales, Regionales y Locales
+              {userStore && <span className="text-emerald-600 ml-1">· {userStore}</span>}
+            </p>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {holidays.map(({ date, name, type }) => {
+              const [m, d] = date.split('-').map(Number);
+              return (
+                <div key={date} className="p-3.5 flex items-center gap-3 hover:bg-slate-50/50 transition-colors">
+                  <div className={`flex flex-col items-center justify-center min-w-[40px] h-[40px] rounded-xl ${type === 'local' ? 'bg-amber-100' : 'bg-rose-100'}`}>
+                    <span className={`font-black text-[15px] leading-none ${type === 'local' ? 'text-amber-700' : 'text-rose-700'}`}>{d}</span>
+                    <span className={`text-[7px] uppercase font-bold ${type === 'local' ? 'text-amber-500' : 'text-rose-500'}`}>{MONTH_NAMES[m - 1]}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] text-slate-700 font-bold leading-tight">{name}</p>
+                  </div>
+                  <span className={`text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-tighter shrink-0 ${type === 'local' ? 'bg-amber-100 text-amber-600' : 'bg-rose-100 text-rose-600'}`}>
+                    {type === 'local' ? 'Local' : 'Regional'}
+                  </span>
+                </div>
+              );
+            })}
+            {holidays.length === 0 && (
+              <div className="p-6 text-center text-xs text-slate-400 font-bold">
+                No hay festivos configurados para tu zona.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Botón Grados de Consanguinidad */}
       <button 
@@ -144,4 +234,3 @@ export const LicenciasView = React.memo(function LicenciasView() {
     </div>
   );
 });
-
