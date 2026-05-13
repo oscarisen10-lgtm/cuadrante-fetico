@@ -20,6 +20,22 @@ workflows:
       - name: Install dependencies
         script: |
           npm install
+      - name: Create environment file
+        script: |
+          # .env is gitignored so we must recreate it for the build.
+          # Firebase config is public/client-side — safe to embed here.
+          printf '%s\n' \
+            "VITE_FIREBASE_API_KEY=AIzaSyCdsO08si23ZQDzgnRCqPEfUZp0TK-K5q8" \
+            "VITE_FIREBASE_AUTH_DOMAIN=mi-calendario-fe.firebaseapp.com" \
+            "VITE_FIREBASE_PROJECT_ID=mi-calendario-fe" \
+            "VITE_FIREBASE_STORAGE_BUCKET=mi-calendario-fe.firebasestorage.app" \
+            "VITE_FIREBASE_MESSAGING_SENDER_ID=484679385374" \
+            "VITE_FIREBASE_APP_ID=1:484679385374:web:fc54045bde29b3cb7f890f" \
+            "VITE_FIREBASE_MEASUREMENT_ID=G-M133C7LHEF" \
+            "VITE_ADMIN_EMAIL=oscargarcia@fetico.es" \
+            > .env
+          echo "--- .env created ---"
+          cat .env
       - name: Build web assets
         script: |
           npm run build
