@@ -1,6 +1,6 @@
 {
-  "name": "Mi Calendario",
-  "short_name": "Mi Calendario",
+  "name": "Mi Cuadrante",
+  "short_name": "Mi Cuadrante",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ecfdf5",
