@@ -39,10 +39,15 @@ export const useAuth = () => {
             setBreakStartTime(data.breakStartTime || null);
           }
           setLoading(false);
+        }, (error) => {
+          console.error("Error al cargar perfil de usuario:", error);
+          setLoading(false);
         });
 
         unsubShifts = subscribeToShifts(firebaseUser.uid, (shiftsArr) => {
           setShifts(shiftsArr);
+        }, (error) => {
+          console.error("Error al cargar turnos:", error);
         });
 
       } else {

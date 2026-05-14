@@ -15,20 +15,20 @@ export const subscribeToAuth = (callback) => {
   return onAuthStateChanged(auth, callback);
 };
 
-export const subscribeToUserDoc = (uid, callback) => {
-  return onSnapshot(doc(db, "users", uid), callback);
+export const subscribeToUserDoc = (uid, callback, onError) => {
+  return onSnapshot(doc(db, "users", uid), callback, onError);
 };
 
 /**
  * Subscribe to the shifts subcollection for a user.
  * Shifts are stored in users/{uid}/shifts/{shiftId} for scalability.
  */
-export const subscribeToShifts = (uid, callback) => {
+export const subscribeToShifts = (uid, callback, onError) => {
   const shiftsRef = collection(db, "users", uid, "shifts");
   return onSnapshot(shiftsRef, (snapshot) => {
     const arr = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
     callback(arr);
-  });
+  }, onError);
 };
 
 /**
