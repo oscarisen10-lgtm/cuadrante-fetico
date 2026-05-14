@@ -26,9 +26,22 @@ export const useAuth = () => {
     let unsubUserDoc = null;
     let unsubShifts = null;
 
+    // Safety timeout: if loading doesn't resolve in 10s, force it.
+    // This covers the edge case where onSnapshot never fires on first
+    // install under restrictive networks (e.g. Apple Review IPv6-only).
+    const safetyTimeout = setTimeout(() => {
+      setLoading((prev) => {
+        if (prev) {
+          console.warn('Safety timeout: forcing loading=false after 10s');
+        }
+        return false;
+      });
+    }, 10000);
+
     const unsubAuth = subscribeToAuth((firebaseUser) => {
       if (firebaseUser) {
         unsubUserDoc = subscribeToUserDoc(firebaseUser.uid, (docSnap) => {
+          clearTimeout(safetyTimeout);
           if (docSnap.exists()) {
             const data = docSnap.data();
             setUser({ ...data.profile, uid: firebaseUser.uid });
@@ -40,6 +53,7 @@ export const useAuth = () => {
           }
           setLoading(false);
         }, (error) => {
+          clearTimeout(safetyTimeout);
           console.error("Error al cargar perfil de usuario:", error);
           setLoading(false);
         });
@@ -51,6 +65,7 @@ export const useAuth = () => {
         });
 
       } else {
+        clearTimeout(safetyTimeout);
         if (unsubUserDoc) { unsubUserDoc(); unsubUserDoc = null; }
         if (unsubShifts) { unsubShifts(); unsubShifts = null; }
         setUser(null);
@@ -60,6 +75,7 @@ export const useAuth = () => {
     });
 
     return () => {
+      clearTimeout(safetyTimeout);
       unsubAuth();
       if (unsubUserDoc) unsubUserDoc();
       if (unsubShifts) unsubShifts();
