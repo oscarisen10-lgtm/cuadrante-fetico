@@ -17,7 +17,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache()
+  localCache: persistentLocalCache(),
+  experimentalForceLongPolling: true
 });
 
 // Firebase Messaging only works in browsers with Service Worker support.

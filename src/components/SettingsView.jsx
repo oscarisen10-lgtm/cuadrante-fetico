@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Settings, Building2, Bell, RefreshCw, Smartphone, Download, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown } from 'lucide-react';
+import { User, Settings, Building2, Bell, RefreshCw, Download, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown } from 'lucide-react';
 import { COMPANY_RULES, ADMIN_EMAIL } from '../constants/config';
 import { STORES } from '../constants/stores';
 import { deleteUserAccount } from '../services/firebaseService';
@@ -81,7 +81,6 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                </div>
              </div>
 
-             {currentCompany === "Supercor" && (
                 <div className="flex flex-col space-y-1 mt-1">
                   <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1 flex items-center gap-1">
                     <Store size={10} className="text-emerald-500"/> Centro / Tienda
@@ -102,7 +101,6 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                     </div>
                   </div>
                 </div>
-             )}
           </div>
 
           <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/5">
