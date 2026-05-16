@@ -115,7 +115,7 @@ export const migrateShiftsToSubcollection = async (uid, shiftsArray) => {
 };
 
 export const loginUser = async (email, password) => {
-  return await signInWithEmailAndPassword(auth, email, password);
+  return await withTimeout(signInWithEmailAndPassword(auth, email, password));
 };
 
 export const loginAsGuest = async () => {
