@@ -55,7 +55,8 @@ export default function AuthView() {
         await registerUser(emailInput, pass, newUserProfile);
       }
     } catch (error) {
-      setRecoveryError("Credenciales incorrectas o cuenta no existe.");
+      const isTimeout = error.message && error.message.includes("Timeout");
+      setRecoveryError(isTimeout ? error.message : "Credenciales incorrectas o cuenta no existe.");
       setTimeout(() => setRecoveryError(""), 3000);
     }
     setIsLoading(false);

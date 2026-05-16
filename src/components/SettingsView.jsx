@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { User, Settings, Building2, Bell, RefreshCw, Download, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { User, Settings, Building2, Bell, RefreshCw, Download, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, Gamepad2 } from 'lucide-react';
 import { COMPANY_RULES, ADMIN_EMAIL } from '../constants/config';
 import { STORES } from '../constants/stores';
 import { deleteUserAccount } from '../services/firebaseService';
@@ -9,6 +10,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
   const isAdmin = user?.email === ADMIN_EMAIL.toLowerCase();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const navigate = useNavigate();
 
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
@@ -167,32 +169,42 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
              </button>
           </div>
 
-          {/* Panel de diagnostico de Notificaciones Push - Solo Admin */}
+          {/* Panel de diagnostico de Notificaciones Push y Minijuego - Solo Admin */}
           {isAdmin && (
-          <div className="bg-black/30 rounded-2xl p-4 border border-white/10 mt-2">
-             <div className="flex items-center gap-2 mb-3">
-                <Bell size={14} className="text-emerald-400" />
-                <span className="text-[10px] font-black text-white uppercase italic">Estado del Push</span>
-             </div>
-             <div className="space-y-2">
-                <div className="flex justify-between items-center bg-white/5 p-2.5 rounded-xl">
-                   <span className="text-[9px] text-white/50 uppercase font-bold">Permiso:</span>
-                   <span className="text-[9px] text-emerald-400 font-black uppercase">{permissionState}</span>
-                </div>
-                <div className="flex flex-col bg-white/5 p-2.5 rounded-xl gap-1">
-                   <span className="text-[9px] text-white/50 uppercase font-bold">Token FCM:</span>
-                   <span className="text-[7px] font-mono break-all leading-tight" style={{ color: tokenColor }}>
-                      {tokenStatus}
-                   </span>
-                </div>
+            <>
+              <div className="bg-black/30 rounded-2xl p-4 border border-white/10 mt-2">
+                 <div className="flex items-center gap-2 mb-3">
+                    <Bell size={14} className="text-emerald-400" />
+                    <span className="text-[10px] font-black text-white uppercase italic">Estado del Push</span>
+                 </div>
+                 <div className="space-y-2">
+                    <div className="flex justify-between items-center bg-white/5 p-2.5 rounded-xl">
+                       <span className="text-[9px] text-white/50 uppercase font-bold">Permiso:</span>
+                       <span className="text-[9px] text-emerald-400 font-black uppercase">{permissionState}</span>
+                    </div>
+                    <div className="flex flex-col bg-white/5 p-2.5 rounded-xl gap-1">
+                       <span className="text-[9px] text-white/50 uppercase font-bold">Token FCM:</span>
+                       <span className="text-[7px] font-mono break-all leading-tight" style={{ color: tokenColor }}>
+                          {tokenStatus}
+                       </span>
+                    </div>
+                    <button 
+                      onClick={() => window.location.reload()} 
+                      className="w-full bg-emerald-600 text-white py-2 rounded-xl text-[9px] font-black uppercase flex items-center justify-center gap-2 mt-1"
+                    >
+                      <RefreshCw size={10} /> RECARGAR PARA ACTIVAR
+                    </button>
+                 </div>
+              </div>
+              <div className="bg-indigo-900/30 rounded-2xl p-4 border border-indigo-500/30 mt-2">
                 <button 
-                  onClick={() => window.location.reload()} 
-                  className="w-full bg-emerald-600 text-white py-2 rounded-xl text-[9px] font-black uppercase flex items-center justify-center gap-2 mt-1"
+                  onClick={() => navigate('/arena')} 
+                  className="w-full bg-indigo-600 text-white py-3 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2 hover:bg-indigo-500 active:scale-95 transition-all"
                 >
-                  <RefreshCw size={10} /> RECARGAR PARA ACTIVAR
+                  <Gamepad2 size={16} /> PROBAR MINIJUEGO (ADMIN)
                 </button>
-             </div>
-          </div>
+              </div>
+            </>
           )}
 
            {/* Zona peligrosa — Eliminar cuenta (Requisito Apple App Store) */}

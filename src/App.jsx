@@ -19,6 +19,7 @@ const TrackerView = lazy(() => import('./components/TrackerView').then(m => ({ d
 const CalendarView = lazy(() => import('./components/CalendarView').then(m => ({ default: m.CalendarView })));
 const LicenciasView = lazy(() => import('./components/LicenciasView').then(m => ({ default: m.LicenciasView })));
 const SettingsView = lazy(() => import('./components/SettingsView').then(m => ({ default: m.SettingsView })));
+const ArenaView = lazy(() => import('./components/ArenaView').then(m => ({ default: m.ArenaView })));
 
 /**
  * NavigationBar — Bottom tab bar with React Router integration.
@@ -163,6 +164,9 @@ function AppContent({ user, authHook }) {
               } />
               <Route path="/settings" element={
                 <SettingsView user={user} settings={settings} saveToCloud={saveToCloud} stopAlarm={stopAlarm} pushToken={pushToken} pushTokenError={pushTokenError} permissionState={permissionState} requestTokenManually={requestTokenManually} />
+              } />
+              <Route path="/arena" element={
+                <ArenaView user={user} />
               } />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>

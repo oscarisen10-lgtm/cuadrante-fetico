@@ -40,8 +40,20 @@ export const useAuth = () => {
 
     const unsubAuth = subscribeToAuth((firebaseUser) => {
       if (firebaseUser) {
+        let snapshotFired = false;
+        
+        const docTimeout = setTimeout(() => {
+          if (!snapshotFired) {
+            console.error("Firestore timeout: No se recibió perfil de usuario a tiempo.");
+            toast.error("Error de conexión con la base de datos. Reinicia la app.", { duration: 5000 });
+            setLoading(false);
+          }
+        }, 12000);
+
         unsubUserDoc = subscribeToUserDoc(firebaseUser.uid, (docSnap) => {
+          snapshotFired = true;
           clearTimeout(safetyTimeout);
+          clearTimeout(docTimeout);
           if (docSnap.exists()) {
             const data = docSnap.data();
             setUser({ ...data.profile, uid: firebaseUser.uid });
@@ -50,11 +62,25 @@ export const useAuth = () => {
             setWorkTimeAccumulated(data.workTimeAccumulated || 0);
             setIsBreakActive(data.isBreakActive || false);
             setBreakStartTime(data.breakStartTime || null);
+          } else {
+             console.warn("User doc doesn't exist for authenticated user, creating default local profile");
+             setUser({
+               uid: firebaseUser.uid,
+               email: firebaseUser.email || "usuario@ejemplo.com",
+               fullName: "Usuario Recuperado",
+               company: "Supercor",
+               store: "Centro sin definir",
+               rank: "Personal base"
+             });
+             setSettings({ notifications: true, breakDuration: 15 });
           }
           setLoading(false);
         }, (error) => {
+          snapshotFired = true;
           clearTimeout(safetyTimeout);
+          clearTimeout(docTimeout);
           console.error("Error al cargar perfil de usuario:", error);
+          toast.error("Error al cargar datos: " + error.message);
           setLoading(false);
         });
 
