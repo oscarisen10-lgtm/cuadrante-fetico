@@ -9,6 +9,19 @@ import {
   query, getDocs, writeBatch, orderBy
 } from "firebase/firestore";
 
+/**
+ * Wraps a promise with a timeout. If the promise doesn't resolve/reject
+ * within `ms` milliseconds, it rejects with a timeout error.
+ * Prevents the app from hanging indefinitely if Firestore operations stall.
+ */
+const withTimeout = (promise, ms = 15000) =>
+  Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout: la operación tardó demasiado. Comprueba tu conexión.')), ms)
+    ),
+  ]);
+
 // --- AUTH & USER ---
 
 export const subscribeToAuth = (callback) => {
@@ -106,12 +119,12 @@ export const loginUser = async (email, password) => {
 };
 
 export const loginAsGuest = async () => {
-  const res = await signInAnonymously(auth);
+  const res = await withTimeout(signInAnonymously(auth));
   
   // Create default profile for guest if it doesn't exist
-  const userDoc = await getDoc(doc(db, "users", res.user.uid));
+  const userDoc = await withTimeout(getDoc(doc(db, "users", res.user.uid)));
   if (!userDoc.exists()) {
-    await setDoc(doc(db, "users", res.user.uid), {
+    await withTimeout(setDoc(doc(db, "users", res.user.uid), {
       profile: {
         email: "invitado@demo.fetico.es",
         fullName: "Tester Invitado",
@@ -126,16 +139,16 @@ export const loginAsGuest = async () => {
       workTimeAccumulated: 0,
       isBreakActive: false,
       breakStartTime: null
-    });
+    }));
   }
   
   return res;
 };
 
 export const registerUser = async (email, password, profileData) => {
-  const res = await createUserWithEmailAndPassword(auth, email, password);
+  const res = await withTimeout(createUserWithEmailAndPassword(auth, email, password));
   
-  await setDoc(doc(db, "users", res.user.uid), {
+  await withTimeout(setDoc(doc(db, "users", res.user.uid), {
     profile: profileData,
     settings: { notifications: true, breakDuration: 15 },
     shifts: [],
@@ -143,7 +156,7 @@ export const registerUser = async (email, password, profileData) => {
     workTimeAccumulated: 0,
     isBreakActive: false,
     breakStartTime: null
-  });
+  }));
   
   return res;
 };
