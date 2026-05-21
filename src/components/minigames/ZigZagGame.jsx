@@ -1,18 +1,23 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Clock, Trophy, AlertTriangle, Play, Gamepad2, Info } from 'lucide-react';
 
-export function CatchTheShiftGame({ onFinish, onCancel, practiceAttempts, playAttempts, onConsumeAttempt }) {
+export function ZigZagGame({ onFinish, onCancel, practiceAttempts, playAttempts, onConsumeAttempt }) {
   const [gameState, setGameState] = useState('intro'); // 'intro', 'countdown', 'playing', 'gameover', 'finished'
   const [gameMode, setGameMode] = useState(null); // 'prueba' or 'jugar'
   const [countdown, setCountdown] = useState(3);
   const [timeLeft, setTimeLeft] = useState(60);
   const [score, setScore] = useState(0);
   const [items, setItems] = useState([]);
-  const [floatingTexts, setFloatingTexts] = useState([]);
   const itemsIdCounter = useRef(0);
   const gameAreaRef = useRef(null);
   const scoreRef = useRef(0);
   const timeLeftRef = useRef(60);
+  const reqRef = useRef();
+  
+  // Continuous movement state
+  const playerXRef = useRef(window.innerWidth / 2);
+  const playerYRef = useRef(160);
+  const playerDirRef = useRef(1); // 1 = right, -1 = left
 
   useEffect(() => {
     scoreRef.current = score;
@@ -21,6 +26,18 @@ export function CatchTheShiftGame({ onFinish, onCancel, practiceAttempts, playAt
   useEffect(() => {
     timeLeftRef.current = timeLeft;
   }, [timeLeft]);
+
+  // Center player initially
+  useEffect(() => {
+    playerXRef.current = window.innerWidth / 2;
+    playerYRef.current = 160;
+    playerDirRef.current = 1;
+    const playerEl = document.getElementById('player-ball');
+    if (playerEl) {
+      playerEl.style.left = `${playerXRef.current}px`;
+      playerEl.style.bottom = `${playerYRef.current}px`;
+    }
+  }, [gameState]);
 
   // Countdown logic
   useEffect(() => {
@@ -34,17 +51,85 @@ export function CatchTheShiftGame({ onFinish, onCancel, practiceAttempts, playAt
     }
   }, [gameState, countdown]);
 
-  // Main game timer
+  // Main game timer and scoring
   useEffect(() => {
     if (gameState === 'playing') {
       if (timeLeft > 0) {
-        const timer = setTimeout(() => setTimeLeft(t => t - 1), 1000);
+        const timer = setTimeout(() => {
+          setTimeLeft(t => t - 1);
+          setScore(s => s + 15); // 15 points per second
+        }, 1000);
         return () => clearTimeout(timer);
       } else {
         setGameState('finished');
       }
     }
   }, [gameState, timeLeft]);
+
+  // Collision Detection and Movement Loop
+  const checkCollisions = useCallback(() => {
+    if (gameState !== 'playing') return;
+    const player = document.getElementById('player-ball');
+    if (player) {
+      // Update player position continuously
+      let progress = 1 - (timeLeftRef.current / 60);
+      let currentSpeed = 5 + (progress * 12); // Speed increases from 5 to 17
+      let newX = playerXRef.current + playerDirRef.current * currentSpeed;
+      
+      // Vertical movement
+      let climbSpeed = 0.02 + (progress * 0.06); // Slowly climb faster as time goes on
+      let newY = playerYRef.current + climbSpeed;
+      
+      // Bounce off walls
+      if (newX < 30) {
+        newX = 30;
+        playerDirRef.current = 1;
+      } else if (newX > window.innerWidth - 30) {
+        newX = window.innerWidth - 30;
+        playerDirRef.current = -1;
+      }
+      
+      playerXRef.current = newX;
+      playerYRef.current = newY;
+      player.style.left = `${newX}px`;
+      player.style.bottom = `${newY}px`;
+
+      const pRect = player.getBoundingClientRect();
+      const obstacles = document.querySelectorAll('.game-obstacle');
+      
+      // Inflate bounding box slightly for forgiveness
+      const margin = 8;
+      const pLeft = pRect.left + margin;
+      const pRight = pRect.right - margin;
+      const pTop = pRect.top + margin;
+      const pBottom = pRect.bottom - margin;
+
+      for (let i = 0; i < obstacles.length; i++) {
+        const oRect = obstacles[i].getBoundingClientRect();
+        if (
+          pLeft < oRect.right - margin &&
+          pRight > oRect.left + margin &&
+          pTop < oRect.bottom - margin &&
+          pBottom > oRect.top + margin
+        ) {
+          // Collision!
+          if (gameAreaRef.current) {
+            gameAreaRef.current.classList.add('shake-animation');
+          }
+          setGameState('gameover');
+          return; // Stop checking
+        }
+      }
+    }
+    reqRef.current = requestAnimationFrame(checkCollisions);
+  }, [gameState]);
+
+  useEffect(() => {
+    if (gameState === 'playing') {
+      reqRef.current = requestAnimationFrame(checkCollisions);
+    }
+    return () => cancelAnimationFrame(reqRef.current);
+  }, [gameState, checkCollisions]);
 
   // Item generation logic with progressive speed
   useEffect(() => {
@@ -53,35 +138,33 @@ export function CatchTheShiftGame({ onFinish, onCancel, practiceAttempts, playAt
     let timeoutId;
 
     const generateItem = () => {
-      // Calculate speed multiplier based on remaining time (1.0 at 60s -> 0.3 at 0s)
       const progress = 1 - (timeLeftRef.current / 60);
-      const speedMult = 1 - (progress * 0.7); // Ends up at 0.3 speed multiplier
 
-      const types = ['target', 'target', 'target', 'decoy', 'alarm'];
-      const type = types[Math.floor(Math.random() * types.length)];
+      const emojis = ['🍎', '🥦', '🍗', '🥛', '📦', '🛒', '🛍️', '🍅', '🧴', '🥚'];
+      const icon = emojis[Math.floor(Math.random() * emojis.length)];
       const id = itemsIdCounter.current++;
-      const left = Math.floor(Math.random() * 80) + 10;
+      
+      // Random starting X
+      const maxLeft = window.innerWidth - 60;
+      const left = Math.floor(Math.random() * maxLeft) + 10;
       
       // Fall duration gets faster
-      const baseDuration = Math.random() * 1.5 + 2.0;
-      const duration = baseDuration * speedMult;
+      // Start at ~3.5 seconds, but scales down faster to ~1.0 seconds
+      const baseDuration = Math.random() * 0.5 + 3.0; 
+      const duration = Math.max(1.0, baseDuration - (progress * 2.5));
 
-      setItems(prev => [...prev, { id, type, left, duration }]);
+      setItems(prev => [...prev, { id, icon, left, duration }]);
 
       // Auto remove item after it falls off screen
       setTimeout(() => {
-        setItems(prev => {
-          if (prev.some(i => i.id === id) && type === 'target') {
-            setScore(s => Math.max(0, s - 5));
-          }
-          return prev.filter(item => item.id !== id);
-        });
+        setItems(prev => prev.filter(item => item.id !== id));
       }, duration * 1000 + 500);
 
-      // Next spawn gets faster too
-      const nextSpawnBase = Math.random() * 300 + 400; // 400-700ms
-      const nextSpawn = nextSpawnBase * Math.max(speedMult, 0.4); // clamp min spawn rate
-      timeoutId = setTimeout(generateItem, nextSpawn);
+      // Spawn rate gets faster
+      // Start at 1.2s, drop quickly down to ~200ms
+      const spawnBase = 1200 - (progress * 1000); 
+      const nextSpawn = spawnBase + (Math.random() * 200 - 100); 
+      timeoutId = setTimeout(generateItem, Math.max(nextSpawn, 200));
     };
 
     generateItem();
@@ -89,35 +172,10 @@ export function CatchTheShiftGame({ onFinish, onCancel, practiceAttempts, playAt
     return () => clearTimeout(timeoutId);
   }, [gameState]);
 
-  const handlePointerDown = (item, e) => {
+  const handlePointerDown = (e) => {
     if (gameState !== 'playing') return;
-    e.stopPropagation();
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = rect.left + rect.width / 2;
-    const y = rect.top;
-
-    if (item.type === 'target') {
-      setScore(s => s + 10);
-      showFloatingText('+10', x, y, 'text-emerald-400');
-    } else if (item.type === 'alarm' || item.type === 'decoy') {
-      // Instant death
-      showFloatingText('¡ELIMINADO!', x, y, 'text-rose-500');
-      if (gameAreaRef.current) {
-        gameAreaRef.current.classList.add('shake-animation');
-      }
-      setGameState('gameover');
-    }
-
-    setItems(prev => prev.filter(i => i.id !== item.id));
-  };
-
-  const showFloatingText = (text, x, y, colorClass) => {
-    const id = Date.now() + Math.random();
-    setFloatingTexts(prev => [...prev, { id, text, x, y, colorClass }]);
-    setTimeout(() => {
-      setFloatingTexts(prev => prev.filter(ft => ft.id !== id));
-    }, 1000);
+    // Tap to switch direction
+    playerDirRef.current *= -1;
   };
 
   const handleStartMode = (mode) => {
@@ -139,10 +197,10 @@ export function CatchTheShiftGame({ onFinish, onCancel, practiceAttempts, playAt
         </button>
 
         <div className="mt-12 flex flex-col items-center pb-24">
-          <div className="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center shadow-[0_0_30px_rgba(79,70,229,0.5)] mb-6 border-b-4 border-indigo-800 rotate-12">
+          <div className="w-20 h-20 bg-emerald-600 rounded-3xl flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.5)] mb-6 border-b-4 border-emerald-800 rotate-12">
             <Gamepad2 size={40} className="text-white" />
           </div>
-          <h2 className="text-3xl font-black uppercase tracking-tighter mb-2 text-center">Atrapa el Turno</h2>
+          <h2 className="text-3xl font-black uppercase tracking-tighter mb-2 text-center">Cinta ZigZag</h2>
           
           <div className="bg-white/5 rounded-3xl p-6 border border-white/10 w-full max-w-sm mt-4 mb-8">
             <h3 className="text-sm font-black text-amber-400 uppercase tracking-widest flex items-center gap-2 mb-4">
@@ -150,21 +208,19 @@ export function CatchTheShiftGame({ onFinish, onCancel, practiceAttempts, playAt
             </h3>
             <ul className="space-y-4 text-sm font-medium text-slate-300">
               <li className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-emerald-500 rounded flex-shrink-0 flex items-center justify-center font-black text-white text-xs mt-0.5 border-b-2 border-emerald-700">M</div>
-                <p>Toca los <strong className="text-white">turnos verdes</strong> para ganar +10 puntos. ¡Si se escapan pierdes 5 puntos!</p>
+                <div className="w-6 h-6 bg-emerald-500 rounded-full flex-shrink-0 flex items-center justify-center font-black text-white text-xs mt-0.5 border-b-2 border-emerald-700"></div>
+                <p>Tú eres la <strong className="text-white">bola verde</strong>. No para de moverse, <strong className="text-amber-400">toca la pantalla</strong> para cambiar su dirección y evitar los choques.</p>
               </li>
               <li className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-blue-500 rounded flex-shrink-0 flex items-center justify-center font-black text-white text-xs mt-0.5 border-b-2 border-blue-700">T</div>
-                <p>No toques los <strong className="text-white">turnos azules</strong> o estarás <span className="text-rose-400 font-bold">eliminado al instante</span>.</p>
+                <div className="w-6 h-6 bg-slate-200 rounded flex-shrink-0 flex items-center justify-center text-xs mt-0.5">🛒</div>
+                <p><strong className="text-white">Esquiva</strong> los productos que caen por la cinta de caja. Si tocas uno, fin del juego.</p>
               </li>
               <li className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-rose-500 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5 border-b-2 border-rose-700">
-                  <AlertTriangle size={12} className="text-white" />
-                </div>
-                <p>Tampoco toques las <strong className="text-white">alarmas rojas</strong>. Te eliminarán.</p>
+                <div className="w-6 h-6 bg-amber-500 rounded flex-shrink-0 flex items-center justify-center font-black text-white text-xs mt-0.5 border-b-2 border-amber-700">+</div>
+                <p>Ganas <strong className="text-emerald-400">15 puntos</strong> por cada segundo que sobrevivas.</p>
               </li>
-              <li className="bg-indigo-900/40 p-3 rounded-xl border border-indigo-500/30">
-                <p className="text-xs text-indigo-200">El juego <strong className="text-white">se acelera</strong> con el tiempo. El que consiga más puntos se pondrá primero en el ranking.</p>
+              <li className="bg-emerald-900/40 p-3 rounded-xl border border-emerald-500/30">
+                <p className="text-xs text-emerald-200">La cinta <strong className="text-white">se acelera</strong> con el tiempo. ¿Aguantarás los 60 segundos completos?</p>
               </li>
             </ul>
           </div>
@@ -214,11 +270,11 @@ export function CatchTheShiftGame({ onFinish, onCancel, practiceAttempts, playAt
         )}
         
         <h2 className="text-4xl font-black uppercase tracking-tighter mb-2 text-center">
-          {isEliminated ? '¡ELIMINADO!' : '¡TIEMPO!'}
+          {isEliminated ? '¡CHOCASTE!' : '¡TIEMPO!'}
         </h2>
         
         {isEliminated && (
-          <p className="text-rose-400 font-bold mb-6 text-center max-w-xs">Has tocado un turno incorrecto. Debes ser preciso.</p>
+          <p className="text-rose-400 font-bold mb-6 text-center max-w-xs">Un producto te ha aplastado. Más suerte la próxima.</p>
         )}
 
         <div className="bg-white/10 rounded-3xl p-8 text-center backdrop-blur-md border border-white/20 shadow-2xl mb-8 w-full max-w-sm">
@@ -243,8 +299,12 @@ export function CatchTheShiftGame({ onFinish, onCancel, practiceAttempts, playAt
 
   // --- PLAYING / COUNTDOWN SCREEN ---
   return (
-    <div className="fixed inset-0 z-[100] bg-slate-900 overflow-hidden font-sans touch-none" ref={gameAreaRef}>
-      <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-20">
+    <div 
+      className="fixed inset-0 z-[100] bg-slate-900 overflow-hidden font-sans touch-none" 
+      ref={gameAreaRef}
+      onPointerDown={handlePointerDown}
+    >
+      <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-20 pointer-events-none">
         <div className="bg-black/50 backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-2 border border-white/10 shadow-lg">
           <Clock size={16} className={timeLeft <= 10 ? 'text-rose-400 animate-pulse' : 'text-emerald-400'} />
           <span className={`font-black text-lg tracking-widest ${timeLeft <= 10 ? 'text-rose-400' : 'text-white'}`}>
@@ -265,48 +325,38 @@ export function CatchTheShiftGame({ onFinish, onCancel, practiceAttempts, playAt
         <X size={20} className="text-white/60" />
       </button>
 
-      <div className="absolute inset-0 pt-20 pb-10">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#2b087a]/40 to-[#1a0b2e] pointer-events-none"></div>
+      {/* Cinta Background */}
+      <div className="absolute inset-0 pt-20 pb-10 pointer-events-none flex justify-center">
+        <div className="absolute inset-0 bg-[#cbd5e1]"></div>
+        {/* Líneas de la cinta móvil */}
+        <div className="w-[85%] h-full bg-[#94a3b8] relative overflow-hidden border-x-8 border-[#64748b]">
+           <div className="absolute inset-0 z-0 opacity-20 conveyor-lines"></div>
+        </div>
         
         {items.map(item => (
           <div
             key={item.id}
-            onPointerDown={(e) => handlePointerDown(item, e)}
-            className="absolute cursor-pointer touch-none active:scale-90"
+            className="absolute z-10 game-obstacle"
             style={{
-              left: `${item.left}%`,
+              left: `${item.left}px`,
               top: '0px',
               animation: `game-fall ${item.duration}s linear forwards`,
-              transform: 'translateX(-50%)',
             }}
           >
-            {item.type === 'target' && (
-              <div className="w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center font-black text-white text-3xl shadow-[0_0_20px_rgba(16,185,129,0.5)] border-b-4 border-emerald-700">
-                M
-              </div>
-            )}
-            {item.type === 'decoy' && (
-              <div className="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center font-black text-white text-3xl shadow-[0_0_20px_rgba(59,130,246,0.5)] border-b-4 border-blue-700">
-                T
-              </div>
-            )}
-            {item.type === 'alarm' && (
-              <div className="w-16 h-16 bg-rose-500 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(244,63,94,0.5)] border-b-4 border-rose-700 animate-pulse">
-                <AlertTriangle size={32} className="text-white" />
-              </div>
-            )}
+            <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center text-4xl shadow-lg border-b-4 border-slate-300">
+              {item.icon}
+            </div>
           </div>
         ))}
 
-        {floatingTexts.map(ft => (
-          <div
-            key={ft.id}
-            className={`fixed font-black text-3xl z-50 pointer-events-none game-float-up drop-shadow-md ${ft.colorClass}`}
-            style={{ left: ft.x - 20, top: ft.y - 20 }}
-          >
-            {ft.text}
-          </div>
-        ))}
+        {/* The Player Ball */}
+        <div 
+          id="player-ball"
+          className="absolute w-12 h-12 bg-emerald-500 rounded-full border-[3px] border-emerald-200 shadow-[0_0_20px_rgba(16,185,129,0.8)] flex items-center justify-center transform -translate-x-1/2 z-20"
+          style={{ left: playerXRef.current, bottom: playerYRef.current }}
+        >
+          <div className="w-4 h-4 bg-emerald-300 rounded-full animate-pulse"></div>
+        </div>
       </div>
 
       {gameState === 'countdown' && (
@@ -320,15 +370,16 @@ export function CatchTheShiftGame({ onFinish, onCancel, practiceAttempts, playAt
 
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes game-fall {
-          0% { transform: translateX(-50%) translateY(-80px) rotate(0deg); }
-          100% { transform: translateX(-50%) translateY(110vh) rotate(180deg); }
+          0% { transform: translateY(-80px); }
+          100% { transform: translateY(110vh); }
         }
-        @keyframes game-float-up {
-          0% { transform: translateY(0) scale(1); opacity: 1; }
-          100% { transform: translateY(-50px) scale(1.5); opacity: 0; }
+        .conveyor-lines {
+          background-image: repeating-linear-gradient(0deg, transparent, transparent 40px, #475569 40px, #475569 80px);
+          animation: belt-move 1s linear infinite;
         }
-        .game-float-up {
-          animation: game-float-up 0.8s ease-out forwards;
+        @keyframes belt-move {
+          0% { transform: translateY(-80px); }
+          100% { transform: translateY(0); }
         }
         .shake-animation {
           animation: game-shake 0.5s cubic-bezier(.36,.07,.19,.97) both;

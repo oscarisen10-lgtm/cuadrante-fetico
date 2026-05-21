@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Timer, Trophy, Crown, Gem } from 'lucide-react';
+import { Timer, Trophy, Crown, Gem, StopCircle } from 'lucide-react';
 import { CatchTheShiftGame } from './minigames/CatchTheShiftGame';
+import { ZigZagGame } from './minigames/ZigZagGame';
+import { FrenoEnSecoGame } from './minigames/FrenoEnSecoGame';
+import { TorreDeBloquesGame } from './minigames/TorreDeBloquesGame';
 
 export function ArenaView({ user }) {
   const [activeTab, setActiveTab] = useState('puntuacion'); // 'clasificacion' or 'puntuacion'
@@ -42,6 +45,47 @@ export function ArenaView({ user }) {
     return () => clearInterval(interval);
   }, []);
 
+  // Determine current day for game rotation
+  const currentDay = new Date().getDate();
+  const getActiveGame = (day) => {
+    // Permite forzar el juego activo usando parámetros en la URL (ej. ?game=torre o ?game=4)
+    const hash = window.location.hash || '';
+    const searchPart = hash.includes('?') ? hash.split('?')[1] : window.location.search;
+    const urlParams = new URLSearchParams(searchPart);
+    const forceId = urlParams.get('game');
+
+    if (forceId === 'torre' || forceId === '4') {
+      return { component: TorreDeBloquesGame, title: "JUGAR: TORRE DE BLOQUES", bgClass: 'bg-gradient-to-br from-[#701a75] to-[#4a044e] border-[#701a75]', gameId: 'torre' };
+    }
+    if (forceId === 'catch' || forceId === '1') {
+      return { component: CatchTheShiftGame, title: "JUGAR: ATRAPA EL TURNO", bgClass: 'bg-[#3a0ca3] border-[#2b087a]', gameId: 'catch' };
+    }
+    if (forceId === 'zigzag' || forceId === '2') {
+      return { component: ZigZagGame, title: "JUGAR: CINTA ZIG ZAG", bgClass: 'bg-[#94a3b8] border-[#64748b]', gameId: 'zigzag' };
+    }
+    if (forceId === 'freno' || forceId === '3') {
+      return { component: FrenoEnSecoGame, title: "JUGAR: FRENO EN SECO", bgClass: 'bg-[#ef4444] border-[#b91c1c]', gameId: 'freno' };
+    }
+
+    switch (day) {
+      case 1: return { component: CatchTheShiftGame, title: "JUGAR: ATRAPA EL TURNO", bgClass: 'bg-[#3a0ca3] border-[#2b087a]', gameId: 'catch' };
+      case 2: return { component: ZigZagGame, title: "JUGAR: CINTA ZIG ZAG", bgClass: 'bg-[#94a3b8] border-[#64748b]', gameId: 'zigzag' };
+      case 3: return { component: FrenoEnSecoGame, title: "JUGAR: FRENO EN SECO", bgClass: 'bg-[#ef4444] border-[#b91c1c]', gameId: 'freno' };
+      case 4: return { component: TorreDeBloquesGame, title: "JUGAR: TORRE DE BLOQUES", bgClass: 'bg-gradient-to-br from-[#701a75] to-[#4a044e] border-[#701a75]', gameId: 'torre' };
+      default: 
+        // Mientras no tengamos los 31 juegos, rotamos los que tenemos para que siempre haya algo a lo que jugar
+        const games = [
+          { component: CatchTheShiftGame, title: "JUGAR: ATRAPA EL TURNO", bgClass: 'bg-[#3a0ca3] border-[#2b087a]', gameId: 'catch' },
+          { component: ZigZagGame, title: "JUGAR: CINTA ZIG ZAG", bgClass: 'bg-[#94a3b8] border-[#64748b]', gameId: 'zigzag' },
+          { component: FrenoEnSecoGame, title: "JUGAR: FRENO EN SECO", bgClass: 'bg-[#ef4444] border-[#b91c1c]', gameId: 'freno' },
+          { component: TorreDeBloquesGame, title: "JUGAR: TORRE DE BLOQUES", bgClass: 'bg-gradient-to-br from-[#701a75] to-[#4a044e] border-[#701a75]', gameId: 'torre' }
+        ];
+        return games[(day - 1) % 4];
+    }
+  };
+  const activeGame = getActiveGame(currentDay);
+  const ActiveGameComponent = activeGame.component;
+
   const mockPlayers = [
     { id: 1, name: 'oscarisen', score: 103, rank: 1, avatar: 'https://i.pravatar.cc/150?u=oscar', color: 'bg-[#e56b6f]', attempts: 1, gems: 60 },
     { id: 2, name: 'Yaiza', score: 99, rank: 2, avatar: 'https://i.pravatar.cc/150?u=yaiza', color: 'bg-[#1b998b]', attempts: 1, gems: 48 },
@@ -74,37 +118,96 @@ export function ArenaView({ user }) {
       {/* Tarjeta del Minijuego */}
       <div 
         onClick={() => setIsPlaying(true)}
-        className="mx-6 bg-[#3a0ca3] rounded-[2rem] relative shadow-2xl mb-8 flex flex-col items-center justify-center min-h-[220px] border border-[#2b087a] overflow-hidden cursor-pointer active:scale-95 transition-transform"
+        className={`mx-6 ${activeGame.bgClass} rounded-[2rem] relative shadow-2xl mb-12 flex flex-col items-center justify-center min-h-[220px] border cursor-pointer active:scale-95 transition-transform`}
       >
-        <div className="absolute top-4 left-4 bg-black/40 text-white text-[11px] font-black px-3 py-1.5 rounded-full">{gameNumberStr}</div>
-        <div className="absolute top-4 right-4 bg-black/40 text-white text-[11px] font-black px-3 py-1.5 rounded-full flex items-center gap-1.5">
+        <div className="absolute inset-0 rounded-[2rem] overflow-hidden pointer-events-none z-0">
+          {activeGame.gameId === 'zigzag' && (
+             <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 40px, #475569 40px, #475569 80px)', animation: 'belt-move 1.5s linear infinite' }}></div>
+          )}
+          {activeGame.gameId === 'freno' && (
+             <div className="absolute inset-0 flex items-center justify-center opacity-20">
+                <Timer size={180} className="text-black animate-pulse" />
+             </div>
+          )}
+          {activeGame.gameId === 'torre' && (
+             <div className="absolute inset-0 bg-gradient-to-t from-fuchsia-950/40 via-transparent to-transparent flex items-end justify-center opacity-30">
+               <div className="w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-fuchsia-500/20 via-transparent to-transparent"></div>
+             </div>
+          )}
+        </div>
+        <div className="absolute top-4 left-4 bg-black/40 text-white text-[11px] font-black px-3 py-1.5 rounded-full z-10">{gameNumberStr}</div>
+        <div className="absolute top-4 right-4 bg-black/40 text-white text-[11px] font-black px-3 py-1.5 rounded-full flex items-center gap-1.5 z-10">
           <Timer size={14} className="animate-pulse" /> {timeLeftStr}
         </div>
         
-        {/* Gráfico decorativo 3D (Simulado) */}
-        <div className="relative mt-4 pointer-events-none">
-          <div className="w-32 h-16 bg-gradient-to-r from-yellow-500 to-yellow-400 rounded-lg transform rotate-12 -skew-x-12 shadow-xl flex items-center justify-center border-b-8 border-yellow-600">
-             <div className="absolute -top-12 w-16 h-16 bg-gradient-to-br from-slate-700 to-black rounded-full shadow-2xl"></div>
-             {/* Destellos simulados */}
-             <div className="absolute -top-4 -left-4 w-4 h-8 bg-orange-400 rotate-45 rounded-full"></div>
-             <div className="absolute -top-8 right-0 w-3 h-10 bg-yellow-300 -rotate-12 rounded-full"></div>
-          </div>
+        {/* Gráfico decorativo: Botones cayendo o Productos según el juego */}
+        <div className="relative mt-6 w-full h-28 pointer-events-none flex items-center justify-center">
+          {activeGame.gameId === 'zigzag' && (
+            <>
+              <div className="absolute top-0 left-1/4 w-10 h-10 bg-white border-b-4 border-slate-300 rounded-xl shadow-lg rotate-12 flex items-center justify-center animate-bounce">
+                <span className="text-xl">🍎</span>
+              </div>
+              <div className="absolute top-6 right-1/4 w-8 h-8 bg-white border-b-4 border-slate-300 rounded-xl shadow-lg -rotate-12 flex items-center justify-center" style={{ animation: 'bounce 2.2s infinite 0.5s' }}>
+                <span className="text-lg">🛒</span>
+              </div>
+              <div className="absolute bottom-2 left-1/3 w-8 h-8 bg-white border-b-4 border-slate-300 rounded-xl shadow-lg rotate-45 flex items-center justify-center" style={{ animation: 'bounce 1.8s infinite 1s' }}>
+                 <span className="text-lg">📦</span>
+              </div>
+              <div className="absolute bottom-6 right-1/3 w-12 h-12 bg-emerald-500 border-b-4 border-emerald-700 rounded-full shadow-lg -rotate-6 flex items-center justify-center" style={{ animation: 'bounce 2.5s infinite 0.2s' }}>
+                <div className="w-4 h-4 bg-emerald-300 rounded-full animate-pulse"></div>
+              </div>
+            </>
+          )}
+          {activeGame.gameId === 'catch' && (
+            <>
+              <div className="absolute top-0 left-1/4 w-10 h-10 bg-emerald-400 border-b-4 border-emerald-600 rounded-xl shadow-lg rotate-12 flex items-center justify-center animate-bounce">
+                <span className="text-emerald-900 font-black text-xs">+1</span>
+              </div>
+              <div className="absolute top-6 right-1/4 w-8 h-8 bg-rose-400 border-b-4 border-rose-600 rounded-full shadow-lg -rotate-12 flex items-center justify-center" style={{ animation: 'bounce 2.2s infinite 0.5s' }}>
+                <span className="text-rose-900 font-black text-xs">✗</span>
+              </div>
+              <div className="absolute bottom-2 left-1/3 w-8 h-8 bg-blue-400 border-b-4 border-blue-600 rounded-full shadow-lg rotate-45 flex items-center justify-center" style={{ animation: 'bounce 1.8s infinite 1s' }}>
+                 <span className="text-blue-900 font-black text-xs">✗</span>
+              </div>
+              <div className="absolute bottom-6 right-1/3 w-12 h-12 bg-emerald-400 border-b-4 border-emerald-600 rounded-xl shadow-lg -rotate-6 flex items-center justify-center" style={{ animation: 'bounce 2.5s infinite 0.2s' }}>
+                <span className="text-emerald-900 font-black text-sm">+1</span>
+              </div>
+            </>
+          )}
+          {activeGame.gameId === 'freno' && (
+             <>
+               <div className="text-white text-6xl font-black drop-shadow-xl z-10">
+                 10:00
+               </div>
+               <div className="absolute -bottom-4 bg-black/30 rounded-full px-6 py-2 border border-white/20">
+                 <span className="text-white/80 font-bold tracking-widest text-sm flex items-center gap-1"><StopCircle size={14}/> FRENAR</span>
+               </div>
+             </>
+          )}
+          {activeGame.gameId === 'torre' && (
+             <div className="flex flex-col items-center justify-center h-full pt-4">
+               <div className="w-20 h-5 bg-pink-500 rounded border-b-2 border-pink-700 shadow-md"></div>
+               <div className="w-16 h-5 bg-purple-500 rounded border-b-2 border-purple-700 shadow-md border-x border-white/10 mt-0.5 animate-pulse"></div>
+               <div className="w-16 h-5 bg-violet-500 rounded border-b-2 border-violet-700 shadow-md border-x border-white/10 mt-0.5" style={{ animation: 'bounce 2.5s infinite 0.2s' }}></div>
+               <div className="w-12 h-5 bg-indigo-500 rounded border-b-2 border-indigo-700 shadow-md border-x border-white/10 mt-0.5 animate-bounce"></div>
+             </div>
+          )}
         </div>
 
-        <div className="absolute -bottom-5 bg-white text-indigo-900 font-black uppercase tracking-widest px-6 py-2.5 rounded-full border-4 border-[#f6f5ef] shadow-md text-sm hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
-          JUGAR: ATRAPA EL TURNO
+        <div className="absolute -bottom-5 bg-white text-black font-black uppercase tracking-tighter px-8 py-3 rounded-full text-sm shadow-[0_4px_15px_rgba(0,0,0,0.1)] border-2 border-slate-100 z-20">
+          {activeGame.title}
         </div>
       </div>
 
       {/* Podio (Top 3) */}
-      <div className="flex justify-center items-end gap-5 mb-10 px-4">
+      <div className="flex justify-center items-end gap-5 mb-10 px-4 mt-6">
         {/* Top 2 */}
         <div className="flex flex-col items-center">
           <img src={mockPlayers[1].avatar} className="w-12 h-12 rounded-full border-2 border-[#f6f5ef] shadow-lg z-10" alt="Rank 2" />
           <span className="text-[10px] font-bold text-slate-500 mt-2">{mockPlayers[1].score} Puntos</span>
         </div>
         {/* Top 1 */}
-        <div className="flex flex-col items-center relative -mt-6">
+        <div className="flex flex-col items-center relative">
           <Crown size={28} className="text-amber-400 fill-amber-400 absolute -top-7 z-20 drop-shadow-md" />
           <img src={mockPlayers[0].avatar} className="w-16 h-16 rounded-full border-4 border-[#f6f5ef] shadow-lg z-10" alt="Rank 1" />
           <div className="bg-white px-3 py-1 rounded-full shadow-md mt-2 z-20 border border-slate-100">
@@ -198,7 +301,7 @@ export function ArenaView({ user }) {
       </p>
 
       {isPlaying && (
-        <CatchTheShiftGame 
+        <ActiveGameComponent 
           practiceAttempts={practiceAttempts}
           playAttempts={playAttempts}
           onConsumeAttempt={(mode) => {
@@ -214,6 +317,12 @@ export function ArenaView({ user }) {
         />
       )}
 
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes belt-move {
+          0% { transform: translateY(-80px); }
+          100% { transform: translateY(0); }
+        }
+      `}} />
     </div>
   );
 }

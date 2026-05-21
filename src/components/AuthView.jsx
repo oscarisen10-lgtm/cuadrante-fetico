@@ -120,7 +120,7 @@ export default function AuthView() {
                     </select>
                   </div>
                 </div>
-                {formCompany === "Supercor" ? (
+                {["Supercor", "S. Romero", "S. Express"].includes(formCompany) ? (
                   <div className="space-y-0.5">
                     <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight flex items-center gap-1">
                       <Store size={10}/> Centro / Tienda
