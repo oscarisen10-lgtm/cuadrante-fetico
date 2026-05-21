@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { User, Lock, Mail, Store, ShieldCheck, KeyRound, X, UserCheck, ChevronDown } from 'lucide-react';
-import { loginUser, registerUser, resetPassword, loginAsGuest } from '../services/firebaseService';
+import { User, Lock, Mail, Store, ShieldCheck, KeyRound, X, ChevronDown } from 'lucide-react';
+import { loginUser, registerUser, resetPassword } from '../services/firebaseService';
 import { InputGroup } from './UIComponents';
 import { COMPANY_RULES } from '../constants/config';
 import { STORES } from '../constants/stores';
@@ -57,18 +57,6 @@ export default function AuthView() {
     } catch (error) {
       const isTimeout = error.message && error.message.includes("Timeout");
       setRecoveryError(isTimeout ? error.message : "Credenciales incorrectas o cuenta no existe.");
-      setTimeout(() => setRecoveryError(""), 3000);
-    }
-    setIsLoading(false);
-  };
-
-  const handleGuestLogin = async () => {
-    setIsLoading(true);
-    setRecoveryError("");
-    try {
-      await loginAsGuest();
-    } catch (error) {
-      setRecoveryError("Error al entrar como invitado. Inténtalo de nuevo.");
       setTimeout(() => setRecoveryError(""), 3000);
     }
     setIsLoading(false);
@@ -161,16 +149,6 @@ export default function AuthView() {
           <div className="mt-4 space-y-2 shrink-0">
             <button type="submit" disabled={isLoading} className={`w-full bg-emerald-600 text-white font-black py-2.5 rounded-xl uppercase text-sm active:scale-95 transition-all shadow-md ${isLoading ? 'opacity-70' : ''}`}>
               {isLoading ? 'CONECTANDO...' : (isRegistering && ALLOW_REGISTRATION ? 'CREAR CUENTA' : 'ENTRAR')}
-            </button>
-
-            {/* Botón de Modo Invitado — Visible siempre para testers */}
-            <button 
-              type="button" 
-              onClick={handleGuestLogin} 
-              disabled={isLoading}
-              className={`w-full bg-slate-800 text-white font-black py-3 rounded-xl uppercase text-xs active:scale-95 transition-all shadow-md flex items-center justify-center gap-2 ${isLoading ? 'opacity-70' : ''}`}
-            >
-              <UserCheck size={16} /> ENTRAR COMO INVITADO
             </button>
 
             {ALLOW_REGISTRATION && (

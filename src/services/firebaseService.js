@@ -2,7 +2,7 @@ import { auth, db } from '../firebase';
 import { 
   onAuthStateChanged, signOut, signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, sendPasswordResetEmail,
-  signInAnonymously, deleteUser
+  deleteUser
 } from "firebase/auth";
 import { 
   doc, setDoc, getDoc, onSnapshot, collection, addDoc, deleteDoc,
@@ -116,33 +116,6 @@ export const migrateShiftsToSubcollection = async (uid, shiftsArray) => {
 
 export const loginUser = async (email, password) => {
   return await withTimeout(signInWithEmailAndPassword(auth, email, password));
-};
-
-export const loginAsGuest = async () => {
-  const res = await withTimeout(signInAnonymously(auth));
-  
-  // Create default profile for guest if it doesn't exist
-  const userDoc = await withTimeout(getDoc(doc(db, "users", res.user.uid)));
-  if (!userDoc.exists()) {
-    await withTimeout(setDoc(doc(db, "users", res.user.uid), {
-      profile: {
-        email: "invitado@demo.fetico.es",
-        fullName: "Tester Invitado",
-        company: "Supercor",
-        store: "Demo",
-        rank: "Personal de fresco",
-        isGuest: true
-      },
-      settings: { notifications: true, breakDuration: 15 },
-      shifts: [],
-      activeShift: null,
-      workTimeAccumulated: 0,
-      isBreakActive: false,
-      breakStartTime: null
-    }));
-  }
-  
-  return res;
 };
 
 export const registerUser = async (email, password, profileData) => {
