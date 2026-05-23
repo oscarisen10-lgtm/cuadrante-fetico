@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { getFormattedDate } from '../utils/dateUtils';
 import { CONFIG, COMPANY_RULES } from '../constants/config';
+import { isHoliday } from '../utils/holidayUtils';
 
 export const useShifts = (shifts, user) => {
   const shiftsMap = useMemo(() => {
@@ -25,8 +26,8 @@ export const useShifts = (shifts, user) => {
         if (s.isHA) contadorHA += 1;
         const [y, m, d] = s.date.split('-');
         const dayOfWeek = new Date(y, m - 1, d).getDay();
-        const isHoliday = Boolean(CONFIG.FESTIVOS?.[`${m}-${d}`]);
-        if (dayOfWeek === 0 || isHoliday) domingosCount += 1;
+        const isHolidayDay = isHoliday(s.date, user?.store);
+        if (dayOfWeek === 0 || isHolidayDay) domingosCount += 1;
       }
       if (s.type === 'vacation') vacacionesCount += 1;
       if (s.type === 'rest') diasLibres += 1;

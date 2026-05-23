@@ -157,10 +157,10 @@ function AppContent({ user, authHook }) {
                 />
               } />
               <Route path="/calendar" element={
-                <CalendarView shifts={shifts} shiftsMap={shiftsMap} saveToCloud={saveToCloud} user={user} />
+                <CalendarView shifts={shifts} shiftsMap={shiftsMap} saveToCloud={saveToCloud} user={user} permissionState={permissionState} requestTokenManually={requestTokenManually} />
               } />
               <Route path="/licencias" element={
-                <LicenciasView user={user} />
+                <LicenciasView user={user} permissionState={permissionState} requestTokenManually={requestTokenManually} />
               } />
               <Route path="/settings" element={
                 <SettingsView user={user} settings={settings} saveToCloud={saveToCloud} stopAlarm={stopAlarm} pushToken={pushToken} pushTokenError={pushTokenError} permissionState={permissionState} requestTokenManually={requestTokenManually} />
@@ -205,19 +205,7 @@ export default function App() {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [biometricError, setBiometricError] = useState(false);
 
-  useEffect(() => {
-    if (!loading) {
-      SplashScreen.hide().catch(() => {});
-      
-      if (user && settings?.useBiometric && !isUnlocked) {
-        verifyBiometric();
-      } else if (user && !settings?.useBiometric) {
-        setIsUnlocked(true);
-      }
-    }
-  }, [loading, user, settings?.useBiometric]);
-
-  const verifyBiometric = async () => {
+  const verifyBiometric = useCallback(async () => {
     try {
       const result = await NativeBiometric.isAvailable();
       if (result.isAvailable) {
@@ -234,7 +222,19 @@ export default function App() {
       console.error(e);
       setBiometricError(true);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!loading) {
+      SplashScreen.hide().catch(() => {});
+      
+      if (user && settings?.useBiometric && !isUnlocked) {
+        verifyBiometric();
+      } else if (user && !settings?.useBiometric) {
+        setIsUnlocked(true);
+      }
+    }
+  }, [loading, user, settings?.useBiometric, isUnlocked, verifyBiometric]);
 
   if (loading) return (
     <div className="h-screen flex items-center justify-center text-emerald-600 font-bold italic text-sm" role="status" aria-label="Cargando aplicación">

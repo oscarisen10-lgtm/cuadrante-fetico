@@ -2,7 +2,7 @@ import { auth, db } from '../firebase';
 import { 
   onAuthStateChanged, signOut, signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, sendPasswordResetEmail,
-  deleteUser
+  deleteUser, GoogleAuthProvider, OAuthProvider, signInWithPopup
 } from "firebase/auth";
 import { 
   doc, setDoc, getDoc, onSnapshot, collection, addDoc, deleteDoc,
@@ -132,6 +132,44 @@ export const registerUser = async (email, password, profileData) => {
   }));
   
   return res;
+};
+
+export const signInWithGoogle = async () => {
+  const provider = new GoogleAuthProvider();
+  const res = await withTimeout(signInWithPopup(auth, provider));
+  await checkAndCreateSocialUserDoc(res.user);
+  return res;
+};
+
+export const signInWithApple = async () => {
+  const provider = new OAuthProvider('apple.com');
+  provider.addScope('email');
+  provider.addScope('name');
+  const res = await withTimeout(signInWithPopup(auth, provider));
+  await checkAndCreateSocialUserDoc(res.user);
+  return res;
+};
+
+const checkAndCreateSocialUserDoc = async (user) => {
+  const userDocRef = doc(db, "users", user.uid);
+  const userDoc = await getDoc(userDocRef);
+  if (!userDoc.exists()) {
+    await setDoc(userDocRef, {
+      profile: {
+        email: user.email,
+        fullName: user.displayName || 'Compañero/a',
+        company: "Supercor",
+        store: "Centro sin definir",
+        rank: "Personal base"
+      },
+      settings: { notifications: true, breakDuration: 15 },
+      shifts: [],
+      activeShift: null,
+      workTimeAccumulated: 0,
+      isBreakActive: false,
+      breakStartTime: null
+    });
+  }
 };
 
 export const resetPassword = async (email) => {

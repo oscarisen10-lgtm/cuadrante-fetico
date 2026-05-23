@@ -9,7 +9,7 @@ import { HoursEditor } from './calendar/HoursEditor';
  * CalendarView — Main calendar component (refactored).
  * Sub-components: MonthGrid, DayCell, WeekdayHeader, DateDetailPanel, HoursEditor
  */
-export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap, saveToCloud, user }) {
+export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap, saveToCloud, user, permissionState, requestTokenManually }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('mensual');
   const [selectedDates, setSelectedDates] = useState([]); 
@@ -82,9 +82,12 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
     else setCurrentDate(new Date(currentDate.getFullYear() + 1, currentDate.getMonth(), 1));
   }, [viewMode, currentDate]);
 
+  const hasNotifications = permissionState === 'granted';
+
   return (
-    <>
-      <div className="flex flex-col animate-in fade-in duration-300 gap-4 pb-20">
+    <div className="relative min-h-[500px] flex flex-col">
+      {/* Contenido de la agenda, borroso si no hay permisos */}
+      <div className={`flex flex-col animate-in fade-in duration-300 gap-4 pb-20 flex-1 ${!hasNotifications ? 'blur-md select-none pointer-events-none' : ''}`}>
         <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden flex flex-col pb-2" role="region" aria-label="Calendario">
           
           {/* View mode switcher */}
@@ -156,6 +159,35 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
         />
       </div>
 
+      {!hasNotifications && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-white/20 backdrop-blur-[1px]">
+          <div className="bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-[2.5rem] p-6 text-center max-w-xs w-full shadow-2xl animate-in zoom-in-95">
+            <div className="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-emerald-500/20">
+              <span className="text-2xl animate-bounce">🔔</span>
+            </div>
+            <h3 className="text-white font-black uppercase text-xs italic tracking-widest mb-2">Agenda Bloqueada</h3>
+            <p className="text-slate-300 text-[9px] uppercase font-bold tracking-wider leading-relaxed mb-6">
+              {permissionState === 'denied' 
+                ? "Has bloqueado las notificaciones. Para ver tu agenda y organizar tus turnos, actívalas en los Ajustes del móvil."
+                : "Para poder acceder a tu Agenda y organizar tu calendario oficial, debes permitir las notificaciones push."
+              }
+            </p>
+            {permissionState === 'denied' ? (
+              <div className="text-[8px] text-emerald-400 font-black uppercase bg-emerald-500/10 border border-emerald-500/20 rounded-xl py-3 px-2 leading-normal">
+                Ajustes ➜ Aplicaciones ➜ Mi Cuadrante ➜ Notificaciones ➜ Permitir
+              </div>
+            ) : (
+              <button 
+                onClick={requestTokenManually}
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest active:scale-95 transition-all shadow-lg shadow-emerald-500/20"
+              >
+                Activar Notificaciones
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <HoursEditor 
         editingDay={editingDay}
         editHH={editHH}
@@ -167,6 +199,6 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
         setEditingDay={setEditingDay}
         saveEditedHours={saveEditedHours}
       />
-    </>
+    </div>
   );
 });

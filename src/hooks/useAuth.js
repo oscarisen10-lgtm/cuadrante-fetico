@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   subscribeToAuth, 
   subscribeToUserDoc, 
@@ -8,7 +8,7 @@ import {
   deleteShiftsBatch,
   logoutUser 
 } from '../services/firebaseService';
-import toast from 'react-hot-toast';
+import { toast } from '../components/Toast';
 
 export const useAuth = () => {
   const [user, setUser] = useState(null);
@@ -21,6 +21,13 @@ export const useAuth = () => {
   const [workTimeAccumulated, setWorkTimeAccumulated] = useState(0);
   const [isBreakActive, setIsBreakActive] = useState(false);
   const [breakStartTime, setBreakStartTime] = useState(null);
+
+  // Keep a mutable ref of shifts to prevent saveToCloud from recreating on every change of shifts.
+  // This avoids render cascades in child components receiving saveToCloud as prop.
+  const shiftsRef = useRef(shifts);
+  useEffect(() => {
+    shiftsRef.current = shifts;
+  }, [shifts]);
 
   useEffect(() => {
     let unsubUserDoc = null;
@@ -45,7 +52,7 @@ export const useAuth = () => {
         const docTimeout = setTimeout(() => {
           if (!snapshotFired) {
             console.error("Firestore timeout: No se recibió perfil de usuario a tiempo.");
-            toast.error("Error de conexión con la base de datos. Reinicia la app.", { duration: 5000 });
+            toast("Error de conexión con la base de datos. Reinicia la app.", "error");
             setLoading(false);
           }
         }, 12000);
@@ -80,7 +87,7 @@ export const useAuth = () => {
           clearTimeout(safetyTimeout);
           clearTimeout(docTimeout);
           console.error("Error al cargar perfil de usuario:", error);
-          toast.error("Error al cargar datos: " + error.message);
+          toast("Error al cargar datos: " + error.message, "error");
           setLoading(false);
         });
 
@@ -115,7 +122,7 @@ export const useAuth = () => {
       // Handle shifts separately — they go to subcollection now
       if (updates.shifts !== undefined) {
         const newShifts = updates.shifts;
-        const oldDates = new Set(shifts.map(s => s.date));
+        const oldDates = new Set(shiftsRef.current.map(s => s.date));
         const newDates = new Set(newShifts.map(s => s.date));
         
         // Find shifts to delete (in old but not in new)
@@ -123,7 +130,7 @@ export const useAuth = () => {
         
         // Find shifts to save (in new but different or not in old)
         const shiftsToSave = newShifts.filter(s => {
-          const existing = shifts.find(e => e.date === s.date);
+          const existing = shiftsRef.current.find(e => e.date === s.date);
           if (!existing) return true;
           return JSON.stringify(existing) !== JSON.stringify(s);
         });
@@ -149,10 +156,10 @@ export const useAuth = () => {
       }
     } catch (error) {
       console.error("Error guardando datos:", error);
-      toast("Error de red o permisos al guardar: " + error.message, { icon: "❌" });
+      toast("Error de red o permisos al guardar: " + error.message, "error");
       throw error; // Re-throw so caller knows it failed
     }
-  }, [user?.uid, shifts]);
+  }, [user?.uid]);
 
   return {
     user, loading, logoutUser, saveToCloud,

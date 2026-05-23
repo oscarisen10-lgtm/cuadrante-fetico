@@ -5,6 +5,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
+import { FCM } from '@capacitor-community/fcm';
 import { toast } from '../components/Toast';
 
 export const useNotifications = (user) => {
@@ -68,9 +69,20 @@ export const useNotifications = (user) => {
          if (res.receive === 'granted') PushNotifications.register();
       });
 
-      PushNotifications.addListener('registration', (token) => {
-        setToken(token.value);
-        updateDoc(doc(db, 'users', user.uid), { 'profile.fcmToken': token.value }).catch(()=>{});
+      PushNotifications.addListener('registration', async (token) => {
+        try {
+          let fcmToken = token.value;
+          if (Capacitor.getPlatform() === 'ios') {
+            const res = await FCM.getToken();
+            fcmToken = res.token;
+          }
+          setToken(fcmToken);
+          updateDoc(doc(db, 'users', user.uid), { 'profile.fcmToken': fcmToken }).catch(()=>{});
+        } catch (err) {
+          console.error("Error al obtener token FCM en iOS:", err);
+          setToken(token.value);
+          updateDoc(doc(db, 'users', user.uid), { 'profile.fcmToken': token.value }).catch(()=>{});
+        }
       });
 
       PushNotifications.addListener('pushNotificationReceived', (notification) => {

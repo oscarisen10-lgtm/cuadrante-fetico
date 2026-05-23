@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { initializeAuth, browserLocalPersistence } from "firebase/auth";
+import { getAuth } from "firebase/auth";
 import { initializeFirestore, memoryLocalCache } from "firebase/firestore";
 import { getMessaging } from "firebase/messaging";
 import { getStorage } from "firebase/storage";
@@ -15,9 +15,7 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const auth = initializeAuth(app, {
-  persistence: browserLocalPersistence
-});
+export const auth = getAuth(app);
 // memoryLocalCache avoids IndexedDB issues on iOS WKWebView (Capacitor).
 // persistentLocalCache can silently hang on first launch in WKWebView,
 // causing setDoc operations to never resolve.

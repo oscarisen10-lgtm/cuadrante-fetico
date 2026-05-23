@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Settings, Building2, Bell, RefreshCw, Download, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, Gamepad2 } from 'lucide-react';
+import { User, Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, Gamepad2 } from 'lucide-react';
 import { COMPANY_RULES, ADMIN_EMAIL } from '../constants/config';
 import { STORES } from '../constants/stores';
 import { deleteUserAccount } from '../services/firebaseService';
@@ -162,11 +162,8 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
           <div className="flex justify-between items-center bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20">
              <div className="flex flex-col">
                 <span className="text-xs font-bold text-emerald-400 uppercase leading-none">Versión App</span>
-                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Buscar actualización</span>
+                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Versión 3.0.7 (Estable)</span>
              </div>
-             <button onClick={() => window.location.reload()} className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase active:scale-95 shadow-md flex items-center gap-1.5">
-                <Download size={14}/> Actualizar
-             </button>
           </div>
 
           {/* Panel de diagnostico de Notificaciones Push y Minijuego - Solo Admin */}

@@ -116,6 +116,29 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
 
   return (
     <div className="flex flex-col animate-in fade-in duration-300 gap-5 pb-20">
+      {permissionState !== 'granted' && (
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-3xl p-4 flex items-center gap-3.5 shadow-sm animate-in slide-in-from-top-3">
+          <div className="w-9 h-9 bg-amber-500/15 rounded-2xl flex items-center justify-center shrink-0 border border-amber-500/25">
+             <span className="text-xl animate-bounce">🔔</span>
+          </div>
+          <div className="flex-1 min-w-0">
+             <h4 className="text-[10px] font-black text-amber-800 uppercase tracking-widest leading-none mb-1">¡Activar Notificaciones!</h4>
+             <p className="text-[8px] text-slate-500 font-bold uppercase tracking-tight leading-tight">
+               {permissionState === 'denied'
+                 ? "Permiso bloqueado. Actívalo en los Ajustes del móvil."
+                 : "Es obligatorio para recibir avisos de tus turnos y cuadrantes."
+               }
+             </p>
+          </div>
+          {permissionState === 'denied' ? (
+             <span className="text-[8px] bg-slate-100 text-slate-500 px-2.5 py-1.5 rounded-lg font-black uppercase shrink-0">Bloqueado</span>
+          ) : (
+             <button onClick={requestTokenManually} className="bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-2 rounded-xl text-[9px] font-black uppercase shadow-md shadow-amber-500/10 active:scale-95 transition-all shrink-0">
+                Permitir
+             </button>
+          )}
+        </div>
+      )}
       <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 flex flex-col min-h-[300px]">
         <h2 className="text-sm font-black text-slate-800 uppercase italic tracking-widest border-b border-slate-100 pb-3 flex items-center gap-2 mb-6 shrink-0">
           <PieChart size={18} className="text-emerald-600" /> Resumen Calendario
