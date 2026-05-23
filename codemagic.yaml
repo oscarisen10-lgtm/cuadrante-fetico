@@ -60,6 +60,9 @@ workflows:
       - name: Set up code signing settings on Xcode project
         script: |
           xcode-project use-profiles --project "$XCODE_PROJECT"
+      - name: Resolve Swift Package Manager dependencies
+        script: |
+          xcodebuild -resolvePackageDependencies -project "$XCODE_PROJECT" -scheme "$XCODE_SCHEME"
       - name: Build iOS App
         script: |
           xcode-project build-ipa \
