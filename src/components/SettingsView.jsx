@@ -64,7 +64,8 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                     onChange={(e) => {
                       const newCompany = e.target.value;
                       const firstRank = Object.keys(COMPANY_RULES[newCompany] || {})[0];
-                      saveToCloud({ profile: { ...user, company: newCompany, rank: firstRank } });
+                      const newStore = newCompany === "ECI" ? "En construcción" : "";
+                      saveToCloud({ profile: { ...user, company: newCompany, rank: firstRank, store: newStore } });
                     }}
                     className="w-full bg-white/10 border-none p-2 rounded-xl text-xs outline-none text-white appearance-none"
                   >
@@ -93,10 +94,16 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                       onChange={(e) => saveToCloud({ profile: { ...user, store: e.target.value } })}
                       className="w-full bg-white/10 border-none p-2.5 pr-8 rounded-xl text-xs outline-none text-white appearance-none font-medium"
                     >
-                      <option value="" disabled className="text-slate-800">Selecciona tu tienda...</option>
-                      {sortedStores.map(s => (
-                        <option key={s.name} value={s.name} className="text-slate-800">{s.name}</option>
-                      ))}
+                      {currentCompany === "ECI" ? (
+                        <option value="En construcción" className="text-slate-800">En construcción</option>
+                      ) : (
+                        <>
+                          <option value="" disabled className="text-slate-800">Selecciona tu tienda...</option>
+                          {sortedStores.map(s => (
+                            <option key={s.name} value={s.name} className="text-slate-800">{s.name}</option>
+                          ))}
+                        </>
+                      )}
                     </select>
                     <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-white/30">
                       <ChevronDown size={14} />
