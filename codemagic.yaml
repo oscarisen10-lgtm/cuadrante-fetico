@@ -42,13 +42,17 @@ workflows:
       - name: Sync Capacitor iOS
         script: |
           npx cap sync ios
-      - name: Fix iOS bundle identifier
+      - name: Fix iOS bundle identifier and set production entitlements
         script: |
           # iOS does NOT allow underscores in bundle IDs
           # Override the bundle ID that Capacitor sets from capacitor.config.json
           sed -i '' "s/PRODUCT_BUNDLE_IDENTIFIER = .*/PRODUCT_BUNDLE_IDENTIFIER = $IOS_BUNDLE_ID;/" "$XCODE_PROJECT/project.pbxproj"
           echo "Bundle ID set to: $IOS_BUNDLE_ID"
           grep "PRODUCT_BUNDLE_IDENTIFIER" "$XCODE_PROJECT/project.pbxproj"
+          # Set aps-environment to production for App Store build
+          sed -i '' "s/<string>development<\/string>/<string>production<\/string>/" ios/App/App/App.entitlements
+          echo "Entitlements updated to production:"
+          cat ios/App/App/App.entitlements
       - name: Increment build number
         script: |
           # Use Codemagic's auto-incrementing BUILD_NUMBER + offset
