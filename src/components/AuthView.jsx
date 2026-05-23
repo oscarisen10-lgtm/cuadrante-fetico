@@ -134,23 +134,34 @@ export default function AuthView() {
                     </select>
                   </div>
                 </div>
-                {["Supercor", "S. Romero", "S. Express"].includes(formCompany) ? (
+                {["Supercor", "S. Romero", "S. Express", "ECI"].includes(formCompany) ? (
                   <div className="space-y-0.5">
                     <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight flex items-center gap-1">
                       <Store size={10}/> Centro / Tienda
                     </label>
                     <div className="relative">
-                      <select 
-                        name="store" 
-                        className="w-full bg-slate-50 border-none p-1.5 pr-8 rounded-lg text-sm outline-none ring-1 ring-slate-200 appearance-none font-medium"
-                        defaultValue=""
-                        required
-                      >
-                        <option value="" disabled>Selecciona tu tienda...</option>
-                        {sortedStores.map(s => (
-                          <option key={s.name} value={s.name}>{s.name}</option>
-                        ))}
-                      </select>
+                      {formCompany === "ECI" ? (
+                        <select 
+                          name="store" 
+                          className="w-full bg-slate-50 border-none p-1.5 pr-8 rounded-lg text-sm outline-none ring-1 ring-slate-200 appearance-none font-medium"
+                          defaultValue="En construcción"
+                          required
+                        >
+                          <option value="En construcción">En construcción</option>
+                        </select>
+                      ) : (
+                        <select 
+                          name="store" 
+                          className="w-full bg-slate-50 border-none p-1.5 pr-8 rounded-lg text-sm outline-none ring-1 ring-slate-200 appearance-none font-medium"
+                          defaultValue=""
+                          required
+                        >
+                          <option value="" disabled>Selecciona tu tienda...</option>
+                          {sortedStores.map(s => (
+                            <option key={s.name} value={s.name}>{s.name}</option>
+                          ))}
+                        </select>
+                      )}
                       <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                         <ChevronDown size={14} />
                       </div>
