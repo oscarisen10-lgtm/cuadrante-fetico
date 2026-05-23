@@ -30,6 +30,7 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
         e.target.value = null; 
         return;
       }
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
       setSelectedFile(file);
       setPreviewUrl(URL.createObjectURL(file));
     }
@@ -158,13 +159,13 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
       </div>
 
       {/* Sección de Noticias (Solo visible si hay noticias o si el usuario es Admin) */}
-      {(newsList.filter(n => !n.isPushRequest).length > 0 || user.email === ADMIN_EMAIL.toLowerCase()) && (
+      {(newsList.filter(n => !n.isPushRequest).length > 0 || (user?.email && ADMIN_EMAIL && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase())) && (
         <div className="bg-slate-900 rounded-[2rem] p-6 flex flex-col min-h-[350px]">
           <div className="flex justify-between items-center mb-6 shrink-0 border-b border-white/5 pb-3">
             <h3 className="text-xs font-black text-white/50 uppercase tracking-widest flex items-center gap-2">
                 <Newspaper size={14}/> Noticias
             </h3>
-            {user.email === ADMIN_EMAIL.toLowerCase() && (
+            {user?.email && ADMIN_EMAIL && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase() && (
               <div className="flex gap-2">
                 <button onClick={() => setShowPushModal(true)} className="bg-indigo-600 text-white px-3 py-1.5 rounded-xl hover:bg-indigo-500 active:scale-95 transition-all shadow-md flex items-center gap-1 font-black text-[10px] uppercase">
                   Push
@@ -189,7 +190,7 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
                               <span className="text-[9px] font-black text-emerald-400 uppercase tracking-tighter bg-emerald-400/10 px-2 py-0.5 rounded-md">{news.tag}</span>
                               <span className="text-[8px] text-white/40">{news.date}</span>
                             </div>
-                            {user.email === ADMIN_EMAIL.toLowerCase() && (
+                            {user?.email && ADMIN_EMAIL && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase() && (
                               <button onClick={() => handleDeleteNews(news.id)} className="text-rose-400 p-2 bg-rose-400/10 hover:bg-rose-500/20 rounded-xl transition-colors">
                                 <Trash2 size={14} />
                               </button>

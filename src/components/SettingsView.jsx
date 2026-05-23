@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, Gamepad2 } from 'lucide-react';
 import { COMPANY_RULES, ADMIN_EMAIL } from '../constants/config';
-import { STORES } from '../constants/stores';
+import { STORES, S_ROMERO_STORES } from '../constants/stores';
 import { deleteUserAccount } from '../services/firebaseService';
 import { toast } from './Toast';
 
 export const SettingsView = React.memo(function SettingsView({ user, settings, saveToCloud, stopAlarm, pushToken, pushTokenError, permissionState, requestTokenManually }) {
-  const isAdmin = user?.email === ADMIN_EMAIL.toLowerCase();
+  const isAdmin = user?.email && ADMIN_EMAIL && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const navigate = useNavigate();
@@ -35,7 +35,13 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
 
   const tokenColor = pushToken ? '#4ade80' : pushTokenError ? '#f87171' : '#ffffff50';
 
-  const sortedStores = [...STORES].sort((a, b) => a.name.localeCompare(b.name));
+  let filteredStores = STORES;
+  if (currentCompany === "S. Romero") {
+    filteredStores = STORES.filter(s => S_ROMERO_STORES.includes(s.name));
+  } else if (currentCompany === "Supercor" || currentCompany === "S. Express") {
+    filteredStores = STORES.filter(s => !S_ROMERO_STORES.includes(s.name));
+  }
+  const sortedStores = [...filteredStores].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div className="flex flex-col space-y-5 animate-in fade-in duration-300 pb-20">
@@ -134,7 +140,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
             <button onClick={() => {
                 const newSettings = {...settings, notifications: !settings.notifications};
                 saveToCloud({settings: newSettings});
-                if(!newSettings.notifications) stopAlarm();
+                if(!newSettings.notifications) stopAlarm?.();
             }} className={`w-12 h-6 rounded-full relative transition-colors ${settings.notifications ? 'bg-emerald-500' : 'bg-white/20'}`}>
                <div className={`absolute top-1 size-4 bg-white rounded-full transition-all ${settings.notifications ? 'left-7' : 'left-1'}`}></div>
             </button>

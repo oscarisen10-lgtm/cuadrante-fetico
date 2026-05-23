@@ -36,7 +36,7 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
     const filtered = shifts.filter(s => !targetDates.includes(s.date));
     
     const newEntries = targetDates.map((date, idx) => ({
-      id: Date.now() + idx, 
+      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now() + Math.random(), 
       date: date, 
       type: 'work', 
       hours: hoursDecimal, 
@@ -53,7 +53,7 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
 
   const markMulti = useCallback((type) => {
     const filtered = shifts.filter(s => !selectedDates.includes(s.date));
-    const newEntries = selectedDates.map(date => ({ id: Math.random(), date, type, hours: 0, isHA: false }));
+    const newEntries = selectedDates.map(date => ({ id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now() + Math.random(), date, type, hours: 0, isHA: false }));
     const newShifts = [...filtered, ...newEntries];
     setSelectedDates([]);
     saveToCloud({ shifts: newShifts });
@@ -86,8 +86,30 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
 
   return (
     <div className="relative min-h-[500px] flex flex-col">
-      {/* Contenido de la agenda, borroso si no hay permisos */}
-      <div className={`flex flex-col animate-in fade-in duration-300 gap-4 pb-20 flex-1 ${!hasNotifications ? 'blur-md select-none pointer-events-none' : ''}`}>
+      {!hasNotifications && (
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-3xl p-4 flex items-center gap-3.5 shadow-sm animate-in slide-in-from-top-3 mb-4">
+          <div className="w-9 h-9 bg-amber-500/15 rounded-2xl flex items-center justify-center shrink-0 border border-amber-500/25">
+             <span className="text-xl animate-bounce">🔔</span>
+          </div>
+          <div className="flex-1 min-w-0">
+             <h4 className="text-[10px] font-black text-amber-800 uppercase tracking-widest leading-none mb-1">¡Activar Notificaciones!</h4>
+             <p className="text-[8px] text-slate-500 font-bold uppercase tracking-tight leading-tight">
+               {permissionState === 'denied'
+                 ? "Permiso bloqueado. Actívalo en los Ajustes del móvil."
+                 : "Es obligatorio para recibir avisos de tus turnos."
+               }
+             </p>
+          </div>
+          {permissionState === 'denied' ? (
+             <span className="text-[8px] bg-slate-100 text-slate-500 px-2.5 py-1.5 rounded-lg font-black uppercase shrink-0">Bloqueado</span>
+          ) : (
+             <button onClick={requestTokenManually} className="bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-2 rounded-xl text-[9px] font-black uppercase shadow-md shadow-amber-500/10 active:scale-95 transition-all shrink-0">
+                Permitir
+             </button>
+          )}
+        </div>
+      )}
+      <div className={`flex flex-col animate-in fade-in duration-300 gap-4 pb-20 flex-1`}>
         <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden flex flex-col pb-2" role="region" aria-label="Calendario">
           
           {/* View mode switcher */}
@@ -159,34 +181,7 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
         />
       </div>
 
-      {!hasNotifications && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-white/20 backdrop-blur-[1px]">
-          <div className="bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-[2.5rem] p-6 text-center max-w-xs w-full shadow-2xl animate-in zoom-in-95">
-            <div className="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-emerald-500/20">
-              <span className="text-2xl animate-bounce">🔔</span>
-            </div>
-            <h3 className="text-white font-black uppercase text-xs italic tracking-widest mb-2">Agenda Bloqueada</h3>
-            <p className="text-slate-300 text-[9px] uppercase font-bold tracking-wider leading-relaxed mb-6">
-              {permissionState === 'denied' 
-                ? "Has bloqueado las notificaciones. Para ver tu agenda y organizar tus turnos, actívalas en los Ajustes del móvil."
-                : "Para poder acceder a tu Agenda y organizar tu calendario oficial, debes permitir las notificaciones push."
-              }
-            </p>
-            {permissionState === 'denied' ? (
-              <div className="text-[8px] text-emerald-400 font-black uppercase bg-emerald-500/10 border border-emerald-500/20 rounded-xl py-3 px-2 leading-normal">
-                Ajustes ➜ Aplicaciones ➜ Mi Cuadrante ➜ Notificaciones ➜ Permitir
-              </div>
-            ) : (
-              <button 
-                onClick={requestTokenManually}
-                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest active:scale-95 transition-all shadow-lg shadow-emerald-500/20"
-              >
-                Activar Notificaciones
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+
 
       <HoursEditor 
         editingDay={editingDay}

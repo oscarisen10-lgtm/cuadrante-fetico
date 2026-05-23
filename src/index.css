@@ -1,3 +1,21 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer utilities {
+  @keyframes decay-bounce {
+    0%   { transform: translateY(0); }
+    15%  { transform: translateY(-20px); animation-timing-function: ease-in; }
+    30%  { transform: translateY(0); animation-timing-function: ease-out; }
+    45%  { transform: translateY(-12px); animation-timing-function: ease-in; }
+    60%  { transform: translateY(0); animation-timing-function: ease-out; }
+    75%  { transform: translateY(-5px); animation-timing-function: ease-in; }
+    90%  { transform: translateY(0); animation-timing-function: ease-out; }
+    95%  { transform: translateY(-2px); animation-timing-function: ease-in; }
+    100% { transform: translateY(0); animation-timing-function: ease-out; }
+  }
+
+  .animate-decay-bounce {
+    animation: decay-bounce 1.5s ease-out forwards;
+  }
+}

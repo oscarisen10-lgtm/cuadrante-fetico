@@ -175,7 +175,7 @@ export function WeekdayHeader({ isSmall = false }) {
   return days.map(d => (
     <div 
       key={d} 
-      className={`text-center font-black text-slate-${isSmall ? '400' : '300'} ${isSmall ? 'text-[6px] mb-0.5' : 'text-[10px] py-1'}`}
+      className={`text-center font-black ${isSmall ? 'text-slate-400 text-[6px] mb-0.5' : 'text-slate-300 text-[10px] py-1'}`}
       role="columnheader"
       aria-label={d === 'L' ? 'Lunes' : d === 'M' ? 'Martes' : d === 'X' ? 'Miércoles' : d === 'J' ? 'Jueves' : d === 'V' ? 'Viernes' : d === 'S' ? 'Sábado' : 'Domingo'}
     >

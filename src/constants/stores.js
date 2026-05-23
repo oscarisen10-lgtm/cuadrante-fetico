@@ -64,6 +64,18 @@ export const STORES = [
   { name: "BOADILLA", city: "Boadilla del Monte" }
 ];
 
+export const S_ROMERO_STORES = [
+  "ARTURO SORIA",
+  "CASTELLANA",
+  "CERRO ESPINO",
+  "CORAZON DE MARIA",
+  "MIRASIERRA",
+  "MORALEJA GREEN",
+  "PINEA",
+  "PTA HIERRO",
+  "ZIELO"
+];
+
 export const MUNICIPAL_HOLIDAYS = {
   "Alcobendas": { "01-24": "Ntra. Sra. de la Paz", "05-15": "San Isidro" },
   "Boadilla del Monte": { "05-26": "San Babilés", "10-06": "Ntra. Sra. del Rosario" },
@@ -72,7 +84,7 @@ export const MUNICIPAL_HOLIDAYS = {
   "Galapagar": { "05-15": "San Isidro", "09-15": "Stmo. Cristo de las Mercedes" },
   "Guadarrama": { "09-29": "San Miguel", "10-04": "San Francisco de Asís" },
   "Las Rozas de Madrid": { "05-05": "Ntra. Sra. del Retamar", "09-29": "San Miguel Arcángel" },
-  "Madrid": { "05-15": "San Isidro", "11-10": "Ntra. Sra. de la Almudena" },
+  "Madrid": { "05-15": "San Isidro", "11-09": "Ntra. Sra. de la Almudena" },
   "Majadahonda": { "09-14": "Stmo. Cristo de los Remedios", "11-25": "Santa Catalina" },
   "Pinto": { "03-19": "San José", "05-15": "San Isidro" },
   "Pozuelo de Alarcón": { "07-16": "Virgen del Carmen", "09-08": "Ntra. Sra. de la Consolación" },

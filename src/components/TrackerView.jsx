@@ -15,7 +15,8 @@ export const TrackerView = React.memo(function TrackerView({
     if (activeShift && !isBreakActive) {
       const tick = () => {
         const currentSessionSeconds = Math.floor((Date.now() - activeShift.startTime) / 1000);
-        setElapsed((workTimeAccumulated || 0) + currentSessionSeconds);
+        const newElapsed = (workTimeAccumulated || 0) + currentSessionSeconds;
+        setElapsed(Math.min(newElapsed, 86400)); // Máximo 24 horas (24 * 60 * 60)
       };
       tick();
       interval = setInterval(tick, 1000);
@@ -47,7 +48,8 @@ export const TrackerView = React.memo(function TrackerView({
         onClick={() => {
           if (activeShift) {
              const currentSessionSeconds = isBreakActive ? 0 : Math.floor((Date.now() - activeShift.startTime) / 1000);
-             const totalElapsed = (workTimeAccumulated || 0) + currentSessionSeconds;
+             const rawElapsed = (workTimeAccumulated || 0) + currentSessionSeconds;
+             const totalElapsed = Math.min(rawElapsed, 86400); // Límite de 24 horas
              cerrarTurno((totalElapsed/60)>=CONFIG.UMBRAL_DIA_HA_MINUTOS, totalElapsed);
           } else {
              iniciarTurno();
@@ -74,7 +76,7 @@ export const TrackerView = React.memo(function TrackerView({
                   showBreakFinishedMsg ? 'bg-rose-600 text-white animate-bounce' : isBreakActive ? 'bg-slate-800 text-white' : 'bg-emerald-200 text-emerald-800'
                 }`}
               >
-                {isBreakActive ? <><Timer size={16} /> Volver</> : <><Coffee size={16} /> Descanso {settings.breakDuration}m</>}
+                {isBreakActive ? <><Timer size={16} /> Volver</> : <><Coffee size={16} /> Descanso {settings?.breakDuration}m</>}
               </button>
             </div>
           ) : (

@@ -54,8 +54,30 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
 
   return (
     <div className="relative min-h-[500px] flex flex-col">
-      {/* Contenido de licencias, borroso si no hay permisos */}
-      <div className={`flex flex-col animate-in fade-in duration-500 gap-6 pb-24 flex-1 ${!hasNotifications ? 'blur-md select-none pointer-events-none' : ''}`}>
+      {!hasNotifications && (
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-3xl p-4 flex items-center gap-3.5 shadow-sm animate-in slide-in-from-top-3 mb-2">
+          <div className="w-9 h-9 bg-amber-500/15 rounded-2xl flex items-center justify-center shrink-0 border border-amber-500/25">
+             <span className="text-xl animate-bounce">🔔</span>
+          </div>
+          <div className="flex-1 min-w-0">
+             <h4 className="text-[10px] font-black text-amber-800 uppercase tracking-widest leading-none mb-1">¡Activar Notificaciones!</h4>
+             <p className="text-[8px] text-slate-500 font-bold uppercase tracking-tight leading-tight">
+               {permissionState === 'denied'
+                 ? "Permiso bloqueado. Actívalo en los Ajustes del móvil."
+                 : "Es obligatorio para recibir avisos de tus licencias."
+               }
+             </p>
+          </div>
+          {permissionState === 'denied' ? (
+             <span className="text-[8px] bg-slate-100 text-slate-500 px-2.5 py-1.5 rounded-lg font-black uppercase shrink-0">Bloqueado</span>
+          ) : (
+             <button onClick={requestTokenManually} className="bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-2 rounded-xl text-[9px] font-black uppercase shadow-md shadow-amber-500/10 active:scale-95 transition-all shrink-0">
+                Permitir
+             </button>
+          )}
+        </div>
+      )}
+      <div className={`flex flex-col animate-in fade-in duration-500 gap-6 pb-24 flex-1`}>
         {/* Header Informativo */}
         <div className="bg-emerald-50 border border-emerald-100 rounded-[2rem] p-5 flex items-start gap-4 shadow-sm">
           <div className="bg-emerald-600 p-2.5 rounded-2xl text-white shadow-md shrink-0">
@@ -72,15 +94,19 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
         {/* Botón Festivos del Año */}
         <button 
           onClick={() => setShowFestivos(!showFestivos)}
-          className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${
-            showFestivos ? 'bg-rose-600 border-rose-600 text-white' : 'bg-white border-slate-100 text-slate-700 hover:bg-slate-50'
-          } shadow-sm group`}
+          className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 ${
+            showFestivos ? 'bg-emerald-700 border-emerald-600 shadow-md ring-2 ring-emerald-600/20' : 'bg-emerald-600 border-emerald-700/20 shadow-sm hover:bg-emerald-500'
+          }`}
         >
-          <div className="flex items-center gap-3">
-            <CalendarDays size={18} className={showFestivos ? 'text-rose-200' : 'text-rose-500'} />
-            <span className="text-[11px] font-black uppercase italic tracking-widest">Calendario de Festivos {new Date().getFullYear()}</span>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${showFestivos ? 'bg-white text-emerald-700 shadow-lg' : 'bg-emerald-700/50 text-emerald-100'}`}>
+              <CalendarDays size={16} />
+            </div>
+            <span className="text-[11px] font-black uppercase text-white leading-snug tracking-tight text-left">Calendario de Festivos {new Date().getFullYear()}</span>
           </div>
-          {showFestivos ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+          <div className={`p-1.5 rounded-lg border transition-all shrink-0 ${showFestivos ? 'bg-white border-white text-emerald-700' : 'bg-emerald-700/50 border-emerald-700/50 text-emerald-100'}`}>
+            {showFestivos ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </div>
         </button>
 
         {/* Lista de Festivos (Condicional) */}
@@ -122,15 +148,19 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
         {/* Botón Grados de Consanguinidad */}
         <button 
           onClick={() => setShowGrados(!showGrados)}
-          className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${
-            showGrados ? 'bg-slate-800 border-slate-800 text-white' : 'bg-white border-slate-100 text-slate-700 hover:bg-slate-50'
-          } shadow-sm group`}
+          className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 ${
+            showGrados ? 'bg-emerald-700 border-emerald-600 shadow-md ring-2 ring-emerald-600/20' : 'bg-emerald-600 border-emerald-700/20 shadow-sm hover:bg-emerald-500'
+          }`}
         >
-          <div className="flex items-center gap-3">
-            <Users size={18} className={showGrados ? 'text-emerald-400' : 'text-emerald-600'} />
-            <span className="text-[11px] font-black uppercase italic tracking-widest">Guía de Grados de Parentesco</span>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${showGrados ? 'bg-white text-emerald-700 shadow-lg' : 'bg-emerald-700/50 text-emerald-100'}`}>
+              <Users size={16} />
+            </div>
+            <span className="text-[11px] font-black uppercase text-white leading-snug tracking-tight text-left">Guía de Grados de Parentesco</span>
           </div>
-          {showGrados ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+          <div className={`p-1.5 rounded-lg border transition-all shrink-0 ${showGrados ? 'bg-white border-white text-emerald-700' : 'bg-emerald-700/50 border-emerald-700/50 text-emerald-100'}`}>
+            {showGrados ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </div>
         </button>
 
         {/* Tabla de Grados (Condicional) */}
@@ -183,18 +213,18 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
                   const isExpanded = expandedLicencia === itemId;
                   
                   return (
-                    <div key={idx} className={`bg-white border rounded-2xl overflow-hidden transition-all duration-300 ${isExpanded ? 'border-emerald-200 shadow-md ring-1 ring-emerald-50' : 'border-slate-100 shadow-sm'}`}>
+                    <div key={idx} className={`bg-white border rounded-2xl overflow-hidden transition-all duration-300 ${isExpanded ? 'border-emerald-600 shadow-md ring-2 ring-emerald-600/20' : 'border-emerald-700/20 shadow-sm'}`}>
                       <div 
-                        className={`p-4 cursor-pointer flex justify-between items-center gap-4 ${isExpanded ? 'bg-emerald-50/30' : 'hover:bg-slate-50'}`}
+                        className={`p-4 cursor-pointer flex justify-between items-center gap-4 transition-colors ${isExpanded ? 'bg-emerald-700' : 'bg-emerald-600 hover:bg-emerald-500'}`}
                         onClick={() => toggleLicencia(itemId)}
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${isExpanded ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200' : 'bg-slate-100 text-slate-500'}`}>
+                          <div className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${isExpanded ? 'bg-white text-emerald-700 shadow-lg' : 'bg-emerald-700/50 text-emerald-100'}`}>
                             <FileText size={16} />
                           </div>
-                          <h4 className="text-[11px] font-black text-slate-800 uppercase leading-snug tracking-tight">{lic.title}</h4>
+                          <h4 className="text-[11px] font-black text-white uppercase leading-snug tracking-tight">{lic.title}</h4>
                         </div>
-                        <div className={`p-1.5 rounded-lg border transition-all ${isExpanded ? 'bg-white border-emerald-200 text-emerald-600 rotate-180' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
+                        <div className={`p-1.5 rounded-lg border transition-all ${isExpanded ? 'bg-white border-white text-emerald-700 rotate-180' : 'bg-emerald-700/50 border-emerald-700/50 text-emerald-100'}`}>
                           <ChevronDown size={14} />
                         </div>
                       </div>
@@ -237,34 +267,7 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
         </div>
       </div>
 
-      {!hasNotifications && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-white/20 backdrop-blur-[1px]">
-          <div className="bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-[2.5rem] p-6 text-center max-w-xs w-full shadow-2xl animate-in zoom-in-95">
-            <div className="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-emerald-500/20">
-              <span className="text-2xl animate-bounce">🔔</span>
-            </div>
-            <h3 className="text-white font-black uppercase text-xs italic tracking-widest mb-2">Permisos Bloqueados</h3>
-            <p className="text-slate-300 text-[9px] uppercase font-bold tracking-wider leading-relaxed mb-6">
-              {permissionState === 'denied' 
-                ? "Has bloqueado las notificaciones. Para consultar tus permisos y convenios oficiales, debes activarlas en los Ajustes."
-                : "Para poder acceder a tu catálogo de Licencias y Permisos oficiales, debes permitir las notificaciones push."
-              }
-            </p>
-            {permissionState === 'denied' ? (
-              <div className="text-[8px] text-emerald-400 font-black uppercase bg-emerald-500/10 border border-emerald-500/20 rounded-xl py-3 px-2 leading-normal">
-                Ajustes ➜ Aplicaciones ➜ Mi Cuadrante ➜ Notificaciones ➜ Permitir
-              </div>
-            ) : (
-              <button 
-                onClick={requestTokenManually}
-                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest active:scale-95 transition-all shadow-lg shadow-emerald-500/20"
-              >
-                Activar Notificaciones
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+
     </div>
   );
 });

@@ -3,7 +3,7 @@ import { User, Lock, Mail, Store, ShieldCheck, KeyRound, X, ChevronDown } from '
 import { loginUser, registerUser, resetPassword, signInWithGoogle, signInWithApple } from '../services/firebaseService';
 import { InputGroup } from './UIComponents';
 import { COMPANY_RULES } from '../constants/config';
-import { STORES } from '../constants/stores';
+import { STORES, S_ROMERO_STORES } from '../constants/stores';
 
 // ⚠️ MODO TESTERS: Cambiar a `true` para reactivar el registro público
 const ALLOW_REGISTRATION = true;
@@ -16,8 +16,14 @@ export default function AuthView() {
   const [formCompany, setFormCompany] = useState("Supercor");
 
   const sortedStores = useMemo(() => {
-    return [...STORES].sort((a, b) => a.name.localeCompare(b.name));
-  }, []);
+    let filteredStores = STORES;
+    if (formCompany === "S. Romero") {
+      filteredStores = STORES.filter(s => S_ROMERO_STORES.includes(s.name));
+    } else if (formCompany === "Supercor" || formCompany === "S. Express") {
+      filteredStores = STORES.filter(s => !S_ROMERO_STORES.includes(s.name));
+    }
+    return [...filteredStores].sort((a, b) => a.name.localeCompare(b.name));
+  }, [formCompany]);
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
