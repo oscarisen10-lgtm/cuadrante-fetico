@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { FileText, ChevronDown, ChevronUp, Info, Users, Clock, ClipboardCheck, Bot, Sparkles } from 'lucide-react';
 import { LICENCIAS_CATEGORIES, GRADOS_CONSANGUINIDAD } from '../constants/licenciasData';
 import { ChatModal } from './ChatModal';
-import claudeLogo from '../assets/claude-logo.jpg';
 
 export const LicenciasView = React.memo(function LicenciasView({ user, permissionState, requestTokenManually }) {
   const [expandedLicencia, setExpandedLicencia] = useState(null);
@@ -66,8 +65,8 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
           <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
           
           <div className="relative flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0 border border-white/20 shadow-inner">
-              <img src={claudeLogo} alt="IA Logo" className="w-8 h-8 object-cover rounded-[0.5rem] shadow-sm" />
+            <div className="w-12 h-12 bg-white/90 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0 border border-white/40 shadow-inner">
+              <img src="https://upload.wikimedia.org/wikipedia/commons/d/d0/Claude_AI_symbol.svg" alt="Claude AI Logo" className="w-8 h-8 object-contain drop-shadow-sm" />
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
