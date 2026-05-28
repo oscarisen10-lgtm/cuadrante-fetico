@@ -66,7 +66,7 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
           
           <div className="relative flex items-center gap-4 mb-4">
             <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0 border border-white/20 shadow-inner">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/8/8a/Google_Gemini_logo.svg" alt="Gemini" className="w-6 h-6 object-contain drop-shadow-sm" />
+              <img src="/claude-logo.jpg" alt="IA Logo" className="w-8 h-8 object-cover rounded-[0.5rem] shadow-sm" />
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
