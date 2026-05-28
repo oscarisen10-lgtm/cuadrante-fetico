@@ -58,29 +58,32 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
         {/* Tarjeta de Acceso al Asistente IA */}
         <button 
           onClick={() => setShowChat(true)}
-          className="w-full relative overflow-hidden group bg-gradient-to-br from-emerald-600 to-emerald-800 rounded-[2rem] p-5 shadow-lg shadow-emerald-600/20 active:scale-[0.98] transition-all"
+          className="w-full relative overflow-hidden group bg-gradient-to-br from-emerald-600 to-emerald-800 rounded-[2rem] p-5 shadow-lg shadow-emerald-600/20 active:scale-[0.98] transition-all flex flex-col text-left"
         >
           {/* Fondo Animado */}
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
           <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
           
-          <div className="relative flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4 min-w-0">
-              <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0 border border-white/20 shadow-inner">
-                <Bot size={24} className="text-white" />
-              </div>
-              <div className="text-left">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-white font-black uppercase tracking-widest text-[13px] leading-none">Asistente Fetico IA</h3>
-                  <Sparkles size={12} className="text-amber-300 animate-pulse" />
-                </div>
-                <p className="text-emerald-100 text-[10px] font-bold uppercase tracking-wider leading-tight">
-                  Resuelve tus dudas del convenio en segundos
-                </p>
-              </div>
+          <div className="relative flex items-center gap-4 mb-4">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0 border border-white/20 shadow-inner">
+              <Bot size={24} className="text-white" />
             </div>
-            <div className="bg-white/20 p-2 rounded-xl text-white shrink-0 group-hover:bg-white group-hover:text-emerald-700 transition-colors">
-              <ChevronDown size={18} className="-rotate-90" />
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="text-white font-black uppercase tracking-widest text-[13px] leading-none">Asistente Fetico IA</h3>
+                <Sparkles size={12} className="text-amber-300 animate-pulse" />
+              </div>
+              <p className="text-emerald-100 text-[10px] font-bold uppercase tracking-wider leading-tight">
+                Resuelve tus dudas del convenio en segundos
+              </p>
+            </div>
+          </div>
+
+          {/* Fake Input */}
+          <div className="relative w-full bg-white rounded-xl p-3 flex items-center justify-between shadow-inner group-hover:bg-slate-50 transition-colors">
+            <span className="text-slate-400 text-[11px] font-bold tracking-wide">Escribe tu consulta laboral aquí...</span>
+            <div className="bg-emerald-600 p-1.5 rounded-lg text-white shrink-0 shadow-sm">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
             </div>
           </div>
         </button>
