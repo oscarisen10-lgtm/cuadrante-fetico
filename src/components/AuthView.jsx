@@ -8,6 +8,42 @@ import { STORES, S_ROMERO_STORES } from '../constants/stores';
 // ⚠️ MODO TESTERS: Cambiar a `true` para reactivar el registro público
 const ALLOW_REGISTRATION = true;
 
+const getFriendlyErrorMessage = (error, isRegistering) => {
+  if (error.message && error.message.includes("Timeout")) {
+    return error.message;
+  }
+  
+  const errorCode = error.code;
+  switch (errorCode) {
+    // Errores de Registro
+    case 'auth/email-already-in-use':
+      return 'Este correo ya está registrado. Intenta iniciar sesión.';
+    case 'auth/invalid-email':
+      return 'El correo electrónico no es válido.';
+    case 'auth/operation-not-allowed':
+      return 'El registro por correo no está habilitado en el servidor.';
+    case 'auth/weak-password':
+      return 'La contraseña es muy débil. Mínimo 6 caracteres.';
+      
+    // Errores de Login
+    case 'auth/wrong-password':
+      return 'Contraseña incorrecta.';
+    case 'auth/user-not-found':
+      return 'No existe ninguna cuenta con este correo.';
+    case 'auth/invalid-credential':
+      return 'Credenciales incorrectas o la cuenta no existe.';
+    case 'auth/user-disabled':
+      return 'Esta cuenta ha sido desactivada por el administrador.';
+      
+    // Errores de Firestore / Permisos
+    case 'permission-denied':
+      return 'Error de permisos al crear tu perfil. Contacta con soporte.';
+      
+    default:
+      return error.message || (isRegistering ? 'Error al crear la cuenta.' : 'Credenciales incorrectas.');
+  }
+};
+
 export default function AuthView() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
@@ -87,9 +123,11 @@ export default function AuthView() {
         await registerUser(emailInput, pass, newUserProfile);
       }
     } catch (error) {
-      const isTimeout = error.message && error.message.includes("Timeout");
-      setRecoveryError(isTimeout ? error.message : "Credenciales incorrectas o cuenta no existe.");
-      setTimeout(() => setRecoveryError(""), 3000);
+      console.error("Auth error details:", error);
+      const friendlyMsg = getFriendlyErrorMessage(error, isRegistering);
+      setRecoveryError(friendlyMsg);
+      // Mantener el error en pantalla más tiempo si es un error de registro (10s) para que el usuario pueda leerlo y decírtelo
+      setTimeout(() => setRecoveryError(""), isRegistering ? 10000 : 4000);
     }
     setIsLoading(false);
   };
