@@ -244,7 +244,7 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
         )}
       </div>
 
-      {showChat && <ChatModal onClose={() => setShowChat(false)} />}
+      {showChat && <ChatModal onClose={() => setShowChat(false)} permissionState={permissionState} requestTokenManually={requestTokenManually} />}
     </div>
   );
 });

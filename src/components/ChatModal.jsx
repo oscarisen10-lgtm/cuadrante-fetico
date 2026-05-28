@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Send, Bot, User, Loader2 } from 'lucide-react';
+import { X, Send, Bot, User, Loader2, Lock } from 'lucide-react';
 import { askAssistant } from '../services/aiService';
 
-export function ChatModal({ onClose }) {
+export function ChatModal({ onClose, permissionState, requestTokenManually }) {
   const [messages, setMessages] = useState([
     { sender: 'bot', text: '¡Hola! Soy tu asistente virtual con IA. ¿En qué te puedo ayudar hoy con el convenio, licencias o turnos?' }
   ]);
@@ -73,9 +73,31 @@ export function ChatModal({ onClose }) {
           </button>
         </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 bg-slate-50 flex flex-col gap-4">
-          {messages.map((msg, idx) => (
+        {permissionState !== 'granted' ? (
+          <div className="flex-1 flex flex-col items-center justify-center bg-slate-800 p-6 text-center relative overflow-hidden">
+            {/* Fondo Animado Bloqueado */}
+            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-emerald-500 opacity-20 rounded-full blur-3xl"></div>
+            
+            <div className="relative z-10 flex flex-col items-center gap-4">
+              <div className="bg-slate-900/50 p-6 rounded-3xl backdrop-blur-md shadow-2xl flex flex-col items-center gap-4 border border-slate-700/50">
+                <Lock size={48} className="text-emerald-400 drop-shadow-md" />
+                <div>
+                  <h3 className="text-xl font-black text-white mb-2">Asistente IA Bloqueado</h3>
+                  <p className="text-sm font-medium text-slate-300 leading-relaxed max-w-xs">Activa las notificaciones para poder resolver tus dudas con el asistente virtual.</p>
+                </div>
+                <button onClick={requestTokenManually} className="mt-2 w-full bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-black px-6 py-3 rounded-xl transition-colors shadow-lg shadow-emerald-500/20 active:scale-95 flex items-center justify-center gap-2">
+                  <Lock size={16} className="opacity-50" />
+                  ACTIVAR AHORA
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+        <>
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-4 bg-slate-50 flex flex-col gap-4">
+            {messages.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[85%] rounded-2xl p-3 shadow-sm ${msg.sender === 'user' ? 'bg-emerald-600 text-white rounded-br-sm' : 'bg-white border border-slate-100 text-slate-700 rounded-bl-sm'}`}>
                 <div className="flex items-center gap-2 mb-1 opacity-70">
@@ -130,6 +152,8 @@ export function ChatModal({ onClose }) {
             Limitado a 10 preguntas por día
           </p>
         </div>
+        </>
+        )}
 
       </div>
     </div>
