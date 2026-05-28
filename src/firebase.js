@@ -3,6 +3,7 @@ import { getAuth } from "firebase/auth";
 import { initializeFirestore, memoryLocalCache } from "firebase/firestore";
 import { getMessaging } from "firebase/messaging";
 import { getStorage } from "firebase/storage";
+import { getFunctions } from "firebase/functions";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -38,5 +39,6 @@ try {
 export const messaging = _messaging;
 
 export const storage = getStorage(app);
+export const functions = getFunctions(app);
 
 export const VAPID_KEY = "BEYovLJVC-gnlNb_aJ4qkOTxh849wiUY_3Y5p9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z";

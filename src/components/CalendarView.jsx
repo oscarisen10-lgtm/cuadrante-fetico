@@ -1,9 +1,43 @@
-import React, { useState, useCallback } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useCallback, useMemo } from 'react';
+import { ChevronLeft, ChevronRight, CalendarDays, ChevronDown, ChevronUp } from 'lucide-react';
 import { CONFIG } from '../constants/config';
+import { STORES, MUNICIPAL_HOLIDAYS } from '../constants/stores';
 import { MonthGrid, WeekdayHeader } from './calendar/CalendarGrid';
 import { DateDetailPanel } from './calendar/DateDetailPanel';
 import { HoursEditor } from './calendar/HoursEditor';
+
+/**
+ * getAllYearHolidays — Collects all common + municipal holidays for the year.
+ */
+function getAllYearHolidays(userStoreName) {
+  const holidays = [];
+
+  // Common holidays (Madrid region)
+  Object.entries(CONFIG.FESTIVOS || {}).forEach(([dateStr, name]) => {
+    holidays.push({ date: dateStr, name, type: 'common' });
+  });
+
+  // Municipal holidays based on the user's store city
+  if (userStoreName) {
+    const store = STORES.find(s => s.name === userStoreName);
+    if (store && store.city && MUNICIPAL_HOLIDAYS[store.city]) {
+      Object.entries(MUNICIPAL_HOLIDAYS[store.city]).forEach(([dateStr, name]) => {
+        if (!holidays.find(h => h.date === dateStr)) {
+          holidays.push({ date: dateStr, name, type: 'local' });
+        }
+      });
+    }
+  }
+
+  // Sort by month-day
+  return holidays.sort((a, b) => {
+    const [am, ad] = a.date.split('-').map(Number);
+    const [bm, bd] = b.date.split('-').map(Number);
+    return am !== bm ? am - bm : ad - bd;
+  });
+}
+
+const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
 /**
  * CalendarView — Main calendar component (refactored).
@@ -17,8 +51,10 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
   const [editHH, setEditHH] = useState("0");
   const [editmm, setEditmm] = useState("0");
   const [editTurn, setEditTurn] = useState("morning");
+  const [showFestivos, setShowFestivos] = useState(false);
 
   const userStore = user?.store;
+  const holidays = useMemo(() => getAllYearHolidays(userStore), [userStore]);
 
   const openEditHours = useCallback((dateStr) => {
     const s = shiftsMap[dateStr];
@@ -179,6 +215,61 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
           openEditHours={openEditHours}
           deleteSelectedDates={deleteSelectedDates}
         />
+
+        {/* Botón Festivos del Año - Ahora debajo de DateDetailPanel */}
+        <button 
+          onClick={() => setShowFestivos(!showFestivos)}
+          className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 ${
+            showFestivos ? 'bg-emerald-700 border-emerald-600 shadow-md ring-2 ring-emerald-600/20' : 'bg-emerald-600 border-emerald-700/20 shadow-sm hover:bg-emerald-500'
+          }`}
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${showFestivos ? 'bg-white text-emerald-700 shadow-lg' : 'bg-emerald-700/50 text-emerald-100'}`}>
+              <CalendarDays size={16} />
+            </div>
+            <span className="text-[11px] font-black uppercase text-white leading-snug tracking-tight text-left">Calendario de Festivos {new Date().getFullYear()}</span>
+          </div>
+          <div className={`p-1.5 rounded-lg border transition-all shrink-0 ${showFestivos ? 'bg-white border-white text-emerald-700' : 'bg-emerald-700/50 border-emerald-700/50 text-emerald-100'}`}>
+            {showFestivos ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </div>
+        </button>
+
+        {/* Lista de Festivos (Condicional) */}
+        {showFestivos && (
+          <div className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-xl animate-in slide-in-from-top-4 duration-300 mb-4">
+            <div className="p-4 bg-slate-50 border-b border-slate-100">
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">
+                Festivos Nacionales, Regionales y Locales
+                {userStore && <span className="text-emerald-600 ml-1">· {userStore}</span>}
+              </p>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {holidays.map(({ date, name, type }) => {
+                const [m, d] = date.split('-').map(Number);
+                return (
+                  <div key={date} className="p-3.5 flex items-center gap-3 hover:bg-slate-50/50 transition-colors">
+                    <div className={`flex flex-col items-center justify-center min-w-[40px] h-[40px] rounded-xl ${type === 'local' ? 'bg-amber-100' : 'bg-rose-100'}`}>
+                      <span className={`font-black text-[15px] leading-none ${type === 'local' ? 'text-amber-700' : 'text-rose-700'}`}>{d}</span>
+                      <span className={`text-[7px] uppercase font-bold ${type === 'local' ? 'text-amber-500' : 'text-rose-500'}`}>{MONTH_NAMES[m - 1]}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] text-slate-700 font-bold leading-tight">{name}</p>
+                    </div>
+                    <span className={`text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-tighter shrink-0 ${type === 'local' ? 'bg-amber-100 text-amber-600' : 'bg-rose-100 text-rose-600'}`}>
+                      {type === 'local' ? 'Local' : 'Regional'}
+                    </span>
+                  </div>
+                );
+              })}
+              {holidays.length === 0 && (
+                <div className="p-6 text-center text-xs text-slate-400 font-bold">
+                  No hay festivos configurados para tu zona.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
       </div>
 
 
