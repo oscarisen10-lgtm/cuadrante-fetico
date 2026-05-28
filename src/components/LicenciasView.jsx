@@ -66,17 +66,7 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
           
           <div className="relative flex items-center gap-4 mb-4">
             <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0 border border-white/20 shadow-inner">
-              <svg width="24" height="24" viewBox="0 0 24 24">
-                <defs>
-                  <linearGradient id="geminiGrad" x1="15%" y1="0%" x2="85%" y2="100%">
-                    <stop offset="0%" stopColor="#EA4335" />
-                    <stop offset="33%" stopColor="#4285F4" />
-                    <stop offset="66%" stopColor="#34A853" />
-                    <stop offset="100%" stopColor="#FBBC04" />
-                  </linearGradient>
-                </defs>
-                <path fill="url(#geminiGrad)" d="M12.02 24c-.167-3.8-1.517-7.05-4.05-9.75-2.533-2.7-5.833-4.1-9.9-4.2 4.067-.167 7.367-1.567 9.9-4.2 2.533-2.633 3.883-5.917 4.05-9.85.167 3.933 1.55 7.217 4.15 9.85 2.6 2.633 5.9 4.033 9.9 4.2-4 .1-7.3 1.5-9.9 4.2-2.6 2.7-3.983 5.95-4.15 9.75Z"/>
-              </svg>
+              <img src="https://upload.wikimedia.org/wikipedia/commons/8/8a/Google_Gemini_logo.svg" alt="Gemini" className="w-6 h-6 object-contain drop-shadow-sm" />
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
