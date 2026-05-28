@@ -22,8 +22,8 @@ export function StatBar({ label, currentValue, totalValue, percentage, color, la
     <div className="space-y-3 flex flex-col" role="meter" aria-label={label} aria-valuenow={clampedPercentage} aria-valuemin={0} aria-valuemax={100}>
       <div className="flex justify-between font-black uppercase tracking-widest items-end leading-none">
         <span className={large ? "text-xs text-slate-500 font-bold tracking-tight" : "text-[10px] text-slate-400"}>{label}</span>
-        <span className={`text-slate-900 ${large ? "text-2xl font-black tracking-tighter" : "text-sm"}`}>
-          {currentValue} <span className={`${large ? "text-xs" : "text-[9px]"} text-slate-400 font-bold tracking-normal`}>/ {totalValue}</span>
+        <span className={`text-slate-400 ${large ? "text-lg font-bold tracking-normal mr-1" : "text-xs mr-1"}`}>
+          {currentValue} / <span className={`${large ? "text-2xl font-black tracking-tighter" : "text-sm font-black"} text-slate-900`}>{totalValue}</span>
         </span>
       </div>
       <div className={`w-full bg-slate-100 rounded-full overflow-hidden border border-slate-50 shadow-inner ${large ? "h-4" : "h-3.5"}`} role="progressbar" aria-valuenow={clampedPercentage} aria-valuemin={0} aria-valuemax={100}>
