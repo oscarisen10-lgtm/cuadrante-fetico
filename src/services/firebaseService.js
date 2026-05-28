@@ -136,7 +136,7 @@ export const registerUser = async (email, password, profileData) => {
 
 export const signInWithGoogle = async () => {
   const provider = new GoogleAuthProvider();
-  const res = await withTimeout(signInWithPopup(auth, provider));
+  const res = await signInWithPopup(auth, provider);
   await checkAndCreateSocialUserDoc(res.user);
   return res;
 };
@@ -145,7 +145,7 @@ export const signInWithApple = async () => {
   const provider = new OAuthProvider('apple.com');
   provider.addScope('email');
   provider.addScope('name');
-  const res = await withTimeout(signInWithPopup(auth, provider));
+  const res = await signInWithPopup(auth, provider);
   await checkAndCreateSocialUserDoc(res.user);
   return res;
 };
