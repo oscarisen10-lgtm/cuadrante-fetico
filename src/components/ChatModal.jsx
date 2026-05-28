@@ -4,7 +4,7 @@ import { askAssistant } from '../services/aiService';
 
 export function ChatModal({ onClose }) {
   const [messages, setMessages] = useState([
-    { sender: 'bot', text: '¡Hola! Soy tu asistente virtual de Fetico. ¿En qué te puedo ayudar hoy con el convenio, licencias o turnos?' }
+    { sender: 'bot', text: '¡Hola! Soy tu asistente virtual con IA. ¿En qué te puedo ayudar hoy con el convenio, licencias o turnos?' }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -50,11 +50,18 @@ export function ChatModal({ onClose }) {
         {/* Header */}
         <div className="bg-emerald-600 p-4 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white backdrop-blur-md">
-              <Bot size={22} />
+            <div className="w-10 h-10 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center shrink-0 shadow-inner">
+              <div 
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  background: 'conic-gradient(from 0deg, #EA4335 0%, #4285F4 25%, #34A853 50%, #FBBC04 75%, #EA4335 100%)',
+                  clipPath: 'path("M10 0 C10 5.5 14.5 10 20 10 C14.5 10 10 14.5 10 20 C10 14.5 5.5 10 0 10 C5.5 10 10 5.5 10 0 Z")'
+                }}
+              />
             </div>
             <div>
-              <h3 className="text-white font-black text-lg leading-tight">Asistente Fetico</h3>
+              <h3 className="text-white font-black text-lg leading-tight">Asistente IA</h3>
               <p className="text-emerald-100 text-xs font-bold">Experto en tu Convenio</p>
             </div>
           </div>
@@ -72,8 +79,17 @@ export function ChatModal({ onClose }) {
             <div key={idx} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[85%] rounded-2xl p-3 shadow-sm ${msg.sender === 'user' ? 'bg-emerald-600 text-white rounded-br-sm' : 'bg-white border border-slate-100 text-slate-700 rounded-bl-sm'}`}>
                 <div className="flex items-center gap-2 mb-1 opacity-70">
-                  {msg.sender === 'user' ? <User size={12} /> : <Bot size={12} />}
-                  <span className="text-[9px] font-black uppercase tracking-widest">{msg.sender === 'user' ? 'Tú' : 'Fetico'}</span>
+                  {msg.sender === 'user' ? <User size={12} /> : (
+                    <div 
+                      style={{
+                        width: '12px',
+                        height: '12px',
+                        background: 'conic-gradient(from 0deg, #EA4335 0%, #4285F4 25%, #34A853 50%, #FBBC04 75%, #EA4335 100%)',
+                        clipPath: 'path("M6 0 C6 3.3 8.7 6 12 6 C8.7 6 6 8.7 6 12 C6 8.7 3.3 6 0 6 C3.3 6 6 3.3 6 0 Z")'
+                      }}
+                    />
+                  )}
+                  <span className="text-[9px] font-black uppercase tracking-widest">{msg.sender === 'user' ? 'Tú' : 'IA'}</span>
                 </div>
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
               </div>
