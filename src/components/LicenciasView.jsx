@@ -66,11 +66,11 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
           
           <div className="relative flex items-center gap-4 mb-4">
             <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0 border border-white/20 shadow-inner">
-              <Bot size={24} className="text-white" />
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-white"><path d="M12.02 24c-.167-3.8-1.517-7.05-4.05-9.75-2.533-2.7-5.833-4.1-9.9-4.2 4.067-.167 7.367-1.567 9.9-4.2 2.533-2.633 3.883-5.917 4.05-9.85.167 3.933 1.55 7.217 4.15 9.85 2.6 2.633 5.9 4.033 9.9 4.2-4 .1-7.3 1.5-9.9 4.2-2.6 2.7-3.983 5.95-4.15 9.75Z"/></svg>
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <h3 className="text-white font-black uppercase tracking-widest text-[13px] leading-none">Asistente Fetico IA</h3>
+                <h3 className="text-white font-black uppercase tracking-widest text-[13px] leading-none">Asistente IA</h3>
                 <Sparkles size={12} className="text-amber-300 animate-pulse" />
               </div>
               <p className="text-emerald-100 text-[10px] font-bold uppercase tracking-wider leading-tight">
