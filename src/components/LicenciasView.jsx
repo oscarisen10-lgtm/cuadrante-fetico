@@ -66,7 +66,17 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
           
           <div className="relative flex items-center gap-4 mb-4">
             <div className="w-12 h-12 bg-white/90 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0 border border-white/40 shadow-inner">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/d/d0/Claude_AI_symbol.svg" alt="Claude AI Logo" className="w-8 h-8 object-contain drop-shadow-sm" />
+              {/* Logo Antigravity renderizado con CSS puro */}
+              <div 
+                className="drop-shadow-sm"
+                style={{
+                  width: '24px',
+                  height: '24px',
+                  background: 'conic-gradient(from 0deg, #EA4335 0%, #4285F4 25%, #34A853 50%, #FBBC04 75%, #EA4335 100%)',
+                  clipPath: 'path("M12 0 C12 6.6 17.4 12 24 12 C17.4 12 12 17.4 12 24 C12 17.4 6.6 12 0 12 C6.6 12 12 6.6 12 0 Z")',
+                  transform: 'scale(1.2)'
+                }}
+              />
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
