@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, CalendarDays, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays, ChevronDown, ChevronUp, Lock } from 'lucide-react';
 import { CONFIG } from '../constants/config';
 import { STORES, MUNICIPAL_HOLIDAYS } from '../constants/stores';
 import { MonthGrid, WeekdayHeader } from './calendar/CalendarGrid';
@@ -166,28 +166,46 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
           {/* Calendar grid */}
           <div id="calendar-grid" role="tabpanel">
             {viewMode === 'mensual' ? (
-              <div className="flex flex-col">
-                <div className="p-3 grid grid-cols-7 gap-1.5" role="grid" aria-label="Calendario mensual">
-                  <WeekdayHeader />
-                  <MonthGrid 
-                    targetYear={currentDate.getFullYear()} 
-                    targetMonth={currentDate.getMonth()} 
-                    shiftsMap={shiftsMap} 
-                    isSmall={false}
-                    selectedDates={selectedDates}
-                    onDayClick={handleDayClick}
-                    onDayDoubleClick={openEditHours}
-                    userStore={userStore}
-                  />
-                </div>
-
+              <div className="flex flex-col relative">
+                {(() => {
+                  const m = currentDate.getMonth();
+                  const isLocked = permissionState !== 'granted' && [0, 7, 9].includes(m);
+                  return (
+                    <>
+                      <div className={`p-3 grid grid-cols-7 gap-1.5 ${isLocked ? 'opacity-30 pointer-events-none' : ''}`} role="grid" aria-label="Calendario mensual">
+                        <WeekdayHeader />
+                        <MonthGrid 
+                          targetYear={currentDate.getFullYear()} 
+                          targetMonth={currentDate.getMonth()} 
+                          shiftsMap={shiftsMap} 
+                          isSmall={false}
+                          selectedDates={selectedDates}
+                          onDayClick={handleDayClick}
+                          onDayDoubleClick={openEditHours}
+                          userStore={userStore}
+                        />
+                      </div>
+                      {isLocked && (
+                        <div className="absolute inset-0 flex items-center justify-center z-10 pb-8">
+                          <div className="bg-slate-800/90 p-5 rounded-3xl backdrop-blur-md text-white flex flex-col items-center gap-3 shadow-2xl mx-6 text-center">
+                            <Lock size={36} className="text-emerald-400" />
+                            <p className="text-sm font-bold leading-snug">Activa las notificaciones para desbloquear este mes</p>
+                            <button onClick={requestTokenManually} className="mt-2 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-black px-4 py-2 rounded-xl transition-colors shadow-lg active:scale-95">ACTIVAR</button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             ) : (
               <div className="p-3 grid grid-cols-3 gap-x-2 gap-y-4 pb-4" role="grid" aria-label="Calendario anual">
-                {Array.from({ length: 12 }).map((_, m) => (
-                  <div key={m} className="flex flex-col">
+                {Array.from({ length: 12 }).map((_, m) => {
+                  const isLocked = permissionState !== 'granted' && [0, 7, 9].includes(m);
+                  return (
+                  <div key={m} className="flex flex-col relative">
                      <h4 className="text-[8px] font-black uppercase text-slate-800 mb-1 text-center tracking-widest">{new Date(currentDate.getFullYear(), m, 1).toLocaleDateString('es-ES', { month: 'short' })}</h4>
-                     <div className="grid grid-cols-7 gap-[2px]">
+                     <div className={`grid grid-cols-7 gap-[2px] ${isLocked ? 'opacity-30 pointer-events-none' : ''}`}>
                        <WeekdayHeader isSmall />
                        <MonthGrid 
                          targetYear={currentDate.getFullYear()} 
@@ -200,8 +218,15 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
                          userStore={userStore}
                        />
                      </div>
+                     {isLocked && (
+                        <div className="absolute inset-0 flex items-center justify-center z-10 pt-4" onClick={() => setViewMode('mensual')}>
+                          <div className="bg-slate-800/90 p-2.5 rounded-2xl backdrop-blur-md text-white shadow-lg shadow-black/20">
+                            <Lock size={18} className="text-emerald-400" />
+                          </div>
+                        </div>
+                     )}
                   </div>
-                ))}
+                )})}
               </div>
             )}
           </div>
