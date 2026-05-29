@@ -55,10 +55,9 @@ workflows:
           cat ios/App/App/App.entitlements
       - name: Increment build number
         script: |
-          # Use Codemagic's auto-incrementing BUILD_NUMBER + offset
-          # This guarantees a unique number on every build
-          NEW_BUILD=$((${BUILD_NUMBER} + 100))
-          echo "Setting build number to: $NEW_BUILD (Codemagic build #${BUILD_NUMBER} + 100)"
+          # Force build number to 157 for this release
+          NEW_BUILD=157
+          echo "Setting build number to: $NEW_BUILD"
           cd ios/App
           agvtool new-version -all "$NEW_BUILD"
       - name: Set up code signing settings on Xcode project
