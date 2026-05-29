@@ -1,9 +1,10 @@
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, initializeAuth, indexedDBLocalPersistence } from "firebase/auth";
 import { initializeFirestore, memoryLocalCache } from "firebase/firestore";
 import { getMessaging } from "firebase/messaging";
 import { getStorage } from "firebase/storage";
 import { getFunctions } from "firebase/functions";
+import { Capacitor } from "@capacitor/core";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -16,7 +17,18 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+
+// FIX iOS: getAuth() auto-detects persistence and hangs inside WKWebView.
+// initializeAuth() with explicit indexedDBLocalPersistence skips the probe.
+let auth;
+if (Capacitor.isNativePlatform()) {
+  auth = initializeAuth(app, {
+    persistence: indexedDBLocalPersistence,
+  });
+} else {
+  auth = getAuth(app);
+}
+export { auth };
 // memoryLocalCache avoids IndexedDB issues on iOS WKWebView (Capacitor).
 // persistentLocalCache can silently hang on first launch in WKWebView,
 // causing setDoc operations to never resolve.

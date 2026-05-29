@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { User, Lock, Mail, Store, ShieldCheck, KeyRound, X, ChevronDown } from 'lucide-react';
 import { loginUser, registerUser, resetPassword, signInWithGoogle, signInWithApple } from '../services/firebaseService';
 import { InputGroup } from './UIComponents';
@@ -45,6 +46,7 @@ const getFriendlyErrorMessage = (error, isRegistering) => {
 };
 
 export default function AuthView() {
+  const isNative = Capacitor.isNativePlatform();
   const [isRegistering, setIsRegistering] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [recoveryError, setRecoveryError] = useState("");
@@ -239,7 +241,8 @@ export default function AuthView() {
               </button>
             )}
 
-            {!isRegistering && (
+            {/* Social login: signInWithPopup does NOT work in WKWebView (iOS native) */}
+            {!isRegistering && !isNative && (
               <>
                 <div className="flex items-center my-3 shrink-0">
                   <div className="flex-1 h-px bg-slate-100"></div>

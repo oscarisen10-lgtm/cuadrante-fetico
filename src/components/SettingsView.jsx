@@ -175,7 +175,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
           <div className="flex justify-between items-center bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20">
              <div className="flex flex-col">
                 <span className="text-xs font-bold text-emerald-400 uppercase leading-none">Versión App</span>
-                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Versión 3.0.7 (Estable)</span>
+                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Versión 3.1.1 (Estable)</span>
              </div>
           </div>
 
