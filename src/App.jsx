@@ -126,11 +126,10 @@ function AppContent({ user, authHook }) {
     <div className="h-[100dvh] bg-slate-50 flex justify-center font-sans overflow-hidden text-slate-800 relative">
       <div className="w-full max-w-md bg-white h-full flex flex-col relative overflow-hidden">
         
-        <header className="bg-emerald-600 text-white p-3 rounded-b-[1.5rem] shadow-lg shrink-0 z-10 relative" role="banner">
+        <header className="bg-emerald-600 text-white py-2 px-3 rounded-b-xl shadow-lg shrink-0 z-10 relative" role="banner">
           <div className="flex justify-between items-center px-1">
             <div>
               <h1 className="font-black text-base italic leading-tight">Hola, {user.fullName?.split(' ')[0]}</h1>
-              <span className="text-[8px] uppercase font-bold opacity-80 tracking-widest leading-none" aria-label="Estado de sincronización: conectado">Datos sincronizados ☁️</span>
             </div>
             <button onClick={() => setShowConfirmLogout(true)} className="bg-white/10 p-2 rounded-lg hover:bg-white/20" aria-label="Cerrar sesión"><LogOut size={16} /></button>
           </div>
