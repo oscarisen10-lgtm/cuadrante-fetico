@@ -15,6 +15,8 @@ export const useShifts = (shifts, user) => {
     let contadorHA = 0;
     let vacacionesCount = 0;
     let findesCalidad = 0;
+    let findesCalidadCorto = 0;
+    let findesCalidadLargo = 0;
     let domingosCount = 0;
     let diasTrabajados = 0;
     let diasLibres = 0;
@@ -43,9 +45,20 @@ export const useShifts = (shifts, user) => {
         const sunDate = new Date(current);
         sunDate.setDate(current.getDate() + 1);
         const sunStr = getFormattedDate(sunDate);
+        const monDate = new Date(current);
+        monDate.setDate(current.getDate() + 2);
+        const monStr = getFormattedDate(monDate);
         const satS = shiftsMap[satStr];
         const sunS = shiftsMap[sunStr];
-        if (satS?.type === 'rest' && sunS?.type === 'rest') findesCalidad++;
+        const monS = shiftsMap[monStr];
+        if (satS?.type === 'rest' && sunS?.type === 'rest') {
+          findesCalidad++;
+          if (monS?.type === 'rest') {
+            findesCalidadLargo++;
+          } else {
+            findesCalidadCorto++;
+          }
+        }
       }
       current.setDate(current.getDate() + 1);
     }
@@ -58,6 +71,8 @@ export const useShifts = (shifts, user) => {
       horasTotales: horasTotalesDecimal, 
       contadorHA, 
       findesCalidad, 
+      findesCalidadCorto,
+      findesCalidadLargo,
       vacacionesCount, 
       domingosCount, 
       diasTrabajados, 

@@ -153,10 +153,48 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
              <StatBar label="Días HA" currentValue={stats.contadorHA} percentage={(stats.contadorHA/stats.targets.ha)*100} totalValue={stats.targets.ha} color="bg-emerald-500" large={true} />
           )}
           
-          <StatBar label="Calidad" currentValue={stats.findesCalidad} percentage={(stats.findesCalidad/(stats.targets?.calidad || 10))*100} totalValue={stats.targets?.calidad || 10} color="bg-emerald-600" large={true} />
           <StatBar label="DOMINGOS/FESTIVOS" currentValue={stats.domingosCount} percentage={(stats.domingosCount/(stats.targets?.domingos || 22))*100} totalValue={stats.targets?.domingos || 22} color="bg-emerald-500" large={true} />
         </div>
       </div>
+
+      {/* Tarjeta Fines de Semana de Calidad */}
+      {(stats.targets?.calidad || 0) > 0 && (
+        <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 flex flex-col">
+          <h2 className="text-sm font-black text-slate-800 uppercase italic tracking-widest border-b border-slate-100 pb-3 flex items-center gap-2 mb-5 shrink-0">
+            🌟 Fines de Semana de Calidad
+          </h2>
+          <div className="space-y-4">
+            <div>
+              <div className="flex justify-between items-center mb-1.5">
+                <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Cortos · Sáb-Dom</span>
+                <span className="text-xs font-black text-emerald-700">{stats.findesCalidadCorto} <span className="text-slate-400 font-bold">/ 6</span></span>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                <div 
+                  className="bg-emerald-500 h-full rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${Math.min((stats.findesCalidadCorto / 6) * 100, 100)}%` }}
+                />
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between items-center mb-1.5">
+                <span className="text-[10px] font-black text-blue-700 uppercase tracking-widest">Largos · Sáb-Dom-Lun</span>
+                <span className="text-xs font-black text-blue-700">{stats.findesCalidadLargo} <span className="text-slate-400 font-bold">/ 4</span></span>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                <div 
+                  className="bg-blue-500 h-full rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${Math.min((stats.findesCalidadLargo / 4) * 100, 100)}%` }}
+                />
+              </div>
+            </div>
+            <div className="flex justify-between items-center pt-3 border-t border-slate-100">
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total Calidad</span>
+              <span className="text-sm font-black text-slate-700">{stats.findesCalidad} <span className="text-slate-400 font-bold text-xs">/ {stats.targets?.calidad || 10}</span></span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sección de Noticias (Solo visible si hay noticias o si el usuario es Admin) */}
       {(newsList.filter(n => !n.isPushRequest).length > 0 || (user?.email && ADMIN_EMAIL && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase())) && (
