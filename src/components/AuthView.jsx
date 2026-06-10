@@ -236,8 +236,16 @@ export default function AuthView() {
             </button>
 
             {ALLOW_REGISTRATION && (
-              <button type="button" onClick={() => { setIsRegistering(!isRegistering); setRecoveryError(""); }} className="w-full text-center text-xs font-black text-emerald-700 uppercase tracking-widest leading-none mt-2">
-                {isRegistering ? 'Volver atrás' : '¿Eres nuevo? Regístrate'}
+              <button 
+                type="button" 
+                onClick={() => { setIsRegistering(!isRegistering); setRecoveryError(""); }} 
+                className={`w-full text-center text-xs font-black py-2.5 rounded-xl uppercase transition-all mt-2 active:scale-95 tracking-wider ${
+                  isRegistering 
+                    ? 'text-slate-500 bg-slate-100 hover:bg-slate-200' 
+                    : 'text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100/70 shadow-sm'
+                }`}
+              >
+                {isRegistering ? 'Volver al Inicio de Sesión' : '¿Eres nuevo? Regístrate aquí'}
               </button>
             )}
 
