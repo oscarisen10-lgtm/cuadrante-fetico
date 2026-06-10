@@ -157,8 +157,8 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
             <div>
               <StatBar label="Calidad" currentValue={stats.findesCalidad} percentage={(stats.findesCalidad/(stats.targets?.calidad || 10))*100} totalValue={stats.targets?.calidad || 10} color="bg-emerald-600" large={true} />
               <div className="flex gap-3 mt-1.5 ml-1">
-                <span className="text-[9px] font-black text-emerald-600 uppercase tracking-wider">🟢 Sáb-Dom: {stats.findesCalidadCorto}/6</span>
-                <span className="text-[9px] font-black text-blue-600 uppercase tracking-wider">🔵 Sáb-Dom-Lun: {stats.findesCalidadLargo}/4</span>
+                <span className="text-[9px] font-black text-emerald-700 uppercase tracking-wider">● Sáb-Dom: {stats.findesCalidadCorto}/6</span>
+                <span className="text-[9px] font-black text-emerald-500 uppercase tracking-wider">● Sáb-Dom-Lun: {stats.findesCalidadLargo}/4</span>
               </div>
             </div>
           )}
