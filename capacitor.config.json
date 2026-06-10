@@ -1,5 +1,14 @@
 {
   "appId": "com.cuadrantefetico.app",
   "appName": "Mi Cuadrante",
-  "webDir": "dist"
+  "webDir": "dist",
+  "ios": {
+    "contentInset": "always",
+    "allowsLinkPreview": false,
+    "scrollEnabled": false
+  },
+  "server": {
+    "iosScheme": "capacitor",
+    "androidScheme": "https"
+  }
 }
