@@ -54,11 +54,17 @@ workflows:
           sed -i '' "s/<string>development<\/string>/<string>production<\/string>/" ios/App/App/App.entitlements
           echo "Entitlements updated to production:"
           cat ios/App/App/App.entitlements
-      - name: Increment build number
+      - name: Set marketing version and build number
         script: |
-          # Force build number to 158 for this release
+          # La 3.1.0 ya está aprobada y CERRADA en App Store (errores 90186 / 90062):
+          # hay que subir la marketing version a 3.1.1 para una nueva entrega.
+          NEW_VERSION=3.1.1
+          sed -i '' "s/MARKETING_VERSION = [^;]*;/MARKETING_VERSION = $NEW_VERSION;/g" "$XCODE_PROJECT/project.pbxproj"
+          echo "Marketing version -> $NEW_VERSION"
+          grep -m2 "MARKETING_VERSION" "$XCODE_PROJECT/project.pbxproj"
+          # Build number interno
           NEW_BUILD=158
-          echo "Setting build number to: $NEW_BUILD"
+          echo "Build number -> $NEW_BUILD"
           cd ios/App
           agvtool new-version -all "$NEW_BUILD"
       - name: Set up code signing settings on Xcode project
