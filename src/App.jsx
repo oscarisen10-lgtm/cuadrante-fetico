@@ -40,7 +40,7 @@ function NavigationBar() {
 
   return (
     <nav 
-      className="h-20 bg-white/95 backdrop-blur-md border-t border-slate-100 flex justify-around items-center px-3 shrink-0 fixed bottom-0 left-0 right-0 z-50 pb-5"
+      className="h-20 bg-white/95 backdrop-blur-md border-t border-slate-100 flex justify-around items-center px-3 shrink-0"
       role="tablist"
       aria-label="Navegación principal"
     >
@@ -123,7 +123,7 @@ function AppContent({ user, authHook }) {
   }, [logoutUser]);
 
   return (
-    <div className="h-[100dvh] bg-slate-50 flex justify-center font-sans overflow-hidden text-slate-800 relative">
+    <div className="h-full bg-slate-50 flex justify-center font-sans overflow-hidden text-slate-800 relative">
       <div className="w-full max-w-md bg-white h-full flex flex-col relative overflow-hidden">
         
         <header className="bg-emerald-600 text-white py-2 px-3 rounded-b-xl shadow-lg shrink-0 z-10 relative" role="banner">
