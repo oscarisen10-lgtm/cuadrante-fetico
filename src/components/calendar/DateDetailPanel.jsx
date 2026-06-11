@@ -1,11 +1,20 @@
-import React from 'react';
-import { X } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Send, ArrowLeft } from 'lucide-react';
 import { getFormattedDate } from '../../utils/dateUtils';
 
 /**
  * DateDetailPanel — Shows details and action buttons for selected dates.
  */
-export function DateDetailPanel({ selectedDates, shiftsMap, setSelectedDates, markMulti, openEditHours, deleteSelectedDates }) {
+export function DateDetailPanel({ selectedDates, shiftsMap, setSelectedDates, markMulti, openEditHours, deleteSelectedDates, user, makeRequest, canRequestOff }) {
+  const [showNoteInput, setShowNoteInput] = useState(false);
+  const [noteText, setNoteText] = useState('');
+
+  // Reset note input state when selection changes
+  React.useEffect(() => {
+    setShowNoteInput(false);
+    setNoteText('');
+  }, [selectedDates]);
+
   if (selectedDates.length === 0) return null;
 
   let dObj, statusText, statusColor, hoursText;
@@ -45,6 +54,10 @@ export function DateDetailPanel({ selectedDates, shiftsMap, setSelectedDates, ma
     } else if (s?.type === 'rest') {
       statusText = isQuality ? "CALIDAD" : "DESCANSO";
       statusColor = isQuality ? "bg-green-100 text-green-700 border-green-200" : "bg-amber-100 text-amber-700 border-amber-200";
+      hoursText = "Libre";
+    } else if (s?.type === 'request') {
+      statusText = "SOLICITADO (PENDIENTE)";
+      statusColor = "bg-orange-100 text-orange-700 border-orange-200";
       hoursText = "Libre";
     }
   } else {
@@ -86,21 +99,55 @@ export function DateDetailPanel({ selectedDates, shiftsMap, setSelectedDates, ma
           <div className={`text-3xl font-black font-mono ${isHoursHighlighted ? 'text-slate-800' : 'text-slate-400'}`}>{hoursText}</div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3" role="toolbar" aria-label="Acciones para las fechas seleccionadas">
-          <button onClick={() => markMulti('rest')} className="bg-amber-500 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all" aria-label="Marcar como día libre">Marcar Libre</button>
-          <select 
-             onChange={(e) => { if(e.target.value) { markMulti(e.target.value); e.target.value=""; } }}
-             className="bg-purple-500 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md transition-all text-center appearance-none cursor-pointer outline-none"
-             defaultValue=""
-             aria-label="Seleccionar tipo de ausencia"
-          >
-             <option value="" disabled className="text-center hidden">AUSENCIA ▼</option>
-             <option value="vacation" className="text-slate-800 bg-white font-bold">Marcar Vacaciones</option>
-             <option value="sick" className="text-slate-800 bg-white font-bold">Marcar Baja Laboral</option>
-          </select>
-          <button onClick={() => openEditHours(selectedDates[0])} className="bg-blue-600 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all" aria-label="Ajustar horas trabajadas">Ajustar Horas</button>
-          <button onClick={deleteSelectedDates} className="bg-rose-500 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all" aria-label="Borrar registro de las fechas seleccionadas">Borrar Registro</button>
-        </div>
+        {showNoteInput ? (
+          <div className="flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <h4 className="text-xs font-black text-emerald-700 uppercase tracking-widest mb-2">Motivo de la solicitud</h4>
+            <textarea
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              placeholder="Ej: Tengo una cita médica, es el cumpleaños de mi hijo... (Opcional)"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all resize-none h-20 mb-3"
+            />
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setShowNoteInput(false)} 
+                className="flex-1 flex justify-center items-center gap-1.5 bg-slate-100 text-slate-500 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all"
+              >
+                <ArrowLeft size={14} /> Volver
+              </button>
+              <button 
+                onClick={() => { makeRequest(noteText); setShowNoteInput(false); setNoteText(''); }} 
+                className="flex-[2] flex justify-center items-center gap-1.5 bg-emerald-500 text-white py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md shadow-emerald-500/20 active:scale-95 transition-all"
+              >
+                <Send size={14} /> Enviar al Coordinador
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 animate-in fade-in duration-300" role="toolbar" aria-label="Acciones para las fechas seleccionadas">
+            <button onClick={() => markMulti('rest')} className="bg-amber-500 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all" aria-label="Marcar como día libre">Marcar Libre</button>
+            {canRequestOff && (
+              <button onClick={() => setShowNoteInput(true)} className="bg-emerald-400 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all" aria-label="Solicitar día libre al jefe">Solicitar Libre</button>
+            )}
+            
+            <select 
+               onChange={(e) => { 
+                 if(e.target.value) { markMulti(e.target.value); e.target.value=""; } 
+               }}
+               className="bg-purple-500 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md transition-all text-center appearance-none cursor-pointer outline-none"
+               defaultValue=""
+               aria-label="Seleccionar otro tipo de ausencia"
+            >
+               <option value="" disabled className="text-center hidden">OTRA AUSENCIA ▼</option>
+               <option value="vacation" className="text-slate-800 bg-white font-bold">Marcar Vacaciones</option>
+               <option value="sick" className="text-slate-800 bg-white font-bold">Marcar Baja Laboral</option>
+            </select>
+            
+            <button onClick={() => openEditHours(selectedDates[0])} className="bg-blue-600 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all" aria-label="Ajustar horas trabajadas">Ajustar Horas</button>
+            
+            <button onClick={deleteSelectedDates} className="col-span-2 bg-rose-500 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all" aria-label="Borrar registro de las fechas seleccionadas">Borrar Registro</button>
+          </div>
+        )}
       </div>
     </div>
   );

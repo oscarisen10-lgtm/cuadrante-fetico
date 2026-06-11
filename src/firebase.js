@@ -1,6 +1,11 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, initializeAuth, indexedDBLocalPersistence } from "firebase/auth";
-import { initializeFirestore, memoryLocalCache } from "firebase/firestore";
+import {
+  initializeFirestore,
+  memoryLocalCache,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from "firebase/firestore";
 import { getMessaging } from "firebase/messaging";
 import { getStorage } from "firebase/storage";
 import { getFunctions } from "firebase/functions";
@@ -18,10 +23,28 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// FIX iOS: getAuth() auto-detects persistence and hangs inside WKWebView.
-// initializeAuth() with explicit indexedDBLocalPersistence skips the probe.
+const platform = Capacitor.getPlatform(); // 'ios' | 'android' | 'web'
+const isNative = platform !== 'web';
+
+// App Check (solo web): protege Functions/Firestore frente a clientes no legítimos.
+// Inerte hasta que definas VITE_APPCHECK_SITE_KEY (reCAPTCHA v3) en .env y registres
+// la clave en Firebase Console. La importación es dinámica para no engordar el bundle
+// cuando no está configurado.
+if (!isNative && import.meta.env.VITE_APPCHECK_SITE_KEY) {
+  import("firebase/app-check")
+    .then(({ initializeAppCheck, ReCaptchaV3Provider }) => {
+      initializeAppCheck(app, {
+        provider: new ReCaptchaV3Provider(import.meta.env.VITE_APPCHECK_SITE_KEY),
+        isTokenAutoRefreshEnabled: true,
+      });
+    })
+    .catch((e) => console.warn("App Check init failed:", e.message));
+}
+
+// FIX iOS: getAuth() auto-detecta la persistencia y se cuelga dentro de WKWebView.
+// initializeAuth() con indexedDBLocalPersistence explícita evita ese sondeo.
 let auth;
-if (Capacitor.isNativePlatform()) {
+if (isNative) {
   auth = initializeAuth(app, {
     persistence: indexedDBLocalPersistence,
   });
@@ -29,17 +52,33 @@ if (Capacitor.isNativePlatform()) {
   auth = getAuth(app);
 }
 export { auth };
-// memoryLocalCache avoids IndexedDB issues on iOS WKWebView (Capacitor).
-// persistentLocalCache can silently hang on first launch in WKWebView,
-// causing setDoc operations to never resolve.
-export const db = initializeFirestore(app, {
-  localCache: memoryLocalCache(),
-  experimentalForceLongPolling: true
-});
 
-// Firebase Messaging only works in browsers with Service Worker support.
-// iOS WKWebView (Capacitor native) does NOT support SW, so getMessaging()
-// would throw a fatal error and cause a blank screen on launch.
+// Firestore — caché según plataforma:
+// - iOS (WKWebView): SOLO memoria. persistentLocalCache puede colgar el arranque aquí.
+// - Android (WebView Chromium): caché PERSISTENTE en disco → en reaperturas sirve los
+//   datos desde el móvil sin gastar lecturas de Firestore (Android no sufre el cuelgue de iOS).
+// - Web/escritorio: caché persistente multipestaña + transporte por defecto.
+export const db = (() => {
+  if (platform === 'ios') {
+    return initializeFirestore(app, {
+      localCache: memoryLocalCache(),
+      experimentalForceLongPolling: true,
+    });
+  }
+  if (platform === 'android') {
+    return initializeFirestore(app, {
+      localCache: persistentLocalCache(),
+      experimentalForceLongPolling: true,
+    });
+  }
+  return initializeFirestore(app, {
+    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+  });
+})();
+
+// Firebase Messaging solo funciona en navegadores con Service Worker.
+// iOS WKWebView (Capacitor nativo) NO lo soporta, así que getMessaging() lanzaría
+// un error fatal y dejaría la pantalla en blanco al arrancar.
 let _messaging = null;
 try {
   if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
@@ -53,4 +92,10 @@ export const messaging = _messaging;
 export const storage = getStorage(app);
 export const functions = getFunctions(app);
 
-export const VAPID_KEY = "BEYovLJVC-gnlNb_aJ4qkOTxh849wiUY_3Y5p9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z";
+// Clave VAPID para Web Push. Se obtiene en Firebase Console > Configuración del proyecto
+// > Cloud Messaging > Certificados push web, y se define en .env como
+// VITE_FIREBASE_VAPID_KEY. Sin ella, getToken() falla en web (el push nativo no la usa).
+export const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
+if (!isNative && !VAPID_KEY) {
+  console.warn('[FCM] VITE_FIREBASE_VAPID_KEY no configurada: las notificaciones web no funcionarán.');
+}

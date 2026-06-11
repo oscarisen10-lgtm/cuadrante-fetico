@@ -47,6 +47,11 @@ export const DayCell = memo(function DayCell({ d, targetYear, targetMonth, shift
     style = "text-slate-800"; 
     label = isSmall ? "" : (s.type === 'sick' ? "Baj" : "Vac"); 
   }
+  else if (s?.type === 'request') {
+    colorBottom = colorTop = "#fdba74"; // orange-300
+    style = "text-slate-800";
+    label = isSmall ? "" : "Sol";
+  }
   else if (s?.type === 'rest') {
     if (dayOfWeek === 6 || dayOfWeek === 0) {
       const isSat = dayOfWeek === 6;

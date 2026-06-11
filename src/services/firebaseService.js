@@ -6,7 +6,7 @@ import {
 } from "firebase/auth";
 import { 
   doc, setDoc, getDoc, onSnapshot, collection, addDoc, deleteDoc,
-  query, getDocs, writeBatch, orderBy
+  query, getDocs, writeBatch, orderBy, where, limit
 } from "firebase/firestore";
 
 /**
@@ -36,9 +36,12 @@ export const subscribeToUserDoc = (uid, callback, onError) => {
  * Subscribe to the shifts subcollection for a user.
  * Shifts are stored in users/{uid}/shifts/{shiftId} for scalability.
  */
-export const subscribeToShifts = (uid, callback, onError) => {
+export const subscribeToShifts = (uid, callback, onError, sinceDate) => {
   const shiftsRef = collection(db, "users", uid, "shifts");
-  return onSnapshot(shiftsRef, (snapshot) => {
+  // Si se indica sinceDate ("YYYY-MM-DD"), solo se cargan los turnos desde esa fecha
+  // en adelante (acota lecturas). Sin sinceDate, carga toda la subcolección (compatibilidad).
+  const ref = sinceDate ? query(shiftsRef, where("date", ">=", sinceDate)) : shiftsRef;
+  return onSnapshot(ref, (snapshot) => {
     const arr = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
     callback(arr);
   }, onError);
@@ -122,7 +125,10 @@ export const registerUser = async (email, password, profileData) => {
   const res = await withTimeout(createUserWithEmailAndPassword(auth, email, password));
   
   await withTimeout(setDoc(doc(db, "users", res.user.uid), {
-    profile: profileData,
+    profile: {
+      ...profileData,
+      section: profileData.section || "Sin especificar"
+    },
     settings: { notifications: true, breakDuration: 15 },
     shifts: [],
     activeShift: null,
@@ -160,7 +166,8 @@ const checkAndCreateSocialUserDoc = async (user) => {
         fullName: user.displayName || 'Compañero/a',
         company: "Supercor",
         store: "Centro sin definir",
-        rank: "Personal base"
+        rank: "Personal base",
+        section: "Sin especificar"
       },
       settings: { notifications: true, breakDuration: 15 },
       shifts: [],
@@ -208,9 +215,12 @@ export const saveUserData = async (updates) => {
 // --- NOTICIAS ---
 
 export const subscribeToNews = (callback) => {
-  return onSnapshot(collection(db, "noticias"), (snapshot) => {
+  // Ordenado y acotado en servidor: evita descargar toda la colección (que crece sin
+  // límite) y re-ordenarla en el cliente en cada cambio. Requiere que cada noticia
+  // tenga `createdAt` (el alta siempre lo añade).
+  const q = query(collection(db, "noticias"), orderBy("createdAt", "desc"), limit(50));
+  return onSnapshot(q, (snapshot) => {
     const arr = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    arr.sort((a, b) => b.createdAt - a.createdAt);
     callback(arr);
   });
 };
@@ -243,4 +253,85 @@ export const updateLicencia = async (id, data) => {
 
 export const deleteLicencia = async (id) => {
   return await deleteDoc(doc(db, "licencias", id));
+};
+
+// --- PETICIONES (REQUESTS) & EQUIPO ---
+
+export const getTeamMembers = async (company, store, section) => {
+  if (!company || !store || !section) return [];
+  try {
+    // Note: We use getDocs without complex where clauses to avoid needing custom composite indexes if possible.
+    // However, basic equality queries on single fields don't need composite indexes unless combined.
+    // In Firebase, chained == queries on DIFFERENT fields DO require a composite index.
+    // To avoid creating indexes via CLI, we will fetch users by company and store, then filter section in JS.
+    // Assuming the number of users per store is small enough.
+    const q = query(
+      collection(db, "users"),
+      where("profile.company", "==", company),
+      where("profile.store", "==", store)
+    );
+    const snap = await getDocs(q);
+    const users = [];
+    snap.forEach(doc => {
+      const data = doc.data();
+      if (data.profile?.section === section) {
+        users.push({ uid: doc.id, ...data.profile });
+      }
+    });
+    return users.sort((a, b) => a.fullName.localeCompare(b.fullName));
+  } catch (error) {
+    console.error("Error fetching team members:", error);
+    return [];
+  }
+};
+
+export const checkRankAvailability = async (company, store, section, newRank, userUid) => {
+  // Solo aplicamos el limite si el nuevo rango es de tipo Responsable
+  const isBossRank = (rank) => rank && rank.match(/.*(jefe|segundo|gestor|coordinador).*/i);
+  
+  if (!isBossRank(newRank)) return true; // Si es personal base, siempre permitido
+
+  const members = await getTeamMembers(company, store, section);
+  
+  // Contamos cuántos responsables hay (excluyendo al propio usuario si ya era responsable)
+  let bossCount = 0;
+  for (const m of members) {
+    if (m.uid !== userUid && isBossRank(m.rank)) {
+      bossCount++;
+    }
+  }
+
+  if (bossCount >= 3) {
+    throw new Error("Límite alcanzado: Ya hay 3 responsables asignados en esta tienda y sección.");
+  }
+  
+  return true;
+};
+
+export const addRequest = async (requestData) => {
+  return await addDoc(collection(db, "requests"), {
+    ...requestData,
+    createdAt: Date.now()
+  });
+};
+
+export const updateRequestStatus = async (id, newStatus) => {
+  return await setDoc(doc(db, "requests", id), { status: newStatus, updatedAt: Date.now() }, { merge: true });
+};
+
+export const subscribeToMyRequests = (uid, callback) => {
+  const q = query(collection(db, "requests"), where("uid", "==", uid));
+  return onSnapshot(q, (snapshot) => {
+    const arr = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    callback(arr);
+  });
+};
+
+export const subscribeToTeamRequests = (storeKey, callback) => {
+  // storeKey format: "Company_Store_Section" to avoid composite index limits
+  const q = query(collection(db, "requests"), where("storeKey", "==", storeKey), where("status", "==", "pending"));
+  return onSnapshot(q, (snapshot) => {
+    const arr = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    callback(arr);
+  });
 };

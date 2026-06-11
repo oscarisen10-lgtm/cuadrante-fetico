@@ -91,11 +91,16 @@ export const useAuth = () => {
           setLoading(false);
         });
 
+        // Ventana de turnos: solo desde el 1 de enero del año pasado en adelante.
+        // Acota las lecturas de Firestore y evita que crezcan sin límite con los años.
+        // (Cubre todo el historial de los usuarios actuales; los cuadrantes de hace
+        // 2+ años no se cargan en cada apertura.)
+        const shiftsSince = `${new Date().getFullYear() - 1}-01-01`;
         unsubShifts = subscribeToShifts(firebaseUser.uid, (shiftsArr) => {
           setShifts(shiftsArr);
         }, (error) => {
           console.error("Error al cargar turnos:", error);
-        });
+        }, shiftsSince);
 
       } else {
         clearTimeout(safetyTimeout);

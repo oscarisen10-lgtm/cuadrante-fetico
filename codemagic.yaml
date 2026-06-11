@@ -33,6 +33,7 @@ workflows:
             "VITE_FIREBASE_APP_ID=1:484679385374:web:fc54045bde29b3cb7f890f" \
             "VITE_FIREBASE_MEASUREMENT_ID=G-M133C7LHEF" \
             "VITE_ADMIN_EMAIL=oscargarcia@fetico.es" \
+            "VITE_FIREBASE_VAPID_KEY=BK7WzHqm7hFFEzFIq8VUlsz60L1jgRDcTghvGcIqUNUuY7vXExnl-K5PW2912EhqiM1ImLzAmTTtyNPwOHS1v78" \
             > .env
           echo "--- .env created ---"
           cat .env
@@ -55,8 +56,8 @@ workflows:
           cat ios/App/App/App.entitlements
       - name: Increment build number
         script: |
-          # Force build number to 157 for this release
-          NEW_BUILD=157
+          # Force build number to 158 for this release
+          NEW_BUILD=158
           echo "Setting build number to: $NEW_BUILD"
           cd ios/App
           agvtool new-version -all "$NEW_BUILD"

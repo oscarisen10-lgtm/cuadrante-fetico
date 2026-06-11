@@ -2,38 +2,133 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    function isAdmin() {
-      return request.auth != null && request.auth.token != null && request.auth.token.email == "oscargarcia@fetico.es";
+
+    // ---------- Helpers ----------
+
+    // Perfil del usuario autenticado. get() se cachea por petición, así que
+    // llamarlo varias veces dentro de una misma regla cuenta como UNA lectura.
+    function myProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profile;
     }
 
-    // Reglas para la colección de usuarios
+    // Clave de sección: "Empresa_Tienda_Seccion" (debe coincidir con el cliente).
+    function myStoreKey() {
+      let p = myProfile();
+      return p.company + "_" + p.store + "_" + p.section;
+    }
+
+    // Admin por custom-claim (recomendado) con fallback al email histórico
+    // para no perder acceso durante la migración a claims.
+    function isAdmin() {
+      return request.auth != null && request.auth.token != null && (
+        request.auth.token.admin == true ||
+        request.auth.token.email == "oscargarcia@fetico.es"
+      );
+    }
+
+    function amIBoss() {
+      let p = myProfile();
+      return 'rank' in p && p.rank.matches('(?i).*(jefe|coordinador|gestor|segundo).*');
+    }
+
+    // Jefe directo del usuario objetivo: mismo equipo (empresa+tienda+sección).
+    function isDirectBossOf(targetUid) {
+      let me = myProfile();
+      let them = get(/databases/$(database)/documents/users/$(targetUid)).data.profile;
+      return amIBoss() &&
+             me.company == them.company &&
+             me.store == them.store &&
+             me.section == them.section;
+    }
+
+    // Jefe de la sección de la que procede la petición.
+    function isDirectBossOfRequest(reqData) {
+      return amIBoss() && myStoreKey() == reqData.storeKey;
+    }
+
+    // ---------- Usuarios ----------
     match /users/{userId} {
-      // El usuario puede leer y escribir sus propios datos
-      // El admin puede leer todos los perfiles si fuera necesario
-      allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      
-      // Reglas para la subcolección de turnos
+      // Lectura ACOTADA: el propio usuario, gente de su misma empresa+tienda,
+      // o el admin. Evita que cualquier usuario lea a toda la plantilla.
+      // (resource.data es el doc leído, así que no requiere get() extra.)
+      allow read: if request.auth != null && (
+        request.auth.uid == userId ||
+        isAdmin() ||
+        ( resource.data.profile.company == myProfile().company &&
+          resource.data.profile.store == myProfile().store )
+      );
+
+      // Solo el propio usuario (o el admin) puede modificar su perfil.
+      allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+
+      // Turnos: subcolección por usuario.
       match /shifts/{shiftId} {
-        allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+        // Lectura: dueño, jefe directo de la sección, o admin.
+        allow read: if request.auth != null && (
+          request.auth.uid == userId ||
+          isDirectBossOf(userId) ||
+          isAdmin()
+        );
+        // Escritura: dueño, jefe directo (p.ej. al aprobar un día libre), o admin.
+        allow write: if request.auth != null && (
+          request.auth.uid == userId ||
+          isDirectBossOf(userId) ||
+          isAdmin()
+        );
+      }
+
+      // Cuota de uso de la IA: la escribe SOLO el backend (Admin SDK ignora reglas).
+      // El cliente puede leer su propia cuota; nadie puede escribirla desde el cliente.
+      match /usage/{usageId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if false;
       }
     }
 
-    // Reglas para noticias
+    // ---------- Peticiones (requests) ----------
+    match /requests/{requestId} {
+      // Lectura ACOTADA: solo el dueño o el jefe de la sección correspondiente.
+      allow read: if request.auth != null && (
+        resource.data.uid == request.auth.uid ||
+        isDirectBossOfRequest(resource.data) ||
+        isAdmin()
+      );
+      // Creación: solo para uno mismo y con el storeKey REAL de su perfil
+      // (impide falsear la sección a la que se enruta la petición).
+      allow create: if request.auth != null &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.storeKey == myStoreKey();
+      // Actualización/Borrado: dueño, jefe de la sección, o admin.
+      allow update: if request.auth != null && (
+        resource.data.uid == request.auth.uid ||
+        isDirectBossOfRequest(resource.data) ||
+        isAdmin()
+      );
+      allow delete: if request.auth != null && (
+        resource.data.uid == request.auth.uid ||
+        isDirectBossOfRequest(resource.data) ||
+        isAdmin()
+      );
+    }
+
+    // ---------- Noticias (requiere sesión) ----------
     match /noticias/{noticiaId} {
-      // Todo el mundo puede leer noticias
-      allow read: if true;
-      // Solo el admin puede crear, editar o borrar noticias
+      allow read: if request.auth != null;
       allow write: if isAdmin();
     }
 
-    // Reglas para licencias (si se guardan en BD)
+    // ---------- Licencias (requiere sesión) ----------
     match /licencias/{licenciaId} {
-      allow read: if true;
+      allow read: if request.auth != null;
       allow write: if isAdmin();
     }
 
-    // Por defecto, denegar todo lo demás para mayor seguridad
+    // ---------- Caché de IA: solo backend ----------
+    match /ai_cache/{docId} {
+      allow read, write: if false;
+    }
+
+    // Por defecto, denegar todo lo demás (el admin conserva acceso de soporte).
     match /{document=**} {
       allow read, write: if isAdmin();
     }

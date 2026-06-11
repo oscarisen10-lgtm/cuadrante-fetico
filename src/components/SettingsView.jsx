@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { User, Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, Gamepad2 } from 'lucide-react';
 import { COMPANY_RULES, ADMIN_EMAIL } from '../constants/config';
 import { STORES, S_ROMERO_STORES } from '../constants/stores';
-import { deleteUserAccount } from '../services/firebaseService';
+import { deleteUserAccount, checkRankAvailability } from '../services/firebaseService';
 import { toast } from './Toast';
 
 export const SettingsView = React.memo(function SettingsView({ user, settings, saveToCloud, stopAlarm, pushToken, pushTokenError, permissionState, requestTokenManually }) {
@@ -26,6 +26,26 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
   const currentCompany = user?.company || "Supercor";
   const currentRank = user?.rank || "Personal de fresco";
   const currentStore = user?.store || "";
+
+  const handleProfileChange = async (updates) => {
+    const newCompany = updates.company || currentCompany;
+    const newStore = updates.store !== undefined ? updates.store : currentStore;
+    const newSection = updates.section !== undefined ? updates.section : (user?.section || "Sin especificar");
+    const newRank = updates.rank || currentRank;
+
+    // Solo validamos si cambia algún campo que afecte a la ubicación o el rango
+    if (updates.rank !== undefined || updates.store !== undefined || updates.section !== undefined || updates.company !== undefined) {
+      try {
+        await checkRankAvailability(newCompany, newStore, newSection, newRank, user.uid);
+      } catch (err) {
+        toast(err.message, "error");
+        // Revertimos el select localmente forzando un re-render sin guardar
+        return; 
+      }
+    }
+    
+    saveToCloud({ profile: { ...user, ...updates } });
+  };
 
   const tokenStatus = pushToken
     ? "OK - GENERADO CON EXITO"
@@ -71,7 +91,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                       const newCompany = e.target.value;
                       const firstRank = Object.keys(COMPANY_RULES[newCompany] || {})[0];
                       const newStore = newCompany === "ECI" ? "En construcción" : "";
-                      saveToCloud({ profile: { ...user, company: newCompany, rank: firstRank, store: newStore } });
+                      handleProfileChange({ company: newCompany, rank: firstRank, store: newStore });
                     }}
                     className="w-full bg-white/10 border-none p-2 rounded-xl text-xs outline-none text-white appearance-none"
                   >
@@ -82,7 +102,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                   <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1">Rango</span>
                   <select 
                     value={currentRank} 
-                    onChange={(e) => saveToCloud({ profile: { ...user, rank: e.target.value } })}
+                    onChange={(e) => handleProfileChange({ rank: e.target.value })}
                     className="w-full bg-white/10 border-none p-2 rounded-xl text-xs outline-none text-white appearance-none"
                   >
                     {Object.keys(COMPANY_RULES[currentCompany] || {}).map(r => <option key={r} value={r} className="text-slate-800">{r}</option>)}
@@ -97,7 +117,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                   <div className="relative">
                     <select 
                       value={currentStore} 
-                      onChange={(e) => saveToCloud({ profile: { ...user, store: e.target.value } })}
+                      onChange={(e) => handleProfileChange({ store: e.target.value })}
                       className="w-full bg-white/10 border-none p-2.5 pr-8 rounded-xl text-xs outline-none text-white appearance-none font-medium"
                     >
                       {currentCompany === "ECI" ? (
@@ -110,6 +130,30 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                           ))}
                         </>
                       )}
+                    </select>
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-white/30">
+                      <ChevronDown size={14} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col space-y-1 mt-1">
+                  <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1 flex items-center gap-1">
+                    <Store size={10} className="text-emerald-500"/> Sección
+                  </span>
+                  <div className="relative">
+                    <select 
+                      value={user?.section || "Sin especificar"} 
+                      onChange={(e) => handleProfileChange({ section: e.target.value })}
+                      className="w-full bg-white/10 border-none p-2.5 pr-8 rounded-xl text-xs outline-none text-white appearance-none font-medium"
+                    >
+                      <option value="Sin especificar" className="text-slate-800">Sin especificar</option>
+                      <option value="Charcutería" className="text-slate-800">Charcutería</option>
+                      <option value="Carnicería" className="text-slate-800">Carnicería</option>
+                      <option value="Pescadería" className="text-slate-800">Pescadería</option>
+                      <option value="Panadería" className="text-slate-800">Panadería</option>
+                      <option value="Frutería" className="text-slate-800">Frutería</option>
+                      <option value="Sala" className="text-slate-800">Sala</option>
                     </select>
                     <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-white/30">
                       <ChevronDown size={14} />

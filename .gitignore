@@ -33,6 +33,7 @@ ui-debug.log
 
 # Environment
 .env
+.env.*
 .env.production
 .env.local
 
@@ -42,6 +43,8 @@ ui-debug.log
 *.p12
 *.key
 signing_key.bin
+serviceAccount*.json
+scripts/serviceAccount.json
 
 # Build artifacts
 android/app/build

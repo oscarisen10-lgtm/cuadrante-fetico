@@ -17,8 +17,13 @@ exports.sendPushNotification = onDocumentCreated("noticias/{docId}", async (even
   const title = data.title || "Nueva notificación";
   const body = data.desc || "";
 
-  // 1. Collect all FCM tokens from registered users
-  const usersSnapshot = await admin.firestore().collection("users").get();
+  // 1. Collect all FCM tokens from registered users.
+  // .select() proyecta SOLO el token: evita descargar el perfil completo de cada
+  // usuario (mucho menos ancho de banda y memoria al crecer la plantilla).
+  const usersSnapshot = await admin.firestore()
+    .collection("users")
+    .select("profile.fcmToken")
+    .get();
   const tokenToUidMap = new Map(); // Map token -> uid for cleanup
 
   usersSnapshot.forEach((doc) => {
@@ -118,7 +123,7 @@ exports.sendPushNotification = onDocumentCreated("noticias/{docId}", async (even
 });
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const { defineSecret } = require("firebase-functions/params");
+const { defineSecret, defineString } = require("firebase-functions/params");
 const { GoogleGenAI } = require("@google/genai");
 const fs = require("fs");
 const path = require("path");
@@ -139,7 +144,13 @@ try {
 
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
 
+// Modelo configurable sin tocar código (firebase functions:config / variable de entorno
+// GEMINI_MODEL). OJO: "gemini-3.5-flash" no es un ID de modelo válido en la API de Gemini
+// y haría fallar TODAS las consultas; el valor por defecto es un modelo flash vigente.
+const geminiModel = defineString("GEMINI_MODEL", { default: "gemini-2.5-flash" });
+
 const MAX_QUESTIONS_PER_DAY = 10;
+const MAX_MESSAGE_LENGTH = 1000; // Tope de longitud para acotar el coste de tokens.
 
 exports.askFeticoAssistant = onCall({
   secrets: [geminiApiKey],
@@ -154,6 +165,10 @@ exports.askFeticoAssistant = onCall({
 
   if (!userMessage || typeof userMessage !== "string" || userMessage.trim().length === 0) {
     throw new HttpsError("invalid-argument", "El mensaje no puede estar vacío.");
+  }
+
+  if (userMessage.length > MAX_MESSAGE_LENGTH) {
+    throw new HttpsError("invalid-argument", `El mensaje es demasiado largo (máximo ${MAX_MESSAGE_LENGTH} caracteres).`);
   }
 
   const isAdmin = request.auth.token && request.auth.token.email === "oscargarcia@fetico.es";
@@ -192,7 +207,10 @@ exports.askFeticoAssistant = onCall({
 
   // 3. Normalized Query for Caching
   const cleanMessage = userMessage.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[¿?¡!.,]/g, '').replace(/\s+/g, ' ');
-  const cacheRef = admin.firestore().collection("ai_cache").doc(cleanMessage);
+  // Las barras (/ y \) rompen los IDs de documento de Firestore y la longitud está
+  // acotada; saneamos antes de usar el texto como clave de caché.
+  const safeKey = cleanMessage.replace(/[/\\]/g, '').slice(0, 400) || 'empty';
+  const cacheRef = admin.firestore().collection("ai_cache").doc(safeKey);
 
   try {
     const cacheDoc = await cacheRef.get();
@@ -257,7 +275,7 @@ ${acuerdoText}
 ${convenioText}`;
     
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: geminiModel.value(),
       contents: userMessage,
       config: {
         systemInstruction: systemInstruction,
