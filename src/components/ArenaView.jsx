@@ -1,9 +1,41 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Timer, Trophy, Crown, Gem, StopCircle } from 'lucide-react';
-import { CatchTheShiftGame } from './minigames/CatchTheShiftGame';
-import { ZigZagGame } from './minigames/ZigZagGame';
-import { FrenoEnSecoGame } from './minigames/FrenoEnSecoGame';
-import { TorreDeBloquesGame } from './minigames/TorreDeBloquesGame';
+
+// Registro de los 31 minijuegos (uno por día del mes).
+// Carga perezosa: el código de cada juego solo se descarga cuando se juega.
+const GAMES = [
+  { day: 1,  id: 'catch',     title: 'ATRAPA EL TURNO',  emoji: '🧲', bgClass: 'bg-[#3a0ca3] border-[#2b087a]',  Component: lazy(() => import('./minigames/CatchTheShiftGame').then(m => ({ default: m.CatchTheShiftGame }))) },
+  { day: 2,  id: 'zigzag',    title: 'CINTA ZIG ZAG',    emoji: '🛒', bgClass: 'bg-[#94a3b8] border-[#64748b]',  Component: lazy(() => import('./minigames/ZigZagGame').then(m => ({ default: m.ZigZagGame }))) },
+  { day: 3,  id: 'freno',     title: 'FRENO EN SECO',    emoji: '⏱️', bgClass: 'bg-[#ef4444] border-[#b91c1c]',  Component: lazy(() => import('./minigames/FrenoEnSecoGame').then(m => ({ default: m.FrenoEnSecoGame }))) },
+  { day: 4,  id: 'torre',     title: 'TORRE DE BLOQUES', emoji: '🏗️', bgClass: 'bg-gradient-to-br from-[#701a75] to-[#4a044e] border-[#701a75]', Component: lazy(() => import('./minigames/TorreDeBloquesGame').then(m => ({ default: m.TorreDeBloquesGame }))) },
+  { day: 5,  id: 'reflejos',  title: 'REFLEJOS',         emoji: '⚡', bgClass: 'bg-[#059669] border-[#047857]',  Component: lazy(() => import('./minigames/ReflejosGame').then(m => ({ default: m.ReflejosGame }))) },
+  { day: 6,  id: 'simon',     title: 'SIMÓN DICE',       emoji: '🧠', bgClass: 'bg-[#7c3aed] border-[#6d28d9]',  Component: lazy(() => import('./minigames/SimonDiceGame').then(m => ({ default: m.SimonDiceGame }))) },
+  { day: 7,  id: 'parejas',   title: 'PAREJAS',          emoji: '🃏', bgClass: 'bg-[#db2777] border-[#be185d]',  Component: lazy(() => import('./minigames/ParejasGame').then(m => ({ default: m.ParejasGame }))) },
+  { day: 8,  id: 'caja',      title: 'CAJA RÁPIDA',      emoji: '🧮', bgClass: 'bg-[#d97706] border-[#b45309]',  Component: lazy(() => import('./minigames/CajaRapidaGame').then(m => ({ default: m.CajaRapidaGame }))) },
+  { day: 9,  id: 'color',     title: 'COLOR TRAMPA',     emoji: '🎨', bgClass: 'bg-[#0891b2] border-[#0e7490]',  Component: lazy(() => import('./minigames/ColorTrampaGame').then(m => ({ default: m.ColorTrampaGame }))) },
+  { day: 10, id: 'ratones',   title: 'CAZA RATONES',     emoji: '🐭', bgClass: 'bg-[#ea580c] border-[#c2410c]',  Component: lazy(() => import('./minigames/CazaRatonesGame').then(m => ({ default: m.CazaRatonesGame }))) },
+  { day: 11, id: 'serpiente', title: 'LA SERPIENTE',     emoji: '🐍', bgClass: 'bg-[#65a30d] border-[#4d7c0f]',  Component: lazy(() => import('./minigames/SerpienteGame').then(m => ({ default: m.SerpienteGame }))) },
+  { day: 12, id: '2048',      title: 'FUSIÓN 2048',      emoji: '🔢', bgClass: 'bg-[#f59e0b] border-[#d97706]',  Component: lazy(() => import('./minigames/Mini2048Game').then(m => ({ default: m.Mini2048Game }))) },
+  { day: 13, id: 'memoria',   title: 'MEMORIA NUMÉRICA', emoji: '🔐', bgClass: 'bg-[#8b5cf6] border-[#7c3aed]',  Component: lazy(() => import('./minigames/MemoriaNumericaGame').then(m => ({ default: m.MemoriaNumericaGame }))) },
+  { day: 14, id: 'ahorcado',  title: 'EL AHORCADO',      emoji: '📝', bgClass: 'bg-[#0284c7] border-[#0369a1]',  Component: lazy(() => import('./minigames/AhorcadoGame').then(m => ({ default: m.AhorcadoGame }))) },
+  { day: 15, id: 'puzzle',    title: 'PUZZLE EXPRESS',   emoji: '🧩', bgClass: 'bg-[#06b6d4] border-[#0891b2]',  Component: lazy(() => import('./minigames/PuzzleDeslizanteGame').then(m => ({ default: m.PuzzleDeslizanteGame }))) },
+  { day: 16, id: 'minas',     title: 'BUSCAMINAS',       emoji: '💣', bgClass: 'bg-[#dc2626] border-[#b91c1c]',  Component: lazy(() => import('./minigames/BuscaminasGame').then(m => ({ default: m.BuscaminasGame }))) },
+  { day: 17, id: 'mayor',     title: 'MAYOR O MENOR',    emoji: '🎴', bgClass: 'bg-[#2563eb] border-[#1d4ed8]',  Component: lazy(() => import('./minigames/MayorMenorGame').then(m => ({ default: m.MayorMenorGame }))) },
+  { day: 18, id: 'rps',       title: 'GANA RÁPIDO',      emoji: '✂️', bgClass: 'bg-[#ec4899] border-[#db2777]',  Component: lazy(() => import('./minigames/GanaRapidoGame').then(m => ({ default: m.GanaRapidoGame }))) },
+  { day: 19, id: 'diana',     title: 'DIANA',            emoji: '🎯', bgClass: 'bg-[#e11d48] border-[#be123c]',  Component: lazy(() => import('./minigames/DianaGame').then(m => ({ default: m.DianaGame }))) },
+  { day: 20, id: 'esquiva',   title: 'ESQUIVA CAJAS',    emoji: '📦', bgClass: 'bg-[#f97316] border-[#ea580c]',  Component: lazy(() => import('./minigames/EsquivaCajasGame').then(m => ({ default: m.EsquivaCajasGame }))) },
+  { day: 21, id: 'salto',     title: 'SALTO DEL PALÉ',   emoji: '🤸', bgClass: 'bg-[#84cc16] border-[#65a30d]',  Component: lazy(() => import('./minigames/SaltoPaleGame').then(m => ({ default: m.SaltoPaleGame }))) },
+  { day: 22, id: 'carrito',   title: 'CARRITO VOLADOR',  emoji: '🛒', bgClass: 'bg-[#0ea5e9] border-[#0284c7]',  Component: lazy(() => import('./minigames/CarritoVoladorGame').then(m => ({ default: m.CarritoVoladorGame }))) },
+  { day: 23, id: 'malabares', title: 'MALABARES',        emoji: '🍉', bgClass: 'bg-[#a855f7] border-[#9333ea]',  Component: lazy(() => import('./minigames/MalabaresGame').then(m => ({ default: m.MalabaresGame }))) },
+  { day: 24, id: 'rompe',     title: 'ROMPE CAJAS',      emoji: '🧱', bgClass: 'bg-[#fb923c] border-[#f97316]',  Component: lazy(() => import('./minigames/RompeCajasGame').then(m => ({ default: m.RompeCajasGame }))) },
+  { day: 25, id: 'quiz',      title: 'QUIZ DEL CONVENIO', emoji: '⚖️', bgClass: 'bg-[#10b981] border-[#059669]', Component: lazy(() => import('./minigames/QuizConvenioGame').then(m => ({ default: m.QuizConvenioGame }))) },
+  { day: 26, id: 'distinto',  title: 'EL DISTINTO',      emoji: '🔍', bgClass: 'bg-[#f472b6] border-[#ec4899]',  Component: lazy(() => import('./minigames/ElDistintoGame').then(m => ({ default: m.ElDistintoGame }))) },
+  { day: 27, id: 'orden',     title: 'ORDEN 1-20',       emoji: '👆', bgClass: 'bg-[#4d7c0f] border-[#3f6212]',  Component: lazy(() => import('./minigames/OrdenaNumerosGame').then(m => ({ default: m.OrdenaNumerosGame }))) },
+  { day: 28, id: 'palabra',   title: 'PALABRA OCULTA',   emoji: '🟩', bgClass: 'bg-[#16a34a] border-[#15803d]',  Component: lazy(() => import('./minigames/PalabraOcultaGame').then(m => ({ default: m.PalabraOcultaGame }))) },
+  { day: 29, id: 'cuenta',    title: 'CUENTA RÁPIDA',    emoji: '🧺', bgClass: 'bg-[#b45309] border-[#92400e]',  Component: lazy(() => import('./minigames/CuentaRapidaGame').then(m => ({ default: m.CuentaRapidaGame }))) },
+  { day: 30, id: 'luces',     title: 'LUCES FUERA',      emoji: '💡', bgClass: 'bg-[#ca8a04] border-[#a16207]',  Component: lazy(() => import('./minigames/LucesFueraGame').then(m => ({ default: m.LucesFueraGame }))) },
+  { day: 31, id: 'ritmo',     title: 'RITMO DE CAJA',    emoji: '🎹', bgClass: 'bg-[#6d28d9] border-[#5b21b6]',  Component: lazy(() => import('./minigames/RitmoCajaGame').then(m => ({ default: m.RitmoCajaGame }))) },
+];
 
 export function ArenaView({ user }) {
   const [activeTab, setActiveTab] = useState('puntuacion'); // 'clasificacion' or 'puntuacion'
@@ -45,46 +77,23 @@ export function ArenaView({ user }) {
     return () => clearInterval(interval);
   }, []);
 
-  // Determine current day for game rotation
+  // Juego del día (1-31, uno distinto cada día del mes)
   const currentDay = new Date().getDate();
   const getActiveGame = (day) => {
-    // Permite forzar el juego activo usando parámetros en la URL (ej. ?game=torre o ?game=4)
+    // Permite forzar el juego activo con parámetros en la URL (ej. ?game=torre o ?game=12)
     const hash = window.location.hash || '';
     const searchPart = hash.includes('?') ? hash.split('?')[1] : window.location.search;
-    const urlParams = new URLSearchParams(searchPart);
-    const forceId = urlParams.get('game');
-
-    if (forceId === 'torre' || forceId === '4') {
-      return { component: TorreDeBloquesGame, title: "JUGAR: TORRE DE BLOQUES", bgClass: 'bg-gradient-to-br from-[#701a75] to-[#4a044e] border-[#701a75]', gameId: 'torre' };
+    const force = new URLSearchParams(searchPart).get('game');
+    if (force) {
+      const byId = GAMES.find(g => g.id === force);
+      if (byId) return byId;
+      const n = parseInt(force, 10);
+      if (n >= 1 && n <= GAMES.length) return GAMES[n - 1];
     }
-    if (forceId === 'catch' || forceId === '1') {
-      return { component: CatchTheShiftGame, title: "JUGAR: ATRAPA EL TURNO", bgClass: 'bg-[#3a0ca3] border-[#2b087a]', gameId: 'catch' };
-    }
-    if (forceId === 'zigzag' || forceId === '2') {
-      return { component: ZigZagGame, title: "JUGAR: CINTA ZIG ZAG", bgClass: 'bg-[#94a3b8] border-[#64748b]', gameId: 'zigzag' };
-    }
-    if (forceId === 'freno' || forceId === '3') {
-      return { component: FrenoEnSecoGame, title: "JUGAR: FRENO EN SECO", bgClass: 'bg-[#ef4444] border-[#b91c1c]', gameId: 'freno' };
-    }
-
-    switch (day) {
-      case 1: return { component: CatchTheShiftGame, title: "JUGAR: ATRAPA EL TURNO", bgClass: 'bg-[#3a0ca3] border-[#2b087a]', gameId: 'catch' };
-      case 2: return { component: ZigZagGame, title: "JUGAR: CINTA ZIG ZAG", bgClass: 'bg-[#94a3b8] border-[#64748b]', gameId: 'zigzag' };
-      case 3: return { component: FrenoEnSecoGame, title: "JUGAR: FRENO EN SECO", bgClass: 'bg-[#ef4444] border-[#b91c1c]', gameId: 'freno' };
-      case 4: return { component: TorreDeBloquesGame, title: "JUGAR: TORRE DE BLOQUES", bgClass: 'bg-gradient-to-br from-[#701a75] to-[#4a044e] border-[#701a75]', gameId: 'torre' };
-      default: 
-        // Mientras no tengamos los 31 juegos, rotamos los que tenemos para que siempre haya algo a lo que jugar
-        const games = [
-          { component: CatchTheShiftGame, title: "JUGAR: ATRAPA EL TURNO", bgClass: 'bg-[#3a0ca3] border-[#2b087a]', gameId: 'catch' },
-          { component: ZigZagGame, title: "JUGAR: CINTA ZIG ZAG", bgClass: 'bg-[#94a3b8] border-[#64748b]', gameId: 'zigzag' },
-          { component: FrenoEnSecoGame, title: "JUGAR: FRENO EN SECO", bgClass: 'bg-[#ef4444] border-[#b91c1c]', gameId: 'freno' },
-          { component: TorreDeBloquesGame, title: "JUGAR: TORRE DE BLOQUES", bgClass: 'bg-gradient-to-br from-[#701a75] to-[#4a044e] border-[#701a75]', gameId: 'torre' }
-        ];
-        return games[(day - 1) % 4];
-    }
+    return GAMES[(((day - 1) % GAMES.length) + GAMES.length) % GAMES.length];
   };
   const activeGame = getActiveGame(currentDay);
-  const ActiveGameComponent = activeGame.component;
+  const ActiveGameComponent = activeGame.Component;
 
   const mockPlayers = [
     { id: 1, name: 'oscarisen', score: 103, rank: 1, avatar: 'https://i.pravatar.cc/150?u=oscar', color: 'bg-[#e56b6f]', attempts: 1, gems: 60 },
@@ -121,15 +130,15 @@ export function ArenaView({ user }) {
         className={`mx-6 ${activeGame.bgClass} rounded-[2rem] relative shadow-2xl mb-12 flex flex-col items-center justify-center min-h-[220px] border cursor-pointer active:scale-95 transition-transform`}
       >
         <div className="absolute inset-0 rounded-[2rem] overflow-hidden pointer-events-none z-0">
-          {activeGame.gameId === 'zigzag' && (
+          {activeGame.id === 'zigzag' && (
              <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 40px, #475569 40px, #475569 80px)', animation: 'belt-move 1.5s linear infinite' }}></div>
           )}
-          {activeGame.gameId === 'freno' && (
+          {activeGame.id === 'freno' && (
              <div className="absolute inset-0 flex items-center justify-center opacity-20">
                 <Timer size={180} className="text-black animate-pulse" />
              </div>
           )}
-          {activeGame.gameId === 'torre' && (
+          {activeGame.id === 'torre' && (
              <div className="absolute inset-0 bg-gradient-to-t from-fuchsia-950/40 via-transparent to-transparent flex items-end justify-center opacity-30">
                <div className="w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-fuchsia-500/20 via-transparent to-transparent"></div>
              </div>
@@ -142,7 +151,7 @@ export function ArenaView({ user }) {
         
         {/* Gráfico decorativo: Botones cayendo o Productos según el juego */}
         <div className="relative mt-6 w-full h-28 pointer-events-none flex items-center justify-center">
-          {activeGame.gameId === 'zigzag' && (
+          {activeGame.id === 'zigzag' && (
             <>
               <div className="absolute top-0 left-1/4 w-10 h-10 bg-white border-b-4 border-slate-300 rounded-xl shadow-lg rotate-12 flex items-center justify-center animate-bounce">
                 <span className="text-xl">🍎</span>
@@ -158,7 +167,7 @@ export function ArenaView({ user }) {
               </div>
             </>
           )}
-          {activeGame.gameId === 'catch' && (
+          {activeGame.id === 'catch' && (
             <>
               <div className="absolute top-0 left-1/4 w-10 h-10 bg-emerald-400 border-b-4 border-emerald-600 rounded-xl shadow-lg rotate-12 flex items-center justify-center animate-bounce">
                 <span className="text-emerald-900 font-black text-xs">+1</span>
@@ -174,7 +183,7 @@ export function ArenaView({ user }) {
               </div>
             </>
           )}
-          {activeGame.gameId === 'freno' && (
+          {activeGame.id === 'freno' && (
              <>
                <div className="text-white text-6xl font-black drop-shadow-xl z-10">
                  10:00
@@ -184,7 +193,7 @@ export function ArenaView({ user }) {
                </div>
              </>
           )}
-          {activeGame.gameId === 'torre' && (
+          {activeGame.id === 'torre' && (
              <div className="flex flex-col items-center justify-center h-full pt-4">
                <div className="w-20 h-5 bg-pink-500 rounded border-b-2 border-pink-700 shadow-md"></div>
                <div className="w-16 h-5 bg-purple-500 rounded border-b-2 border-purple-700 shadow-md border-x border-white/10 mt-0.5 animate-pulse"></div>
@@ -192,10 +201,17 @@ export function ArenaView({ user }) {
                <div className="w-12 h-5 bg-indigo-500 rounded border-b-2 border-indigo-700 shadow-md border-x border-white/10 mt-0.5 animate-bounce"></div>
              </div>
           )}
+          {!['zigzag', 'catch', 'freno', 'torre'].includes(activeGame.id) && (
+            <>
+              <div className="absolute top-0 left-1/4 text-4xl opacity-70 animate-bounce">{activeGame.emoji}</div>
+              <div className="text-7xl drop-shadow-2xl z-10" style={{ animation: 'bounce 2.6s infinite 0.1s' }}>{activeGame.emoji}</div>
+              <div className="absolute bottom-2 right-1/4 text-4xl opacity-70" style={{ animation: 'bounce 2.2s infinite 0.5s' }}>{activeGame.emoji}</div>
+            </>
+          )}
         </div>
 
         <div className="absolute -bottom-5 bg-white text-black font-black uppercase tracking-tighter px-8 py-3 rounded-full text-sm shadow-[0_4px_15px_rgba(0,0,0,0.1)] border-2 border-slate-100 z-20">
-          {activeGame.title}
+          JUGAR: {activeGame.title}
         </div>
       </div>
 
@@ -301,20 +317,27 @@ export function ArenaView({ user }) {
       </p>
 
       {isPlaying && (
-        <ActiveGameComponent 
-          practiceAttempts={practiceAttempts}
-          playAttempts={playAttempts}
-          onConsumeAttempt={(mode) => {
-            if (mode === 'prueba') setPracticeAttempts(p => Math.max(0, p - 1));
-            if (mode === 'jugar') setPlayAttempts(p => Math.max(0, p - 1));
-          }}
-          onCancel={() => setIsPlaying(false)} 
-          onFinish={(score, mode) => {
-            setLastScore(score);
-            setIsPlaying(false);
-            // Here we could update firebase in the future
-          }} 
-        />
+        <Suspense fallback={
+          <div className="fixed inset-0 z-50 bg-[#1e1b4b] flex flex-col items-center justify-center text-white font-black gap-3">
+            <span className="text-5xl animate-bounce">{activeGame.emoji}</span>
+            <span className="text-sm uppercase tracking-widest animate-pulse">Cargando juego...</span>
+          </div>
+        }>
+          <ActiveGameComponent
+            practiceAttempts={practiceAttempts}
+            playAttempts={playAttempts}
+            onConsumeAttempt={(mode) => {
+              if (mode === 'prueba') setPracticeAttempts(p => Math.max(0, p - 1));
+              if (mode === 'jugar') setPlayAttempts(p => Math.max(0, p - 1));
+            }}
+            onCancel={() => setIsPlaying(false)}
+            onFinish={(score, mode) => {
+              setLastScore(score);
+              setIsPlaying(false);
+              // Here we could update firebase in the future
+            }}
+          />
+        </Suspense>
       )}
 
       <style dangerouslySetInnerHTML={{__html: `
