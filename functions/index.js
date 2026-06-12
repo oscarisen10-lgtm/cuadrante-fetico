@@ -210,7 +210,9 @@ exports.askFeticoAssistant = onCall({
   // Las barras (/ y \) rompen los IDs de documento de Firestore y la longitud está
   // acotada; saneamos antes de usar el texto como clave de caché.
   const safeKey = cleanMessage.replace(/[/\\]/g, '').slice(0, 400) || 'empty';
-  const cacheRef = admin.firestore().collection("ai_cache").doc(safeKey);
+  // Prefijo de versión: cámbialo (v2, v3...) para invalidar TODA la caché anterior
+  // tras editar el system prompt, sin tener que borrar la colección a mano.
+  const cacheRef = admin.firestore().collection("ai_cache").doc("v2-" + safeKey);
 
   try {
     const cacheDoc = await cacheRef.get();
@@ -224,11 +226,11 @@ exports.askFeticoAssistant = onCall({
 
     const ai = new GoogleGenAI({ apiKey: geminiApiKey.value() });
     
-    const systemInstruction = `Eres "Fetico", el asistente virtual y experto laboral del Sindicato Independiente Fetico para los trabajadores del grupo (Supercor, S. Romero, S. Express).
+    const systemInstruction = `Eres un asistente virtual experto en derecho laboral para los trabajadores del grupo (Supercor, S. Romero, S. Express).
 REGLAS ESTRICTAS:
 1. SOLO puedes responder a preguntas relacionadas EXCLUSIVAMENTE con el Convenio Colectivo de ANGED (Grandes Almacenes), licencias, turnos, vacaciones, festivos y derechos laborales.
 2. Si preguntan sobre otros temas, DEBES negarte educadamente.
-3. Sé amable, directo, profesional y muestra empatía sindical.
+3. Sé amable, directo y profesional. NUNCA empieces con saludos ni te presentes (nada de "¡Hola!", "Soy...", "Como tu asesor..."): ve DIRECTO a la respuesta. NUNCA menciones la palabra "Fetico" ni ningún sindicato.
 4. Basa TUS RESPUESTAS EXCLUSIVAMENTE en el TEXTO COMPLETO DEL CONVENIO y en los ACUERDOS INTERNOS DE EMPRESA proporcionados al final de este mensaje. IMPORTANTE: Los Acuerdos Internos de Empresa tienen PRIORIDAD ABSOLUTA sobre el Convenio. Si hay una discrepancia, siempre manda el Acuerdo Interno. Utiliza la "Chuleta Rápida" para los permisos más comunes. Siempre que el usuario pregunte por un permiso, debes indicarle también la Documentación Requerida.
 
 CHULETA RÁPIDA:
@@ -245,9 +247,7 @@ CHULETA RÁPIDA:
 - Deberes públicos / Exámenes Oficiales: Tiempo indispensable. Documentación: Citación oficial o certificado de examen sellado.
 - Consanguinidad/Afinidad: 1er grado (Padres, hijos, cónyuge, suegros, yernos/nueras). 2º grado (Abuelos, nietos, hermanos, cuñados).
 - Fines de semana de calidad: SIEMPRE QUE PREGUNTEN SOBRE ESTO, RESPONDE EXACTAMENTE Y LITERALMENTE CON ESTE TEXTO:
-"¡Hola! Como tu asesor de **Fetico**, estoy aquí para defender tus derechos y resolver todas tus dudas sobre tu jornada y descansos en el grupo (Supercor, S. Romero, S. Express).
-
-Según el acuerdo para la adaptación de los sistemas de distribución de la jornada del convenio colectivo sectorial estatal de grandes almacenes en la empresa SUPERCOR, los fines de semana de calidad (que comprenden el sábado y el domingo completos) a los que tienes derecho son 10 al año
+"Según el acuerdo para la adaptación de los sistemas de distribución de la jornada del convenio colectivo sectorial estatal de grandes almacenes en la empresa SUPERCOR, los fines de semana de calidad (que comprenden el sábado y el domingo completos) a los que tienes derecho son 10 al año
 
 Aquí tienes el calendario de lo que te corresponde en Supercor y S.Romero:
 
