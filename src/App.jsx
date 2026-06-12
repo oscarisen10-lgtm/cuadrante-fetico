@@ -8,8 +8,9 @@ import { useNews } from './hooks/useNews';
 import { useTimer } from './hooks/useTimer';
 import { useShifts } from './hooks/useShifts';
 import { useNotifications } from './hooks/useNotifications';
-import { Clock, Calendar as CalendarIcon, PieChart, FileText, Settings, LogOut, WifiOff, Fingerprint } from 'lucide-react';
+import { Clock, Calendar as CalendarIcon, PieChart, FileText, Settings, LogOut, WifiOff, Fingerprint, Trophy } from 'lucide-react';
 import { getFormattedDate } from './utils/dateUtils';
+import { ADMIN_EMAIL } from './constants/config';
 import { NavItem } from './components/UIComponents';
 import AuthView from './components/AuthView';
 import { ToastContainer, ConfirmDialog } from './components/Toast';
@@ -25,14 +26,18 @@ const ArenaView = lazy(() => import('./components/ArenaView').then(m => ({ defau
  * NavigationBar — Bottom tab bar with React Router integration.
  * Each tab navigates to a route, and the browser back button works correctly.
  */
-function NavigationBar() {
+function NavigationBar({ isAdmin }) {
   const navigate = useNavigate();
   const location = useLocation();
   const currentPath = location.pathname;
 
   const tabs = [
     { path: '/dashboard', icon: <PieChart />, label: 'Resumen' },
-    { path: '/track',     icon: <Clock />,    label: 'Fichar' },
+    // FEATURE FLAG (en pruebas): solo el admin ve "Competición" (minijuegos) en lugar
+    // de "Fichar". El resto de usuarios sigue viendo "Fichar" hasta que se publique.
+    isAdmin
+      ? { path: '/arena', icon: <Trophy />, label: 'Competición' }
+      : { path: '/track', icon: <Clock />, label: 'Fichar' },
     { path: '/calendar',  icon: <CalendarIcon />, label: 'Agenda' },
     { path: '/licencias', icon: <FileText />,  label: 'Permisos' },
     { path: '/settings',  icon: <Settings />,  label: 'Ajustes' },
@@ -70,6 +75,9 @@ function AppContent({ user, authHook }) {
   const { newsList, addNews, deleteNews } = useNews();
   const { showBreakFinishedMsg, setShowBreakFinishedMsg, stopAlarm } = useTimer(activeShift, isBreakActive, workTimeAccumulated, breakStartTime, settings);
   const { shiftsMap, stats } = useShifts(shifts, user);
+
+  // Mientras se prueba, solo el admin ve la pestaña "Competición" (minijuegos).
+  const isAdmin = !!(user?.email && ADMIN_EMAIL && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase());
 
   const [showConfirmLogout, setShowConfirmLogout] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
@@ -172,7 +180,7 @@ function AppContent({ user, authHook }) {
           </Suspense>
         </main>
 
-        <NavigationBar />
+        <NavigationBar isAdmin={isAdmin} />
 
         {showConfirmLogout && (
           <div className="fixed inset-0 z-[110] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in" role="dialog" aria-modal="true" aria-label="Confirmar cierre de sesión">
