@@ -70,18 +70,21 @@ function Play({ end }) {
       </div>
       <p className="text-white/60 font-bold uppercase tracking-widest text-xs mb-5">¡Échalos del almacén!</p>
       <div className="grid grid-cols-3 gap-3.5 w-full max-w-xs">
-        {Array.from({ length: 9 }, (_, i) => (
-          <button
-            key={i}
-            onPointerDown={() => whack(i)}
-            className="relative aspect-square rounded-full flex items-end justify-center overflow-hidden active:scale-95 transition-transform"
-            style={{ background: 'radial-gradient(circle at 50% 28%, #3a2c19, #170f07 72%)', boxShadow: 'inset 0 10px 18px rgba(0,0,0,0.8), inset 0 -3px 7px rgba(255,255,255,0.05)' }}
-          >
-            {/* montículo de tierra al borde de la madriguera */}
-            <span className="absolute bottom-0 left-0 right-0 h-2/5 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 120%, rgba(146,99,45,0.6), transparent 72%)' }} />
-            {moleCells.has(i) && <span className="gfx-pop relative text-5xl drop-shadow-[0_3px_4px_rgba(0,0,0,0.55)] mb-1.5">🐭</span>}
-          </button>
-        ))}
+        {Array.from({ length: 9 }, (_, i) => {
+          const up = moleCells.has(i);
+          return (
+            <button
+              key={i}
+              onPointerDown={() => whack(i)}
+              className={`aspect-square rounded-3xl flex items-center justify-center text-5xl border-b-[6px] transition-all duration-75 active:scale-95 ${up ? 'border-orange-800 scale-105' : 'border-amber-950'}`}
+              style={up
+                ? { background: 'radial-gradient(circle at 40% 28%, #fdba74, #f97316)', boxShadow: '0 0 26px rgba(249,115,22,0.7), inset 0 2px 6px rgba(255,255,255,0.45)' }
+                : { background: 'linear-gradient(160deg, #c08a4f, #6b4a28)', boxShadow: 'inset 0 2px 5px rgba(255,255,255,0.3), inset 0 -6px 12px rgba(0,0,0,0.4)' }}
+            >
+              <span className={up ? 'gfx-pop drop-shadow-[0_3px_4px_rgba(0,0,0,0.5)]' : 'drop-shadow-[0_2px_3px_rgba(0,0,0,0.4)]'}>{up ? '🐭' : '📦'}</span>
+            </button>
+          );
+        })}
       </div>
       <p className="text-white/40 text-[10px] font-bold uppercase tracking-wide mt-5 text-center px-6">Cada 5 cazas sube el nivel: más rápidos y más a la vez</p>
     </div>
@@ -94,7 +97,7 @@ export function CazaRatonesGame(props) {
       {...props}
       day={10} title="Caza Ratones" emoji="🐭" accent="orange"
       instructions={[
-        <span key="1">¡Hay ratones en el almacén! Asoman por las <strong>madrigueras</strong>.</span>,
+        <span key="1">¡Hay ratones en el almacén! Salen de entre las <strong>cajas</strong>.</span>,
         <span key="2">Tócalos antes de que se escondan. Cada caza son <strong>30 puntos</strong>.</span>,
         <span key="3"><strong>45 segundos</strong>. Cada 5 cazas <strong>sube el nivel</strong>: van más rápido y salen varios a la vez.</span>,
       ]}
