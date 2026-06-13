@@ -81,6 +81,7 @@ function AppContent({ user, authHook }) {
 
   const [showConfirmLogout, setShowConfirmLogout] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
+  const [gameActive, setGameActive] = useState(false); // true mientras se juega un minijuego (oculta cabecera y barra)
 
   useEffect(() => {
     const checkNetwork = async () => {
@@ -134,6 +135,7 @@ function AppContent({ user, authHook }) {
     <div className="h-full bg-slate-50 flex justify-center font-sans overflow-hidden text-slate-800 relative">
       <div className="w-full max-w-md bg-white h-full flex flex-col relative overflow-hidden">
         
+        {!gameActive && (
         <header className="bg-emerald-600 text-white py-2 px-3 rounded-b-xl shadow-lg shrink-0 z-10 relative" role="banner">
           <div className="flex justify-between items-center px-1">
             <div>
@@ -149,6 +151,7 @@ function AppContent({ user, authHook }) {
             </div>
           )}
         </header>
+        )}
 
         <main className="flex-1 p-4 overflow-y-auto scrollbar-hide flex flex-col min-h-0 relative z-0" role="main">
           <Suspense fallback={<div className="flex-1 flex items-center justify-center text-emerald-500 font-bold text-xs italic" role="status" aria-label="Cargando contenido">Cargando...</div>}>
@@ -173,14 +176,14 @@ function AppContent({ user, authHook }) {
                 <SettingsView user={user} settings={settings} saveToCloud={saveToCloud} stopAlarm={stopAlarm} pushToken={pushToken} pushTokenError={pushTokenError} permissionState={permissionState} requestTokenManually={requestTokenManually} />
               } />
               <Route path="/arena" element={
-                <ArenaView user={user} />
+                <ArenaView user={user} onPlayingChange={setGameActive} />
               } />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </Suspense>
         </main>
 
-        <NavigationBar isAdmin={isAdmin} />
+        {!gameActive && <NavigationBar isAdmin={isAdmin} />}
 
         {showConfirmLogout && (
           <div className="fixed inset-0 z-[110] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in" role="dialog" aria-modal="true" aria-label="Confirmar cierre de sesión">

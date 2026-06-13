@@ -40,7 +40,7 @@ const GAMES = [
   { day: 31, id: 'ritmo',     title: 'RITMO DE CAJA',    emoji: '🎹', bgClass: 'bg-[#6d28d9] border-[#5b21b6]',  Component: lazy(() => import('./minigames/RitmoCajaGame').then(m => ({ default: m.RitmoCajaGame }))) },
 ];
 
-export function ArenaView({ user }) {
+export function ArenaView({ user, onPlayingChange }) {
   const [activeTab, setActiveTab] = useState('puntuacion'); // 'clasificacion' or 'puntuacion'
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedGame, setSelectedGame] = useState(null); // juego a lanzar (null = el de hoy)
@@ -111,6 +111,10 @@ export function ArenaView({ user }) {
     if (user?.uid) getArenaUsage(user.uid, todayStr).then(setPlaysUsed);
     return () => { unsubP(); unsubS(); };
   }, [user?.uid, todayStr]);
+
+  // Avisa al contenedor para ocultar cabecera/barra mientras se juega una partida.
+  useEffect(() => { onPlayingChange?.(isPlaying); }, [isPlaying]);
+  useEffect(() => () => onPlayingChange?.(false), []);
 
   const playAttemptsLeft = isAdmin ? 99 : Math.max(0, ARENA_DAILY_PLAYS - playsUsed);
   const myEntry = players.find(p => p.uid === user?.uid);
