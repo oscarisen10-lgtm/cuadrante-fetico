@@ -41,7 +41,8 @@ function Play({ end }) {
       forceRender(n => n + 1);
     }, 170);
     return () => clearInterval(id);
-  }, [end]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const turn = (dx, dy) => {
     // No permitir giro de 180º

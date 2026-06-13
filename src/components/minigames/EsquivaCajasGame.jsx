@@ -47,7 +47,8 @@ function Play({ end }) {
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [end]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const moveTo = (clientX) => {
     const rect = arenaRef.current?.getBoundingClientRect();

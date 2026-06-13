@@ -44,7 +44,8 @@ function Play({ end }) {
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [end]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const tapCol = (col) => {
     const s = st.current;

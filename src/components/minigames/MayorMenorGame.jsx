@@ -28,7 +28,8 @@ function Play({ end }) {
       });
     }, 1000);
     return () => clearInterval(id);
-  }, [end]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const guess = (higher) => {
     if (reveal) return;

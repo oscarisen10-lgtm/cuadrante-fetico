@@ -57,7 +57,8 @@ function Play({ end }) {
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [end]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const flap = () => { cart.current.vy = FLAP_V; };
 
