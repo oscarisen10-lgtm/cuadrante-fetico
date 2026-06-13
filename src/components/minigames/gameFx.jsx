@@ -22,14 +22,13 @@ const THEMES = {
  */
 export function GameBackground({ theme = 'violet', grid = true }) {
   const t = THEMES[theme] || THEMES.violet;
+  const glow = (color) => `radial-gradient(circle, ${color} 0%, transparent 70%)`;
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-0" style={{ background: t.bg }}>
-      <div className="gfx-orb" style={{ background: t.orbs[0], top: '-12%', left: '-18%' }} />
-      <div className="gfx-orb" style={{ background: t.orbs[1], bottom: '-18%', right: '-12%', width: 340, height: 340, animationDelay: '-5s' }} />
-      <div className="gfx-orb" style={{ background: t.orbs[2], top: '34%', right: '26%', width: 190, height: 190, opacity: 0.35, animationDelay: '-9s' }} />
+      <div className="gfx-orb" style={{ background: glow(t.orbs[0]), top: '-16%', left: '-20%' }} />
+      <div className="gfx-orb" style={{ background: glow(t.orbs[1]), bottom: '-20%', right: '-16%', width: 480, height: 480, opacity: 0.42, animationDelay: '-7s' }} />
       {grid && <div className="absolute inset-0 gfx-grid" />}
-      <div className="absolute inset-0 gfx-scan" />
-      <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 38%, transparent 42%, rgba(0,0,0,0.62) 100%)' }} />
+      <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 38%, transparent 45%, rgba(0,0,0,0.6) 100%)' }} />
     </div>
   );
 }
