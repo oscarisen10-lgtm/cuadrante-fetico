@@ -18,7 +18,7 @@ const GAMES = [
   { day: 9,  id: 'color',     title: 'COLOR TRAMPA',     emoji: '🎨', bgClass: 'bg-[#0891b2] border-[#0e7490]',  Component: lazy(() => import('./minigames/ColorTrampaGame').then(m => ({ default: m.ColorTrampaGame }))) },
   { day: 10, id: 'ratones',   title: 'CAZA RATONES',     emoji: '🐭', bgClass: 'bg-[#ea580c] border-[#c2410c]',  Component: lazy(() => import('./minigames/CazaRatonesGame').then(m => ({ default: m.CazaRatonesGame }))) },
   { day: 11, id: 'serpiente', title: 'LA SERPIENTE',     emoji: '🐍', bgClass: 'bg-[#65a30d] border-[#4d7c0f]',  Component: lazy(() => import('./minigames/SerpienteGame').then(m => ({ default: m.SerpienteGame }))) },
-  { day: 12, id: '2048',      title: 'FUSIÓN 2048',      emoji: '🔢', bgClass: 'bg-[#f59e0b] border-[#d97706]',  Component: lazy(() => import('./minigames/Mini2048Game').then(m => ({ default: m.Mini2048Game }))) },
+  { day: 12, id: 'escaner',   title: 'ESCÁNER',          emoji: '🔦', bgClass: 'bg-[#0891b2] border-[#0e7490]',  Component: lazy(() => import('./minigames/EscanerGame').then(m => ({ default: m.EscanerGame }))) },
   { day: 13, id: 'memoria',   title: 'MEMORIA NUMÉRICA', emoji: '🔐', bgClass: 'bg-[#8b5cf6] border-[#7c3aed]',  Component: lazy(() => import('./minigames/MemoriaNumericaGame').then(m => ({ default: m.MemoriaNumericaGame }))) },
   { day: 14, id: 'ahorcado',  title: 'EL AHORCADO',      emoji: '📝', bgClass: 'bg-[#0284c7] border-[#0369a1]',  Component: lazy(() => import('./minigames/AhorcadoGame').then(m => ({ default: m.AhorcadoGame }))) },
   { day: 15, id: 'puzzle',    title: 'PUZZLE EXPRESS',   emoji: '🧩', bgClass: 'bg-[#06b6d4] border-[#0891b2]',  Component: lazy(() => import('./minigames/PuzzleDeslizanteGame').then(m => ({ default: m.PuzzleDeslizanteGame }))) },
