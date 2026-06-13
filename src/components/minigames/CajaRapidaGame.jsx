@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameShell, clamp, shuffle, rand } from './GameShell';
+import { GameShell, clamp, shuffle, rand, fx } from './GameShell';
 
 const DURATION = 30;
 const fmt = (cents) => (cents / 100).toFixed(2).replace('.', ',') + ' €';
@@ -51,7 +51,7 @@ function Play({ end }) {
         <span className="bg-black/30 text-emerald-400 font-black px-4 py-1.5 rounded-full text-sm">✓ {stats.current.ok}</span>
       </div>
       <p className="text-white/60 font-bold uppercase tracking-widest text-xs mb-3">Cobra al cliente</p>
-      <div className="bg-black/40 border border-amber-500/30 rounded-3xl px-8 py-6 mb-8 text-center">
+      <div className="rounded-3xl px-8 py-6 mb-8 text-center" style={fx.panel}>
         <p className="text-white text-4xl font-black tabular-nums">{fmt(q.a)} <span className="text-amber-400">+</span> {fmt(q.b)}</p>
       </div>
       <div className="flex flex-col gap-3 w-full max-w-xs">
@@ -59,7 +59,8 @@ function Play({ end }) {
           <button
             key={opt}
             onPointerDown={() => answer(opt)}
-            className="bg-amber-500 text-amber-950 font-black text-2xl py-4 rounded-2xl border-b-4 border-amber-700 active:scale-95 transition-transform tabular-nums"
+            className="text-amber-950 font-black text-2xl py-4 rounded-2xl border-b-4 border-amber-800 active:scale-95 transition-transform tabular-nums"
+            style={fx.tile('#fde68a', '#f59e0b', 'rgba(245,158,11,0.45)')}
           >
             {fmt(opt)}
           </button>

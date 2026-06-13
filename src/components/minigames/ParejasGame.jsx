@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { GameShell, clamp, shuffle } from './GameShell';
+import { GameShell, clamp, shuffle, fx } from './GameShell';
 
 const EMOJIS = ['🍎', '🥖', '🧀', '🥛', '🍫', '🧃', '🥚', '🍌'];
 
@@ -47,13 +47,10 @@ function Play({ end }) {
             <button
               key={card.id}
               onPointerDown={() => tap(card)}
-              className={`aspect-square rounded-2xl flex items-center justify-center text-3xl transition-all duration-200 border-b-4 active:scale-95 ${
-                isMatched ? 'bg-emerald-500/30 border-emerald-700/30 opacity-60'
-                : isUp ? 'bg-white border-slate-300'
-                : 'bg-pink-600 border-pink-800'
-              }`}
+              className={`aspect-square rounded-2xl flex items-center justify-center text-3xl transition-all duration-200 border-b-4 active:scale-95 ${isMatched ? 'opacity-50 border-emerald-900/40' : isUp ? 'border-slate-300' : 'border-pink-900'}`}
+              style={isMatched ? fx.tile('#34d399', '#059669', 'rgba(16,185,129,0.4)') : isUp ? fx.tile('#ffffff', '#e2e8f0') : fx.tile('#f472b6', '#be185d', 'rgba(236,72,153,0.5)')}
             >
-              {isUp ? card.emoji : '❓'}
+              {isUp ? card.emoji : <span className="text-white/90 drop-shadow">❓</span>}
             </button>
           );
         })}

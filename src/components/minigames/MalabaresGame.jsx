@@ -69,8 +69,8 @@ function Play({ end }) {
       >
         <div className="absolute text-3xl -ml-4 -mt-4" style={{ left: `${ball.current.x}%`, top: `${ball.current.y}%` }}>🍉</div>
         <div
-          className="absolute h-3.5 bg-violet-400 rounded-full border-b-2 border-violet-600"
-          style={{ left: `${paddle.current.x - PADDLE_W / 2}%`, width: `${PADDLE_W}%`, top: `${PADDLE_Y}%` }}
+          className="absolute h-3.5 rounded-full border-b-2 border-violet-700"
+          style={{ left: `${paddle.current.x - PADDLE_W / 2}%`, width: `${PADDLE_W}%`, top: `${PADDLE_Y}%`, background: 'linear-gradient(180deg, #c4b5fd, #7c3aed)', boxShadow: '0 0 14px rgba(124,58,237,0.6)' }}
         />
         <p className="absolute bottom-2 left-0 right-0 text-center text-white/30 text-[10px] font-bold uppercase tracking-wide pointer-events-none">
           Arrastra para mover la bandeja

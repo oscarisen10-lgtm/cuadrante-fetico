@@ -80,9 +80,8 @@ function Play({ end }) {
               key={l}
               onPointerDown={() => tap(l)}
               disabled={used}
-              className={`w-9 h-10 rounded-lg font-black text-sm transition-all active:scale-90 ${
-                !used ? 'bg-white/15 text-white' : good ? 'bg-emerald-500/40 text-emerald-200' : 'bg-rose-500/30 text-rose-300 opacity-50'
-              }`}
+              className={`w-9 h-10 rounded-lg font-black text-sm transition-all active:scale-90 ${!used ? 'text-white' : good ? 'bg-emerald-500/40 text-emerald-200' : 'bg-rose-500/30 text-rose-300 opacity-50'}`}
+              style={!used ? { background: 'linear-gradient(160deg, rgba(255,255,255,0.22), rgba(255,255,255,0.06))', boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.28)' } : undefined}
             >
               {l}
             </button>

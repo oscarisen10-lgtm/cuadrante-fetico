@@ -50,9 +50,10 @@ function Play({ end }) {
           <button
             key={i}
             onPointerDown={() => tap(i)}
-            className={`rounded-xl flex items-center justify-center text-2xl transition-all duration-150 active:scale-90 ${
-              on ? 'bg-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.6)]' : 'bg-slate-800'
-            }`}
+            className="rounded-xl flex items-center justify-center text-2xl transition-all duration-150 active:scale-90"
+            style={on
+              ? { background: 'radial-gradient(circle at 40% 30%, #fde68a, #f59e0b)', boxShadow: '0 0 18px rgba(245,158,11,0.75), inset 0 2px 5px rgba(255,255,255,0.5)' }
+              : { background: 'linear-gradient(160deg, #1e293b, #0f172a)', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.5)' }}
           >
             {on ? '💡' : ''}
           </button>

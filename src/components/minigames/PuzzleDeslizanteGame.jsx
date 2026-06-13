@@ -51,7 +51,8 @@ function Play({ end }) {
             <button
               key={i}
               onPointerDown={() => tap(i)}
-              className="rounded-xl bg-cyan-500 text-cyan-950 font-black text-3xl border-b-4 border-cyan-700 active:scale-95 transition-transform flex items-center justify-center"
+              className="rounded-xl text-cyan-950 font-black text-3xl border-b-4 border-cyan-800 active:scale-95 transition-transform flex items-center justify-center"
+              style={{ background: 'linear-gradient(160deg, #67e8f9, #06b6d4)', boxShadow: '0 5px 14px rgba(6,182,212,0.4), inset 0 2px 5px rgba(255,255,255,0.5)' }}
             >
               {v}
             </button>

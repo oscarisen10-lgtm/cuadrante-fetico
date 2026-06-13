@@ -62,8 +62,8 @@ function Play({ end }) {
           <button
             key={`${round}-${i}`}
             onPointerDown={() => tap(i)}
-            className="aspect-square rounded-2xl bg-white/10 flex items-center justify-center active:scale-90 transition-transform"
-            style={{ fontSize: data.size > 4 ? '1.5rem' : '2.2rem' }}
+            className="aspect-square rounded-2xl flex items-center justify-center active:scale-90 transition-transform"
+            style={{ fontSize: data.size > 4 ? '1.5rem' : '2.2rem', background: 'linear-gradient(160deg, rgba(255,255,255,0.16), rgba(255,255,255,0.05))', boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.2)' }}
           >
             {i === data.oddIdx ? data.odd : data.common}
           </button>

@@ -102,7 +102,8 @@ function Play({ end }) {
         onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}
       >
         {board.map((v, i) => (
-          <div key={i} className={`rounded-xl flex items-center justify-center font-black transition-all duration-100 ${v === 0 ? 'bg-white/5' : COLORS[v] || 'bg-emerald-300 text-emerald-950'} ${v >= 100 ? 'text-xl' : 'text-2xl'}`}>
+          <div key={i} className={`rounded-xl flex items-center justify-center font-black transition-all duration-100 ${v === 0 ? 'bg-white/5' : COLORS[v] || 'bg-emerald-300 text-emerald-950'} ${v >= 100 ? 'text-xl' : 'text-2xl'}`}
+            style={v !== 0 ? { boxShadow: 'inset 0 2px 3px rgba(255,255,255,0.4), 0 3px 7px rgba(0,0,0,0.28)' } : undefined}>
             {v || ''}
           </div>
         ))}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameShell, clamp, rand } from './GameShell';
+import { GameShell, clamp, rand, fx } from './GameShell';
 
 const WORDS = [
   { name: 'ROJO',     cls: 'text-rose-400' },
@@ -54,12 +54,12 @@ function Play({ end }) {
         <span className="bg-black/30 text-emerald-400 font-black px-4 py-1.5 rounded-full text-sm">✓ {stats.current.ok}</span>
       </div>
       <p className="text-white/60 font-bold uppercase tracking-widest text-xs mb-4">¿La palabra coincide con su color?</p>
-      <div className="bg-black/40 border border-cyan-500/30 rounded-3xl px-10 py-10 mb-10">
-        <p className={`text-5xl font-black tracking-tight ${WORDS[round.color].cls}`}>{WORDS[round.word].name}</p>
+      <div className="rounded-3xl px-10 py-10 mb-10" style={fx.panel}>
+        <p className={`text-5xl font-black tracking-tight drop-shadow ${WORDS[round.color].cls}`}>{WORDS[round.word].name}</p>
       </div>
       <div className="flex gap-4 w-full max-w-xs">
-        <button onPointerDown={() => answer(true)} className="flex-1 bg-emerald-500 text-emerald-950 font-black text-2xl py-5 rounded-2xl border-b-4 border-emerald-700 active:scale-95 transition-transform">SÍ</button>
-        <button onPointerDown={() => answer(false)} className="flex-1 bg-rose-500 text-rose-950 font-black text-2xl py-5 rounded-2xl border-b-4 border-rose-700 active:scale-95 transition-transform">NO</button>
+        <button onPointerDown={() => answer(true)} className="flex-1 text-emerald-950 font-black text-2xl py-5 rounded-2xl border-b-4 border-emerald-800 active:scale-95 transition-transform" style={fx.tile('#6ee7b7', '#10b981', 'rgba(16,185,129,0.45)')}>SÍ</button>
+        <button onPointerDown={() => answer(false)} className="flex-1 text-rose-950 font-black text-2xl py-5 rounded-2xl border-b-4 border-rose-800 active:scale-95 transition-transform" style={fx.tile('#fda4af', '#f43f5e', 'rgba(244,63,94,0.45)')}>NO</button>
       </div>
     </div>
   );

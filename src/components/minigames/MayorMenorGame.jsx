@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameShell, clamp, rand } from './GameShell';
+import { GameShell, clamp, rand, fx } from './GameShell';
 
 const DURATION = 45;
 const newNumber = (not) => {
@@ -60,7 +60,7 @@ function Play({ end }) {
       </div>
       <p className="text-white/60 font-bold uppercase tracking-widest text-xs mb-3">¿El siguiente será mayor o menor?</p>
       <div className="flex items-center gap-4 mb-8">
-        <div className="bg-black/40 border border-blue-500/30 rounded-3xl w-28 h-32 flex items-center justify-center">
+        <div className="rounded-3xl w-28 h-32 flex items-center justify-center" style={fx.panel}>
           <span className="text-white text-5xl font-black tabular-nums">{current}</span>
         </div>
         <span className="text-white/40 text-3xl font-black">→</span>
@@ -70,8 +70,8 @@ function Play({ end }) {
       </div>
       {streak >= 3 && <p className="text-amber-400 font-black text-sm mb-3 animate-pulse">🔥 Racha de {streak}</p>}
       <div className="flex gap-4 w-full max-w-xs">
-        <button onPointerDown={() => guess(true)} className="flex-1 bg-sky-500 text-sky-950 font-black text-xl py-5 rounded-2xl border-b-4 border-sky-700 active:scale-95 transition-transform">⬆ MAYOR</button>
-        <button onPointerDown={() => guess(false)} className="flex-1 bg-orange-500 text-orange-950 font-black text-xl py-5 rounded-2xl border-b-4 border-orange-700 active:scale-95 transition-transform">⬇ MENOR</button>
+        <button onPointerDown={() => guess(true)} className="flex-1 text-sky-950 font-black text-xl py-5 rounded-2xl border-b-4 border-sky-800 active:scale-95 transition-transform" style={fx.tile('#7dd3fc', '#0ea5e9', 'rgba(14,165,233,0.45)')}>⬆ MAYOR</button>
+        <button onPointerDown={() => guess(false)} className="flex-1 text-orange-950 font-black text-xl py-5 rounded-2xl border-b-4 border-orange-800 active:scale-95 transition-transform" style={fx.tile('#fdba74', '#f97316', 'rgba(249,115,22,0.45)')}>⬇ MENOR</button>
       </div>
     </div>
   );

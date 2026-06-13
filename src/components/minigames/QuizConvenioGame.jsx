@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameShell, shuffle } from './GameShell';
+import { GameShell, shuffle, fx } from './GameShell';
 
 // Banco de afirmaciones basadas en el convenio/acuerdos (V/F)
 const BANK = [
@@ -66,14 +66,14 @@ function Play({ end }) {
         <span className={`bg-black/30 font-black px-4 py-1.5 rounded-full text-sm ${timeLeft <= 3 ? 'text-rose-400 animate-pulse' : 'text-white'}`}>⏱ {timeLeft}s</span>
         <span className="bg-black/30 text-emerald-400 font-black px-4 py-1.5 rounded-full text-sm">✓ {okRef.current}</span>
       </div>
-      <div className="bg-black/40 border border-emerald-500/30 rounded-3xl px-6 py-8 mb-8 min-h-[140px] flex items-center max-w-sm w-full">
+      <div className="rounded-3xl px-6 py-8 mb-8 min-h-[140px] flex items-center max-w-sm w-full" style={fx.panel}>
         <p className="text-white text-lg font-bold text-center leading-relaxed w-full">
           {feedback ? (feedback === 'ok' ? '✅ ¡Correcto!' : `❌ Era ${q.v ? 'VERDADERO' : 'FALSO'}`) : q.t}
         </p>
       </div>
       <div className="flex gap-4 w-full max-w-xs">
-        <button onPointerDown={() => answer(true)} className="flex-1 bg-emerald-500 text-emerald-950 font-black text-lg py-5 rounded-2xl border-b-4 border-emerald-700 active:scale-95 transition-transform">VERDADERO</button>
-        <button onPointerDown={() => answer(false)} className="flex-1 bg-rose-500 text-rose-950 font-black text-lg py-5 rounded-2xl border-b-4 border-rose-700 active:scale-95 transition-transform">FALSO</button>
+        <button onPointerDown={() => answer(true)} className="flex-1 text-emerald-950 font-black text-lg py-5 rounded-2xl border-b-4 border-emerald-800 active:scale-95 transition-transform" style={fx.tile('#6ee7b7', '#10b981', 'rgba(16,185,129,0.45)')}>VERDADERO</button>
+        <button onPointerDown={() => answer(false)} className="flex-1 text-rose-950 font-black text-lg py-5 rounded-2xl border-b-4 border-rose-800 active:scale-95 transition-transform" style={fx.tile('#fda4af', '#f43f5e', 'rgba(244,63,94,0.45)')}>FALSO</button>
       </div>
     </div>
   );

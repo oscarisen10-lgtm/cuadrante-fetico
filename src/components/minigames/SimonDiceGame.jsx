@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameShell, clamp, rand } from './GameShell';
+import { GameShell, clamp, rand, fx } from './GameShell';
 
 const PADS = [
-  { id: 0, base: 'bg-emerald-700', lit: 'bg-emerald-300', emoji: '🍏' },
-  { id: 1, base: 'bg-rose-700',    lit: 'bg-rose-300',    emoji: '🍎' },
-  { id: 2, base: 'bg-amber-700',   lit: 'bg-amber-300',   emoji: '🧀' },
-  { id: 3, base: 'bg-sky-700',     lit: 'bg-sky-300',     emoji: '🐟' },
+  { id: 0, on: ['#6ee7b7', '#10b981'], off: ['#065f46', '#052e23'], glow: 'rgba(16,185,129,0.75)', emoji: '🍏' },
+  { id: 1, on: ['#fda4af', '#f43f5e'], off: ['#9f1239', '#5c0f22'], glow: 'rgba(244,63,94,0.75)',  emoji: '🍎' },
+  { id: 2, on: ['#fcd34d', '#f59e0b'], off: ['#92400e', '#5a2c08'], glow: 'rgba(245,158,11,0.75)', emoji: '🧀' },
+  { id: 3, on: ['#7dd3fc', '#0ea5e9'], off: ['#075985', '#072f47'], glow: 'rgba(14,165,233,0.75)', emoji: '🐟' },
 ];
 
 function Play({ end }) {
@@ -60,9 +60,10 @@ function Play({ end }) {
           <button
             key={p.id}
             onPointerDown={() => tap(p.id)}
-            className={`rounded-3xl flex items-center justify-center text-5xl transition-all duration-100 border-b-8 border-black/30 active:scale-95 ${lit === p.id ? `${p.lit} scale-105 shadow-[0_0_30px_rgba(255,255,255,0.5)]` : p.base}`}
+            className={`rounded-[1.75rem] flex items-center justify-center text-5xl transition-transform duration-100 border-b-[6px] border-black/40 active:scale-95 ${lit === p.id ? 'scale-105' : ''}`}
+            style={lit === p.id ? fx.orb(p.on[0], p.on[1], p.glow) : fx.tile(p.off[0], p.off[1])}
           >
-            {p.emoji}
+            <span className="drop-shadow-[0_2px_3px_rgba(0,0,0,0.4)]">{p.emoji}</span>
           </button>
         ))}
       </div>

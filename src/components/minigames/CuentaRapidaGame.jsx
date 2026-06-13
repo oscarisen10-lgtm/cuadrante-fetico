@@ -80,7 +80,8 @@ function Play({ end }) {
                 key={o}
                 onPointerDown={() => answer(o)}
                 disabled={phase === 'feedback'}
-                className="w-20 h-20 bg-amber-500 text-amber-950 font-black text-3xl rounded-2xl border-b-4 border-amber-700 active:scale-90 transition-transform disabled:opacity-50"
+                className="w-20 h-20 text-amber-950 font-black text-3xl rounded-2xl border-b-4 border-amber-800 active:scale-90 transition-transform disabled:opacity-50"
+                style={{ background: 'linear-gradient(160deg, #fde68a, #f59e0b)', boxShadow: '0 5px 14px rgba(245,158,11,0.4), inset 0 2px 5px rgba(255,255,255,0.5)' }}
               >
                 {o}
               </button>

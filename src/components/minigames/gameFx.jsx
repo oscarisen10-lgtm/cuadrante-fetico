@@ -34,6 +34,29 @@ export function GameBackground({ theme = 'violet', grid = true }) {
 }
 
 /**
+ * Estilos "premium" reutilizables. Baratos para la GPU: solo degradados + sombras
+ * (sin filter:blur ni mix-blend-mode), así que no afectan a la fluidez.
+ */
+export const fx = {
+  // Ficha/botón rectangular con relieve y brillo interior.
+  tile: (a, b, glow = 'rgba(0,0,0,0.4)') => ({
+    background: `linear-gradient(160deg, ${a}, ${b})`,
+    boxShadow: `0 6px 16px ${glow}, inset 0 2px 5px rgba(255,255,255,0.42)`,
+  }),
+  // Botón/orbe redondo glossy.
+  orb: (a, b, glow = 'rgba(0,0,0,0.4)') => ({
+    background: `radial-gradient(circle at 38% 28%, ${a}, ${b})`,
+    boxShadow: `0 0 26px ${glow}, inset 0 2px 6px rgba(255,255,255,0.5), inset 0 -6px 12px rgba(0,0,0,0.25)`,
+  }),
+  // Panel/tarjeta oscura tipo cristal.
+  panel: {
+    background: 'linear-gradient(160deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03))',
+    boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.18), 0 8px 24px rgba(0,0,0,0.35)',
+    border: '1px solid rgba(255,255,255,0.12)',
+  },
+};
+
+/**
  * Estallido de partículas para feedback "jugoso" (al puntuar/acertar).
  * Devuelve [layer, fire] — pinta <Particles/> y llama fire(xPct, yPct, color).
  */

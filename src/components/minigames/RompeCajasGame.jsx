@@ -95,7 +95,7 @@ function Play({ end }) {
           );
         })}
         <div className="absolute w-4 h-4 -ml-2 -mt-2 bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.8)]" style={{ left: `${ball.current.x}%`, top: `${ball.current.y}%` }} />
-        <div className="absolute h-3.5 bg-orange-400 rounded-full border-b-2 border-orange-600" style={{ left: `${paddle.current.x - PADDLE_W / 2}%`, width: `${PADDLE_W}%`, top: `${PADDLE_Y}%` }} />
+        <div className="absolute h-3.5 rounded-full border-b-2 border-orange-700" style={{ left: `${paddle.current.x - PADDLE_W / 2}%`, width: `${PADDLE_W}%`, top: `${PADDLE_Y}%`, background: 'linear-gradient(180deg, #fdba74, #ea580c)', boxShadow: '0 0 14px rgba(249,115,22,0.6)' }} />
       </div>
     </div>
   );

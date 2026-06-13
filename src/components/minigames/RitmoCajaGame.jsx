@@ -73,8 +73,8 @@ function Play({ end }) {
         {Array.from({ length: COLS }, (_, c) => (
           <button key={c} onPointerDown={() => tapCol(c)} className="flex-1 relative border-r border-white/5 last:border-r-0 active:bg-white/5">
             {tiles.current.filter(t => t.col === c).map(t => (
-              <div key={t.id} className="absolute left-1/2 -ml-5 -mt-5 w-10 h-10 bg-violet-500 rounded-xl border-b-4 border-violet-700 flex items-center justify-center text-xl"
-                style={{ top: `${t.y}%` }}>
+              <div key={t.id} className="absolute left-1/2 -ml-5 -mt-5 w-10 h-10 rounded-xl border-b-4 border-violet-800 flex items-center justify-center text-xl"
+                style={{ top: `${t.y}%`, background: 'linear-gradient(160deg, #c4b5fd, #7c3aed)', boxShadow: '0 4px 10px rgba(124,58,237,0.5), inset 0 2px 4px rgba(255,255,255,0.4)' }}>
                 {ICONS[t.col]}
               </div>
             ))}

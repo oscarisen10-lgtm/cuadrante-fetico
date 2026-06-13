@@ -37,11 +37,8 @@ function Play({ end }) {
             <button
               key={n}
               onPointerDown={() => tap(n, i)}
-              className={`aspect-square rounded-2xl font-black text-2xl border-b-4 transition-all flex items-center justify-center ${
-                done ? 'bg-lime-500/20 text-lime-500/40 border-transparent'
-                : shakeIdx === i ? 'bg-rose-500 text-white border-rose-700 animate-pulse'
-                : 'bg-white/10 text-white border-black/30 active:scale-90'
-              }`}
+              className={`aspect-square rounded-2xl font-black text-2xl border-b-4 transition-all flex items-center justify-center ${done ? 'text-lime-500/40 border-transparent' : shakeIdx === i ? 'text-white border-rose-800 animate-pulse' : 'text-white border-black/40 active:scale-90'}`}
+              style={done ? { background: 'rgba(132,204,22,0.15)' } : shakeIdx === i ? { background: 'linear-gradient(160deg,#fb7185,#e11d48)' } : { background: 'linear-gradient(160deg, rgba(255,255,255,0.18), rgba(255,255,255,0.05))', boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.22)' }}
             >
               {n}
             </button>

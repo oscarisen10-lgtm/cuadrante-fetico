@@ -59,11 +59,8 @@ function Play({ end }) {
           <button
             key={k}
             onPointerDown={() => press(k)}
-            className={`py-4 rounded-2xl font-black text-xl active:scale-95 transition-transform border-b-4 ${
-              k === 'OK' ? 'bg-emerald-500 text-emerald-950 border-emerald-700'
-              : k === '⌫' ? 'bg-rose-500/80 text-white border-rose-700'
-              : 'bg-white/10 text-white border-black/30'
-            }`}
+            className={`py-4 rounded-2xl font-black text-xl active:scale-95 transition-transform border-b-4 ${k === 'OK' ? 'text-emerald-950 border-emerald-800' : k === '⌫' ? 'text-white border-rose-800' : 'text-white border-black/40'}`}
+            style={k === 'OK' ? { background: 'linear-gradient(160deg,#6ee7b7,#10b981)', boxShadow: '0 4px 12px rgba(16,185,129,0.4), inset 0 2px 4px rgba(255,255,255,0.4)' } : k === '⌫' ? { background: 'linear-gradient(160deg,#fb7185,#e11d48)', boxShadow: '0 4px 12px rgba(225,29,72,0.35), inset 0 2px 4px rgba(255,255,255,0.3)' } : { background: 'linear-gradient(160deg, rgba(255,255,255,0.16), rgba(255,255,255,0.04))', boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.2)' }}
           >
             {k}
           </button>

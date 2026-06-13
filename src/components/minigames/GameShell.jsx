@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Info } from 'lucide-react';
 import { GameBackground } from './gameFx';
+export { fx } from './gameFx';
 
 // Utilidades compartidas por los minijuegos
 export const clamp = (v, min, max) => Math.max(min, Math.min(max, v));

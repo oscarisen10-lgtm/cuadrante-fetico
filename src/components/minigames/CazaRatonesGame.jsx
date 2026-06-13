@@ -68,9 +68,10 @@ function Play({ end }) {
           <button
             key={i}
             onPointerDown={() => whack(i)}
-            className={`aspect-square rounded-3xl flex items-center justify-center text-5xl border-b-8 transition-all duration-75 active:scale-95 ${
-              active === i ? 'bg-orange-400 border-orange-600 scale-105' : 'bg-slate-800 border-slate-900'
-            }`}
+            className={`aspect-square rounded-3xl flex items-center justify-center text-5xl border-b-8 transition-all duration-75 active:scale-95 ${active === i ? 'border-orange-700 scale-105' : 'border-slate-900'}`}
+            style={active === i
+              ? { background: 'radial-gradient(circle at 40% 30%, #fdba74, #f97316)', boxShadow: '0 0 24px rgba(249,115,22,0.7), inset 0 2px 6px rgba(255,255,255,0.4)' }
+              : { background: 'linear-gradient(160deg, #334155, #1e293b)', boxShadow: 'inset 0 2px 5px rgba(255,255,255,0.08)' }}
           >
             {active === i ? '🐭' : '📦'}
           </button>

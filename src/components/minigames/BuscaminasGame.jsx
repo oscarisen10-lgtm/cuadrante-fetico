@@ -67,11 +67,8 @@ function Play({ end }) {
             <button
               key={i}
               onPointerDown={() => tap(i)}
-              className={`rounded-md flex items-center justify-center font-black text-sm transition-all ${
-                boom === i ? 'bg-rose-500 animate-pulse'
-                : isRevealed ? 'bg-white/5'
-                : 'bg-slate-600 border-b-2 border-slate-800 active:scale-90'
-              }`}
+              className={`rounded-md flex items-center justify-center font-black text-sm transition-all ${boom === i ? 'bg-rose-500 animate-pulse' : isRevealed ? 'bg-white/5' : 'border-b-2 border-slate-900 active:scale-90'}`}
+              style={(!isRevealed && boom !== i) ? { background: 'linear-gradient(160deg, #64748b, #334155)', boxShadow: 'inset 0 2px 3px rgba(255,255,255,0.22)' } : undefined}
             >
               {boom === i ? '💥' : isRevealed && count > 0 ? <span className={NUM_COLORS[count]}>{count}</span> : ''}
             </button>

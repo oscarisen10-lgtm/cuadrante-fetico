@@ -50,7 +50,8 @@ function Play({ end }) {
           <button
             key={i}
             onPointerDown={() => tap(i)}
-            className="w-24 h-24 bg-white/10 rounded-3xl text-5xl border-b-4 border-black/40 active:scale-90 transition-transform flex items-center justify-center"
+            className="w-24 h-24 rounded-3xl text-5xl border-b-4 border-black/40 active:scale-90 transition-transform flex items-center justify-center"
+            style={{ background: 'linear-gradient(160deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05))', boxShadow: 'inset 0 2px 6px rgba(255,255,255,0.25), 0 6px 16px rgba(0,0,0,0.35)' }}
           >
             {h}
           </button>
