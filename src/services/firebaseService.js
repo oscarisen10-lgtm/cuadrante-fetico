@@ -1,6 +1,7 @@
-import { auth, db } from '../firebase';
-import { 
-  onAuthStateChanged, signOut, signInWithEmailAndPassword, 
+import { auth, db, functions } from '../firebase';
+import { httpsCallable } from "firebase/functions";
+import {
+  onAuthStateChanged, signOut, signInWithEmailAndPassword,
   createUserWithEmailAndPassword, sendPasswordResetEmail,
   deleteUser, GoogleAuthProvider, OAuthProvider, signInWithPopup
 } from "firebase/auth";
@@ -334,4 +335,36 @@ export const subscribeToTeamRequests = (storeKey, callback) => {
     const arr = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     callback(arr);
   });
+};
+
+// --- ARENA / COMPETICIÓN ---
+
+/** Envía una puntuación al backend (valida intentos y aplica tope de cordura). */
+export const submitArenaScore = async (gameId, score) => {
+  const fn = httpsCallable(functions, 'submitArenaScore');
+  const res = await fn({ gameId, score });
+  return res.data; // { success, best, improved, attemptsLeft }
+};
+
+/** Ranking de jugadores del día (orderBy score, sin índice compuesto: subcolección por fecha). */
+export const subscribeToDailyScores = (dateStr, callback) => {
+  const q = query(collection(db, "leaderboards", dateStr, "players"), orderBy("score", "desc"), limit(20));
+  return onSnapshot(q, (snap) => callback(snap.docs.map(d => ({ id: d.id, ...d.data() }))), () => callback([]));
+};
+
+/** Ranking de tiendas del día (suma de mejores marcas). */
+export const subscribeToStoreScores = (dateStr, callback) => {
+  const q = query(collection(db, "leaderboards", dateStr, "stores"), orderBy("total", "desc"), limit(10));
+  return onSnapshot(q, (snap) => callback(snap.docs.map(d => ({ id: d.id, ...d.data() }))), () => callback([]));
+};
+
+/** Partidas puntuables ya usadas hoy (para mostrar intentos restantes). */
+export const getArenaUsage = async (uid, dateStr) => {
+  if (!uid) return 0;
+  try {
+    const snap = await getDoc(doc(db, "users", uid, "usage", `arena_${dateStr}`));
+    return snap.exists() ? (snap.data().count || 0) : 0;
+  } catch {
+    return 0;
+  }
 };

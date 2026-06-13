@@ -1,5 +1,8 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { Timer, Trophy, Crown, Gem, StopCircle } from 'lucide-react';
+import { Timer, Trophy, Crown, Gem, StopCircle, Gamepad2, X } from 'lucide-react';
+import { ADMIN_EMAIL } from '../constants/config';
+import { submitArenaScore, subscribeToDailyScores, subscribeToStoreScores, getArenaUsage } from '../services/firebaseService';
+import { toast } from './Toast';
 
 // Registro de los 31 minijuegos (uno por día del mes).
 // Carga perezosa: el código de cada juego solo se descarga cuando se juega.
@@ -40,11 +43,17 @@ const GAMES = [
 export function ArenaView({ user }) {
   const [activeTab, setActiveTab] = useState('puntuacion'); // 'clasificacion' or 'puntuacion'
   const [isPlaying, setIsPlaying] = useState(false);
-  const [lastScore, setLastScore] = useState(null);
+  const [selectedGame, setSelectedGame] = useState(null); // juego a lanzar (null = el de hoy)
+  const [showPicker, setShowPicker] = useState(false);     // selector de TODOS los juegos (admin)
   const [timeLeftStr, setTimeLeftStr] = useState('');
   const [gameNumberStr, setGameNumberStr] = useState('');
-  const [practiceAttempts, setPracticeAttempts] = useState(1);
-  const [playAttempts, setPlayAttempts] = useState(2);
+  const [players, setPlayers] = useState([]);
+  const [stores, setStores] = useState([]);
+  const [playsUsed, setPlaysUsed] = useState(0);
+
+  const ARENA_DAILY_PLAYS = 3; // debe coincidir con la Cloud Function
+  const isAdmin = !!(user?.email && ADMIN_EMAIL && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase());
+  const todayStr = new Date().toISOString().split('T')[0]; // misma base de fecha (UTC) que el backend
 
   useEffect(() => {
     // Calculate game number (day of month / total days in month)
@@ -95,38 +104,58 @@ export function ArenaView({ user }) {
   const activeGame = getActiveGame(currentDay);
   const ActiveGameComponent = activeGame.Component;
 
-  const mockPlayers = [
-    { id: 1, name: 'oscarisen', score: 103, rank: 1, avatar: 'https://i.pravatar.cc/150?u=oscar', color: 'bg-[#e56b6f]', attempts: 1, gems: 60 },
-    { id: 2, name: 'Yaiza', score: 99, rank: 2, avatar: 'https://i.pravatar.cc/150?u=yaiza', color: 'bg-[#1b998b]', attempts: 1, gems: 48 },
-    { id: 3, name: 'hugo 🏀', score: 96, rank: 3, avatar: null, initials: 'HU', color: 'bg-[#9d8df1]', attempts: null, gems: 36 },
-    { id: 4, name: 'miriam', score: 75, rank: 4, avatar: 'https://i.pravatar.cc/150?u=miriam', color: 'bg-[#4a4e69]', attempts: 1, gems: 24 },
-    { id: 5, name: 'Alex', score: 43, rank: 5, avatar: null, initials: 'AL', color: 'bg-[#4a4e69]', attempts: 2, gems: 12 },
-  ];
+  // Rankings reales del día + partidas usadas hoy
+  useEffect(() => {
+    const unsubP = subscribeToDailyScores(todayStr, setPlayers);
+    const unsubS = subscribeToStoreScores(todayStr, setStores);
+    if (user?.uid) getArenaUsage(user.uid, todayStr).then(setPlaysUsed);
+    return () => { unsubP(); unsubS(); };
+  }, [user?.uid, todayStr]);
 
-  const mockStores = [
-    { id: 1, name: 'Supercor Goya', score: 4500, rank: 1, color: 'bg-[#e56b6f]' },
-    { id: 2, name: 'Supercor Alcalá', score: 4230, rank: 2, color: 'bg-[#1b998b]' },
-    { id: 3, name: 'Supercor Ventas', score: 3980, rank: 3, color: 'bg-[#9d8df1]' },
-    { id: 4, name: 'Supercor Retiro', score: 3100, rank: 4, color: 'bg-[#4a4e69]' },
-  ];
+  const playAttemptsLeft = isAdmin ? 99 : Math.max(0, ARENA_DAILY_PLAYS - playsUsed);
+  const myEntry = players.find(p => p.uid === user?.uid);
+  const myRank = myEntry ? players.indexOf(myEntry) + 1 : null;
+
+  const RANK_COLORS = ['bg-[#e56b6f]', 'bg-[#1b998b]', 'bg-[#9d8df1]', 'bg-[#4a4e69]', 'bg-[#577590]'];
+  const initialsOf = (n) => (n || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+
+  const launchGame = (game) => { setSelectedGame(game); setShowPicker(false); setIsPlaying(true); };
+
+  const handleFinish = async (score, mode) => {
+    setIsPlaying(false);
+    if (mode !== 'jugar') return; // las partidas de "prueba" no puntúan
+    const g = selectedGame || activeGame;
+    try {
+      const res = await submitArenaScore(g.id, score);
+      if (!isAdmin && res?.attemptsLeft !== undefined) setPlaysUsed(ARENA_DAILY_PLAYS - res.attemptsLeft);
+      toast(res?.improved ? `¡Nueva marca: ${res.best} pts! 🎉` : `Has hecho ${score} pts`, 'success');
+    } catch (e) {
+      toast(e.message || 'No se pudo guardar la puntuación.', 'error');
+    }
+  };
 
   return (
     <div className="h-full bg-[#f6f5ef] text-slate-800 overflow-y-auto scrollbar-hide relative font-sans">
       {/* Cabecera */}
-      <header className="flex justify-center py-2 sticky top-0 bg-[#f6f5ef]/90 backdrop-blur-md z-50 border-b border-slate-200/50">
+      <header className="flex justify-center items-center gap-2 py-2 sticky top-0 bg-[#f6f5ef]/90 backdrop-blur-md z-50 border-b border-slate-200/50 px-4">
          <div className="bg-white rounded-full px-4 py-1.5 font-black text-[13px] flex items-center gap-2 shadow-sm text-slate-800">
-           <span className="flex items-center gap-1">384 <Gem size={14} className="text-emerald-500 fill-emerald-500"/></span>
+           <span className="flex items-center gap-1" title="Partidas que te quedan hoy">🎮 {isAdmin ? '∞' : playAttemptsLeft}</span>
            <span className="text-slate-200 px-1">|</span>
-           <span className="flex items-center gap-1">#1 <Trophy size={14} className="text-amber-500 fill-amber-500"/></span>
+           <span className="flex items-center gap-1" title="Tu posición en el ranking de hoy">{myRank ? `#${myRank}` : '—'} <Trophy size={14} className="text-amber-500 fill-amber-500"/></span>
          </div>
+         {isAdmin && (
+           <button onClick={() => setShowPicker(true)} className="bg-violet-600 text-white rounded-full px-3 py-1.5 font-black text-[11px] flex items-center gap-1.5 shadow-sm active:scale-95">
+             <Gamepad2 size={14}/> TODOS
+           </button>
+         )}
       </header>
 
       {/* Título Principal */}
       <h1 className="text-center font-black text-5xl uppercase tracking-tighter mt-3 mb-4 text-black" style={{ textShadow: '2px 2px 0px rgba(0,0,0,0.1)' }}>HOY</h1>
 
       {/* Tarjeta del Minijuego */}
-      <div 
-        onClick={() => setIsPlaying(true)}
+      <div
+        onClick={() => launchGame(activeGame)}
         className={`mx-6 ${activeGame.bgClass} rounded-[2rem] relative shadow-2xl mb-12 flex flex-col items-center justify-center min-h-[220px] border cursor-pointer active:scale-95 transition-transform`}
       >
         <div className="absolute inset-0 rounded-[2rem] overflow-hidden pointer-events-none z-0">
@@ -216,41 +245,51 @@ export function ArenaView({ user }) {
       </div>
 
       {/* Podio (Top 3) */}
-      <div className="flex justify-center items-end gap-5 mb-10 px-4 mt-6">
-        {/* Top 2 */}
-        <div className="flex flex-col items-center">
-          <img src={mockPlayers[1].avatar} className="w-12 h-12 rounded-full border-2 border-[#f6f5ef] shadow-lg z-10" alt="Rank 2" />
-          <span className="text-[10px] font-bold text-slate-500 mt-2">{mockPlayers[1].score} Puntos</span>
+      {players.length === 0 ? (
+        <div className="text-center px-8 mb-8 mt-2">
+          <p className="text-slate-400 font-bold text-sm leading-relaxed">Aún no hay puntuaciones hoy.<br/>¡Sé el primero en jugar! 🏆</p>
         </div>
-        {/* Top 1 */}
-        <div className="flex flex-col items-center relative">
-          <Crown size={28} className="text-amber-400 fill-amber-400 absolute -top-7 z-20 drop-shadow-md" />
-          <img src={mockPlayers[0].avatar} className="w-16 h-16 rounded-full border-4 border-[#f6f5ef] shadow-lg z-10" alt="Rank 1" />
-          <div className="bg-white px-3 py-1 rounded-full shadow-md mt-2 z-20 border border-slate-100">
-            <span className="text-[11px] font-black text-black">{mockPlayers[0].score} Puntos</span>
+      ) : (
+        <>
+          <div className="flex justify-center items-end gap-5 mb-8 px-4 mt-6">
+            {players[1] && (
+              <div className="flex flex-col items-center">
+                <div className="w-12 h-12 rounded-full bg-[#1b998b] border-2 border-[#f6f5ef] shadow-lg z-10 flex items-center justify-center text-white font-black text-sm">{initialsOf(players[1].name)}</div>
+                <span className="text-[10px] font-bold text-slate-500 mt-2 truncate max-w-[70px]">{players[1].name}</span>
+                <span className="text-[10px] font-bold text-slate-400">{players[1].score} pts</span>
+              </div>
+            )}
+            <div className="flex flex-col items-center relative">
+              <Crown size={28} className="text-amber-400 fill-amber-400 absolute -top-7 z-20 drop-shadow-md" />
+              <div className="w-16 h-16 rounded-full bg-[#e56b6f] border-4 border-[#f6f5ef] shadow-lg z-10 flex items-center justify-center text-white font-black text-lg">{initialsOf(players[0].name)}</div>
+              <div className="bg-white px-3 py-1 rounded-full shadow-md mt-2 z-20 border border-slate-100 text-center">
+                <span className="text-[11px] font-black text-black block truncate max-w-[90px]">{players[0].name}</span>
+                <span className="text-[10px] font-bold text-slate-500">{players[0].score} pts</span>
+              </div>
+            </div>
+            {players[2] && (
+              <div className="flex flex-col items-center">
+                <div className="w-12 h-12 rounded-full bg-[#9d8df1] border-2 border-[#f6f5ef] shadow-lg z-10 flex items-center justify-center text-white font-black text-sm">{initialsOf(players[2].name)}</div>
+                <span className="text-[10px] font-bold text-slate-500 mt-2 truncate max-w-[70px]">{players[2].name}</span>
+                <span className="text-[10px] font-bold text-slate-400">{players[2].score} pts</span>
+              </div>
+            )}
           </div>
-        </div>
-        {/* Top 3 */}
-        <div className="flex flex-col items-center">
-          <div className="w-12 h-12 rounded-full bg-indigo-200 border-2 border-[#f6f5ef] shadow-lg z-10 flex items-center justify-center">
-             <span className="font-bold text-indigo-800 text-sm">{mockPlayers[2].initials}</span>
-          </div>
-          <span className="text-[10px] font-bold text-slate-500 mt-2">{mockPlayers[2].score} Puntos</span>
-        </div>
-      </div>
 
-      {/* Mejor Jugador */}
-      <div className="flex flex-col items-center mb-8">
-        <div className="flex items-center gap-4">
-          <span className="text-3xl grayscale opacity-50">🌿</span>
-          <div className="text-center">
-            <span className="text-xs font-bold uppercase text-slate-800 block mb-1">Mejor jugador</span>
-            <span className="text-2xl font-black uppercase text-black block tracking-tighter">{mockPlayers[0].name}</span>
-            <span className="text-xs font-bold text-slate-500">{mockPlayers[0].score} Puntos</span>
+          {/* Mejor Jugador */}
+          <div className="flex flex-col items-center mb-8">
+            <div className="flex items-center gap-4">
+              <span className="text-3xl grayscale opacity-50">🌿</span>
+              <div className="text-center">
+                <span className="text-xs font-bold uppercase text-slate-800 block mb-1">Mejor jugador</span>
+                <span className="text-2xl font-black uppercase text-black block tracking-tighter">{players[0].name}</span>
+                <span className="text-xs font-bold text-slate-500">{players[0].score} Puntos</span>
+              </div>
+              <span className="text-3xl grayscale opacity-50 transform scale-x-[-1]">🌿</span>
+            </div>
           </div>
-          <span className="text-3xl grayscale opacity-50 transform scale-x-[-1]">🌿</span>
-        </div>
-      </div>
+        </>
+      )}
 
       {/* Tabs Clasificación / Puntuación */}
       <div className="mx-6 bg-[#2a2a2a] rounded-full p-1 flex mb-6 shadow-inner">
@@ -270,74 +309,95 @@ export function ArenaView({ user }) {
 
       {/* Lista de Ranking */}
       <div className="flex flex-col gap-3 px-6 pb-6">
-        {activeTab === 'puntuacion' ? mockPlayers.map(p => (
-          <div key={p.id} className={`${p.color} rounded-[1.25rem] p-4 flex items-center text-white relative shadow-sm hover:scale-[1.02] transition-transform`}>
-            <span className="text-xl font-black w-10 opacity-90">#{p.rank}</span>
-            {p.avatar ? (
-               <img src={p.avatar} className="w-11 h-11 rounded-full border-2 border-white/20 mr-3 shadow-sm" alt={p.name} />
-            ) : (
-               <div className="w-11 h-11 rounded-full bg-white/20 border-2 border-white/20 mr-3 flex items-center justify-center font-bold shadow-sm">{p.initials}</div>
-            )}
-            <div className="flex flex-col">
-              <span className="font-black text-[15px]">{p.score} Puntos</span>
-              <span className="text-sm font-medium opacity-90">{p.name}</span>
-            </div>
-            
-            {p.gems && (
-              <div className="absolute -bottom-2.5 right-4 bg-[#1a1a1a] text-white text-[10px] font-black px-2.5 py-1 rounded-full flex items-center gap-1.5 border-[3px] border-[#f6f5ef] shadow-sm">
-                {p.attempts && <span className="opacity-80">{p.attempts} <span className="text-[8px]">↺</span></span>}
-                <span className="text-emerald-400 flex items-center gap-0.5">+{p.gems} <Gem size={10} className="fill-emerald-400"/></span>
+        {activeTab === 'puntuacion' ? (
+          players.length === 0 ? (
+            <p className="text-center text-slate-400 font-bold text-sm py-6">Nadie ha jugado todavía hoy.</p>
+          ) : players.map((p, i) => (
+            <div key={p.uid} className={`${RANK_COLORS[i % RANK_COLORS.length]} rounded-[1.25rem] p-4 flex items-center text-white relative shadow-sm ${p.uid === user?.uid ? 'ring-2 ring-amber-400' : ''}`}>
+              <span className="text-xl font-black w-10 opacity-90">#{i + 1}</span>
+              <div className="w-11 h-11 rounded-full bg-white/20 border-2 border-white/20 mr-3 flex items-center justify-center font-bold shadow-sm">{initialsOf(p.name)}</div>
+              <div className="flex flex-col min-w-0">
+                <span className="font-black text-[15px]">{p.score} Puntos</span>
+                <span className="text-sm font-medium opacity-90 truncate">{p.name}{p.uid === user?.uid ? ' (tú)' : ''}</span>
               </div>
-            )}
-          </div>
-        )) : mockStores.map(s => (
-           <div key={s.id} className={`${s.color} rounded-[1.25rem] p-4 flex items-center text-white relative shadow-sm hover:scale-[1.02] transition-transform`}>
-            <span className="text-xl font-black w-10 opacity-90">#{s.rank}</span>
-            <div className="w-11 h-11 rounded-full bg-white/20 border-2 border-white/20 mr-3 flex items-center justify-center font-bold shadow-sm text-lg">🏪</div>
-            <div className="flex flex-col">
-              <span className="font-black text-[15px]">{s.score} Puntos</span>
-              <span className="text-sm font-medium opacity-90">{s.name}</span>
             </div>
-          </div>
-        ))}
+          ))
+        ) : (
+          stores.length === 0 ? (
+            <p className="text-center text-slate-400 font-bold text-sm py-6">Todavía no hay tiendas en el ranking.</p>
+          ) : stores.map((s, i) => (
+            <div key={s.id} className={`${RANK_COLORS[i % RANK_COLORS.length]} rounded-[1.25rem] p-4 flex items-center text-white relative shadow-sm`}>
+              <span className="text-xl font-black w-10 opacity-90">#{i + 1}</span>
+              <div className="w-11 h-11 rounded-full bg-white/20 border-2 border-white/20 mr-3 flex items-center justify-center font-bold shadow-sm text-lg">🏪</div>
+              <div className="flex flex-col min-w-0">
+                <span className="font-black text-[15px]">{s.total} Puntos</span>
+                <span className="text-sm font-medium opacity-90 truncate">{s.store}</span>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
-      {/* Bonus Box */}
+      {/* Info de la competición */}
       <div className="mx-6 bg-[#e6e4df] rounded-[2rem] p-6 text-center mb-8 relative border-b-4 border-slate-300/50">
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase flex items-center gap-1 shadow-sm">
-          <Gem size={10} className="fill-white" /> DÍA 5
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-violet-500 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase flex items-center gap-1 shadow-sm">
+          <Trophy size={10} className="fill-white" /> Juego de hoy
         </div>
-        <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-1 mt-2">BONUS</h4>
-        <div className="text-4xl font-black text-black mb-1">+20%</div>
-        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Gems en todos los scores</p>
+        <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-2 mt-2">{activeGame.emoji} {activeGame.title}</h4>
+        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide leading-relaxed">
+          Cada día, un juego distinto. Tienes {ARENA_DAILY_PLAYS} partidas para tu mejor marca.<br/>¡Compite por el orgullo de tu tienda!
+        </p>
       </div>
 
       <p className="text-center text-[10px] text-slate-400 font-bold px-12 pb-12 leading-relaxed mb-4">
-        Consigue 10 gems por jugar y 10 por cada compañero que superes hoy.
+        El ranking se reinicia cada día. Solo por diversión 🎮
       </p>
 
-      {isPlaying && (
-        <Suspense fallback={
-          <div className="fixed inset-0 z-50 bg-[#1e1b4b] flex flex-col items-center justify-center text-white font-black gap-3">
-            <span className="text-5xl animate-bounce">{activeGame.emoji}</span>
-            <span className="text-sm uppercase tracking-widest animate-pulse">Cargando juego...</span>
+      {isPlaying && (() => {
+        const pg = selectedGame || activeGame;
+        const PlayComp = pg.Component;
+        return (
+          <Suspense fallback={
+            <div className="fixed inset-0 z-50 bg-[#1e1b4b] flex flex-col items-center justify-center text-white font-black gap-3">
+              <span className="text-5xl animate-bounce">{pg.emoji}</span>
+              <span className="text-sm uppercase tracking-widest animate-pulse">Cargando juego...</span>
+            </div>
+          }>
+            <PlayComp
+              practiceAttempts={99}
+              playAttempts={playAttemptsLeft}
+              onConsumeAttempt={() => {}}
+              onCancel={() => setIsPlaying(false)}
+              onFinish={handleFinish}
+            />
+          </Suspense>
+        );
+      })()}
+
+      {/* Selector de TODOS los juegos (solo admin, modo pruebas) */}
+      {showPicker && (
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex flex-col p-5 overflow-y-auto" onClick={() => setShowPicker(false)}>
+          <div className="max-w-md mx-auto w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4 sticky top-0 py-2">
+              <h2 className="text-white font-black text-xl flex items-center gap-2"><Gamepad2 size={22} className="text-violet-400"/> Modo pruebas</h2>
+              <button onClick={() => setShowPicker(false)} className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center text-white active:scale-90"><X size={22}/></button>
+            </div>
+            <p className="text-white/50 text-xs font-bold mb-4 px-1">Solo tú (admin) ves esto. Prueba cualquiera de los 31 juegos sin esperar al día.</p>
+            <div className="grid grid-cols-3 gap-2.5 pb-8">
+              {GAMES.map(g => (
+                <button
+                  key={g.id}
+                  onClick={() => launchGame(g)}
+                  className={`${g.bgClass} rounded-2xl p-3 flex flex-col items-center justify-center gap-1.5 aspect-square border active:scale-95 transition-transform text-white`}
+                >
+                  <span className="text-3xl">{g.emoji}</span>
+                  <span className="text-[8px] font-black uppercase tracking-tight leading-tight text-center">{g.title}</span>
+                  <span className="text-[7px] font-bold opacity-60">Día {g.day}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        }>
-          <ActiveGameComponent
-            practiceAttempts={practiceAttempts}
-            playAttempts={playAttempts}
-            onConsumeAttempt={(mode) => {
-              if (mode === 'prueba') setPracticeAttempts(p => Math.max(0, p - 1));
-              if (mode === 'jugar') setPlayAttempts(p => Math.max(0, p - 1));
-            }}
-            onCancel={() => setIsPlaying(false)}
-            onFinish={(score, mode) => {
-              setLastScore(score);
-              setIsPlaying(false);
-              // Here we could update firebase in the future
-            }}
-          />
-        </Suspense>
+        </div>
       )}
 
       <style dangerouslySetInnerHTML={{__html: `

@@ -302,3 +302,84 @@ ${convenioText}`;
     throw new HttpsError("internal", "Error al conectar con la Inteligencia Artificial. Inténtalo más tarde.");
   }
 });
+
+/**
+ * submitArenaScore — Guarda la puntuación de un minijuego (modelo "por diversión").
+ * - Límite de partidas/día por usuario (el admin está exento, como en la IA).
+ * - Tope de cordura en la puntuación (anti-trampa básico; nada de premios reales).
+ * - El nombre y la tienda se leen del perfil en el SERVIDOR (el cliente no los puede falsear).
+ * - Guarda la MEJOR marca del día y mantiene un agregado por tienda (suma de mejores marcas).
+ */
+const ARENA_MAX_SCORE = 5000;     // tope de cordura por partida
+const ARENA_DAILY_PLAYS = 3;      // partidas puntuables por usuario y día
+const ADMIN_EMAIL_FN = "oscargarcia@fetico.es";
+
+exports.submitArenaScore = onCall({ enforceAppCheck: false }, async (request) => {
+  if (!request.auth || !request.auth.uid) {
+    throw new HttpsError("unauthenticated", "Debes iniciar sesión para competir.");
+  }
+  const uid = request.auth.uid;
+
+  let { gameId, score } = request.data || {};
+  if (typeof gameId !== "string" || gameId.length === 0 || gameId.length > 30) {
+    throw new HttpsError("invalid-argument", "Juego no válido.");
+  }
+  // Tope de cordura: entero entre 0 y ARENA_MAX_SCORE.
+  score = Math.max(0, Math.min(ARENA_MAX_SCORE, Math.floor(Number(score) || 0)));
+
+  const db = admin.firestore();
+  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+  const isAdmin = request.auth.token && (request.auth.token.admin === true || request.auth.token.email === ADMIN_EMAIL_FN);
+
+  // Perfil (servidor): nombre y tienda reales, no manipulables por el cliente.
+  const userSnap = await db.collection("users").doc(uid).get();
+  const profile = (userSnap.exists && userSnap.data().profile) || {};
+  const name = profile.fullName || "Compañero/a";
+  const company = profile.company || "—";
+  const store = profile.store || "—";
+  const storeKey = `${company}__${store}`;
+
+  const usageRef = db.collection("users").doc(uid).collection("usage").doc(`arena_${today}`);
+  const playerRef = db.collection("leaderboards").doc(today).collection("players").doc(uid);
+  const storeRef = db.collection("leaderboards").doc(today).collection("stores").doc(storeKey);
+
+  const result = await db.runTransaction(async (tx) => {
+    const usageDoc = await tx.get(usageRef);
+    const playerDoc = await tx.get(playerRef);
+    const storeDoc = await tx.get(storeRef);
+
+    const used = usageDoc.exists ? (usageDoc.data().count || 0) : 0;
+    if (!isAdmin && used >= ARENA_DAILY_PLAYS) {
+      return { allowed: false };
+    }
+
+    const oldBest = playerDoc.exists ? (playerDoc.data().score || 0) : 0;
+    const newBest = Math.max(oldBest, score);
+
+    tx.set(playerRef, {
+      uid, name, company, store, storeKey, gameId,
+      score: newBest, date: today,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    const delta = newBest - oldBest;
+    if (delta > 0) {
+      const prevTotal = storeDoc.exists ? (storeDoc.data().total || 0) : 0;
+      tx.set(storeRef, { company, store, storeKey, date: today, total: prevTotal + delta }, { merge: true });
+    }
+
+    if (!isAdmin) tx.set(usageRef, { count: used + 1 }, { merge: true });
+
+    return {
+      allowed: true,
+      best: newBest,
+      improved: delta > 0,
+      attemptsLeft: isAdmin ? 999 : Math.max(0, ARENA_DAILY_PLAYS - (used + 1)),
+    };
+  });
+
+  if (!result.allowed) {
+    throw new HttpsError("resource-exhausted", "Has agotado tus partidas de hoy. ¡Vuelve mañana!");
+  }
+  return { success: true, ...result };
+});
