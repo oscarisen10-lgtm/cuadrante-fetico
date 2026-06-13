@@ -21,10 +21,10 @@ const GAMES = [
   { day: 12, id: 'escaner',   title: 'ESCÁNER',          emoji: '🔦', bgClass: 'bg-[#0891b2] border-[#0e7490]',  Component: lazy(() => import('./minigames/EscanerGame').then(m => ({ default: m.EscanerGame }))) },
   { day: 13, id: 'memoria',   title: 'MEMORIA NUMÉRICA', emoji: '🔐', bgClass: 'bg-[#8b5cf6] border-[#7c3aed]',  Component: lazy(() => import('./minigames/MemoriaNumericaGame').then(m => ({ default: m.MemoriaNumericaGame }))) },
   { day: 14, id: 'ahorcado',  title: 'EL AHORCADO',      emoji: '📝', bgClass: 'bg-[#0284c7] border-[#0369a1]',  Component: lazy(() => import('./minigames/AhorcadoGame').then(m => ({ default: m.AhorcadoGame }))) },
-  { day: 15, id: 'puzzle',    title: 'PUZZLE EXPRESS',   emoji: '🧩', bgClass: 'bg-[#06b6d4] border-[#0891b2]',  Component: lazy(() => import('./minigames/PuzzleDeslizanteGame').then(m => ({ default: m.PuzzleDeslizanteGame }))) },
-  { day: 16, id: 'minas',     title: 'BUSCAMINAS',       emoji: '💣', bgClass: 'bg-[#dc2626] border-[#b91c1c]',  Component: lazy(() => import('./minigames/BuscaminasGame').then(m => ({ default: m.BuscaminasGame }))) },
-  { day: 17, id: 'mayor',     title: 'MAYOR O MENOR',    emoji: '🎴', bgClass: 'bg-[#2563eb] border-[#1d4ed8]',  Component: lazy(() => import('./minigames/MayorMenorGame').then(m => ({ default: m.MayorMenorGame }))) },
-  { day: 18, id: 'rps',       title: 'GANA RÁPIDO',      emoji: '✂️', bgClass: 'bg-[#ec4899] border-[#db2777]',  Component: lazy(() => import('./minigames/GanaRapidoGame').then(m => ({ default: m.GanaRapidoGame }))) },
+  { day: 15, id: 'relampago', title: 'MEMORIA RELÁMPAGO', emoji: '💡', bgClass: 'bg-[#7c3aed] border-[#6d28d9]', Component: lazy(() => import('./minigames/MemoriaRelampagoGame').then(m => ({ default: m.MemoriaRelampagoGame }))) },
+  { day: 16, id: 'clasifica', title: 'CLASIFICA',        emoji: '🧊', bgClass: 'bg-[#2563eb] border-[#1d4ed8]',  Component: lazy(() => import('./minigames/ClasificaGame').then(m => ({ default: m.ClasificaGame }))) },
+  { day: 17, id: 'valida',    title: 'VALIDA',           emoji: '✅', bgClass: 'bg-[#059669] border-[#047857]',  Component: lazy(() => import('./minigames/ValidaGame').then(m => ({ default: m.ValidaGame }))) },
+  { day: 18, id: 'equilibrio',title: 'EQUILIBRIO',       emoji: '⚖️', bgClass: 'bg-[#d97706] border-[#b45309]',  Component: lazy(() => import('./minigames/EquilibrioGame').then(m => ({ default: m.EquilibrioGame }))) },
   { day: 19, id: 'diana',     title: 'DIANA',            emoji: '🎯', bgClass: 'bg-[#e11d48] border-[#be123c]',  Component: lazy(() => import('./minigames/DianaGame').then(m => ({ default: m.DianaGame }))) },
   { day: 20, id: 'esquiva',   title: 'ESQUIVA CAJAS',    emoji: '📦', bgClass: 'bg-[#f97316] border-[#ea580c]',  Component: lazy(() => import('./minigames/EsquivaCajasGame').then(m => ({ default: m.EsquivaCajasGame }))) },
   { day: 21, id: 'salto',     title: 'SALTO DEL PALÉ',   emoji: '🤸', bgClass: 'bg-[#84cc16] border-[#65a30d]',  Component: lazy(() => import('./minigames/SaltoPaleGame').then(m => ({ default: m.SaltoPaleGame }))) },
@@ -36,7 +36,7 @@ const GAMES = [
   { day: 27, id: 'orden',     title: 'ORDEN 1-20',       emoji: '👆', bgClass: 'bg-[#4d7c0f] border-[#3f6212]',  Component: lazy(() => import('./minigames/OrdenaNumerosGame').then(m => ({ default: m.OrdenaNumerosGame }))) },
   { day: 28, id: 'palabra',   title: 'PALABRA OCULTA',   emoji: '🟩', bgClass: 'bg-[#16a34a] border-[#15803d]',  Component: lazy(() => import('./minigames/PalabraOcultaGame').then(m => ({ default: m.PalabraOcultaGame }))) },
   { day: 29, id: 'cuenta',    title: 'CUENTA RÁPIDA',    emoji: '🧺', bgClass: 'bg-[#b45309] border-[#92400e]',  Component: lazy(() => import('./minigames/CuentaRapidaGame').then(m => ({ default: m.CuentaRapidaGame }))) },
-  { day: 30, id: 'luces',     title: 'LUCES FUERA',      emoji: '💡', bgClass: 'bg-[#ca8a04] border-[#a16207]',  Component: lazy(() => import('./minigames/LucesFueraGame').then(m => ({ default: m.LucesFueraGame }))) },
+  { day: 30, id: 'combo',     title: 'COMBO DE FLECHAS', emoji: '🕹️', bgClass: 'bg-[#db2777] border-[#be185d]',  Component: lazy(() => import('./minigames/ComboFlechasGame').then(m => ({ default: m.ComboFlechasGame }))) },
   { day: 31, id: 'ritmo',     title: 'RITMO DE CAJA',    emoji: '🎹', bgClass: 'bg-[#6d28d9] border-[#5b21b6]',  Component: lazy(() => import('./minigames/RitmoCajaGame').then(m => ({ default: m.RitmoCajaGame }))) },
 ];
 
