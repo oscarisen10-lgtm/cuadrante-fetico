@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Info } from 'lucide-react';
+import { GameBackground } from './gameFx';
 
 // Utilidades compartidas por los minijuegos
 export const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
@@ -82,10 +83,11 @@ export function GameShell({
 
   if (phase === 'intro') {
     return (
-      <div className="fixed inset-0 z-50 bg-[#1e1b4b] text-white flex flex-col p-6 overflow-y-auto font-sans">
-        <div className="flex items-center justify-between bg-black/20 p-4 rounded-xl mb-6">
+      <div className="fixed inset-0 z-50 text-white flex flex-col p-6 overflow-y-auto font-sans bg-[#0b0520]">
+        <GameBackground theme={accent} />
+        <div className="relative z-10 flex items-center justify-between bg-black/25 backdrop-blur-md p-4 rounded-2xl mb-6 border border-white/10">
           <div className="flex items-center gap-2 text-white">
-            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-base">{emoji}</div>
+            <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-lg border border-white/10">{emoji}</div>
             <div>
               <p className="text-[10px] text-white/60 font-bold uppercase tracking-wider">Día {day}</p>
               <p className="text-sm font-black leading-none">{title}</p>
@@ -94,7 +96,7 @@ export function GameShell({
           <div className="w-10 h-10"></div>
         </div>
 
-        <div className="flex flex-col items-center pb-12">
+        <div className="relative z-10 flex flex-col items-center pb-12">
           <div className={`bg-black/40 border ${t.border} p-6 rounded-3xl backdrop-blur-md text-center mb-8 max-w-sm w-full relative`}>
             <div className="absolute inset-0 z-0 flex items-center justify-center opacity-5 pointer-events-none text-[10rem]">{emoji}</div>
             <h2 className="text-white text-2xl font-black mb-4 z-10 relative">{title}</h2>
@@ -140,14 +142,16 @@ export function GameShell({
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#1e1b4b] flex flex-col font-sans overflow-hidden">
-      <Header />
-
-      {phase === 'playing' && (
-        <div className="flex-1 relative overflow-hidden flex flex-col">
-          {children({ mode, end })}
-        </div>
-      )}
+    <div className="fixed inset-0 z-50 flex flex-col font-sans overflow-hidden bg-[#0b0520]">
+      <GameBackground theme={accent} />
+      <div className="relative z-10 flex flex-col flex-1 min-h-0">
+        <Header />
+        {phase === 'playing' && (
+          <div className="flex-1 relative overflow-hidden flex flex-col">
+            {children({ mode, end })}
+          </div>
+        )}
+      </div>
 
       {phase === 'countdown' && (
         <div className="absolute inset-0 z-40 bg-black/80 backdrop-blur-sm flex items-center justify-center flex-col">

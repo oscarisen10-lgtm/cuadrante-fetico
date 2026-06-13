@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Gamepad2, Info, Timer } from 'lucide-react';
+import { GameBackground } from './gameFx';
 
 export function FrenoEnSecoGame({ onFinish, onCancel, practiceAttempts, playAttempts, onConsumeAttempt }) {
   const [gameState, setGameState] = useState('intro'); // 'intro', 'countdown', 'playing', 'finished'
@@ -82,10 +83,11 @@ export function FrenoEnSecoGame({ onFinish, onCancel, practiceAttempts, playAtte
 
   if (gameState === 'intro') {
     return (
-      <div className="fixed inset-0 z-50 bg-[#1e1b4b] text-white flex flex-col p-6 overflow-y-auto font-sans">
-        <div className="flex items-center justify-between bg-black/20 p-4 rounded-xl mb-6">
+      <div className="fixed inset-0 z-50 bg-[#160407] text-white flex flex-col p-6 overflow-y-auto font-sans">
+        <GameBackground theme="red" />
+        <div className="relative z-10 flex items-center justify-between bg-black/25 backdrop-blur-md p-4 rounded-2xl mb-6 border border-white/10">
           <div className="flex items-center gap-2 text-white">
-            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center border border-white/10">
               <Timer size={16} className="text-red-400" />
             </div>
             <div>
@@ -96,7 +98,7 @@ export function FrenoEnSecoGame({ onFinish, onCancel, practiceAttempts, playAtte
           <div className="w-10 h-10"></div>
         </div>
 
-        <div className="flex flex-col items-center pb-12">
+        <div className="relative z-10 flex flex-col items-center pb-12">
           <div className="bg-black/40 border border-red-500/30 p-6 rounded-3xl backdrop-blur-md text-center mb-8 max-w-sm w-full relative">
             <div className="absolute inset-0 z-0 flex items-center justify-center opacity-5 pointer-events-none">
               <Timer size={200} className="text-red-500" />
@@ -150,9 +152,10 @@ export function FrenoEnSecoGame({ onFinish, onCancel, practiceAttempts, playAtte
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#1e1b4b] flex flex-col font-sans overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-[#160407] flex flex-col font-sans overflow-hidden">
+      <GameBackground theme="red" />
       {/* Header */}
-      <div className="pt-12 pb-4 px-6 flex items-center justify-between z-10 bg-black/20">
+      <div className="relative pt-12 pb-4 px-6 flex items-center justify-between z-10 bg-black/20 backdrop-blur-sm">
         <div className="flex items-center gap-2 text-white">
           <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
             <Timer size={16} className="text-red-400" />
@@ -166,22 +169,25 @@ export function FrenoEnSecoGame({ onFinish, onCancel, practiceAttempts, playAtte
       </div>
 
       {gameState === 'playing' && (
-        <div className="flex-1 flex flex-col items-center justify-around relative px-6 py-12">
+        <div className="flex-1 flex flex-col items-center justify-around relative z-10 px-6 py-12">
           <div className="text-center">
             <p className="text-red-400 font-bold uppercase tracking-widest mb-2 text-sm">Objetivo</p>
             <p className="text-white text-3xl font-black">10:00 Segundos</p>
           </div>
-          
-          <div className={`text-[6rem] font-black tabular-nums transition-all duration-300 ${isHidden ? 'text-white/10 blur-sm scale-90' : 'text-white scale-100 drop-shadow-[0_0_20px_rgba(239,68,68,0.8)]'}`}>
+
+          <div className={`text-[6rem] font-black tabular-nums transition-all duration-300 ${isHidden ? 'text-white/10 blur-sm scale-90' : 'text-white scale-100 drop-shadow-[0_0_25px_rgba(239,68,68,0.9)]'}`}>
             {isHidden ? '??:??' : formatTime(elapsedTime)}
           </div>
 
           <div className="w-full flex justify-center pb-8">
-            <button 
+            <button
               onClick={handleStop}
-              className="w-48 h-48 bg-red-500 rounded-full shadow-[0_0_40px_rgba(239,68,68,0.6)] border-8 border-red-400 flex items-center justify-center active:scale-90 active:bg-red-600 transition-all z-20"
+              className="relative w-52 h-52 rounded-full flex items-center justify-center active:scale-90 transition-transform z-20 border-4 border-red-300/40"
+              style={{ background: 'radial-gradient(circle at 38% 30%, #fb7185, #ef4444 55%, #b91c1c)', boxShadow: '0 0 60px rgba(239,68,68,0.7), inset 0 4px 12px rgba(255,255,255,0.45), inset 0 -8px 18px rgba(0,0,0,0.35)' }}
             >
-              <span className="text-white text-3xl font-black uppercase tracking-wider">Frenar</span>
+              <span className="absolute inset-3 rounded-full border-2 border-white/20" />
+              <span className="absolute top-7 left-12 w-12 h-5 bg-white/40 rounded-full blur-[2px]" />
+              <span className="text-white text-3xl font-black uppercase tracking-wider drop-shadow-[0_2px_4px_rgba(0,0,0,0.45)]">Frenar</span>
             </button>
           </div>
         </div>

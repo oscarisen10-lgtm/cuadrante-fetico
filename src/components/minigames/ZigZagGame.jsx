@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Clock, Trophy, AlertTriangle, Play, Gamepad2, Info } from 'lucide-react';
+import { GameBackground } from './gameFx';
 
 export function ZigZagGame({ onFinish, onCancel, practiceAttempts, playAttempts, onConsumeAttempt }) {
   const [gameState, setGameState] = useState('intro'); // 'intro', 'countdown', 'playing', 'gameover', 'finished'
@@ -299,11 +300,12 @@ export function ZigZagGame({ onFinish, onCancel, practiceAttempts, playAttempts,
 
   // --- PLAYING / COUNTDOWN SCREEN ---
   return (
-    <div 
-      className="fixed inset-0 z-[100] bg-slate-900 overflow-hidden font-sans touch-none" 
+    <div
+      className="fixed inset-0 z-[100] bg-[#060a14] overflow-hidden font-sans touch-none"
       ref={gameAreaRef}
       onPointerDown={handlePointerDown}
     >
+      <GameBackground theme="slate" />
       <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-20 pointer-events-none">
         <div className="bg-black/50 backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-2 border border-white/10 shadow-lg">
           <Clock size={16} className={timeLeft <= 10 ? 'text-rose-400 animate-pulse' : 'text-emerald-400'} />
@@ -325,14 +327,16 @@ export function ZigZagGame({ onFinish, onCancel, practiceAttempts, playAttempts,
         <X size={20} className="text-white/60" />
       </button>
 
-      {/* Cinta Background */}
-      <div className="absolute inset-0 pt-20 pb-10 pointer-events-none flex justify-center">
-        <div className="absolute inset-0 bg-[#cbd5e1]"></div>
-        {/* Líneas de la cinta móvil */}
-        <div className="w-[85%] h-full bg-[#94a3b8] relative overflow-hidden border-x-8 border-[#64748b]">
-           <div className="absolute inset-0 z-0 opacity-20 conveyor-lines"></div>
+      {/* Cinta transportadora */}
+      <div className="absolute inset-0 pt-20 pb-10 pointer-events-none flex justify-center z-10">
+        {/* Cinta metálica con rieles brillantes */}
+        <div className="w-[84%] h-full relative overflow-hidden rounded-t-[2rem]"
+          style={{ background: 'linear-gradient(90deg, #1e293b, #475569 18%, #64748b 50%, #475569 82%, #1e293b)', boxShadow: 'inset 0 0 50px rgba(0,0,0,0.55), 0 0 40px rgba(0,0,0,0.5)' }}>
+           <div className="absolute left-0 top-0 bottom-0 w-2.5" style={{ background: 'linear-gradient(180deg, #22d3ee, #0891b2)', boxShadow: '0 0 14px #22d3ee' }} />
+           <div className="absolute right-0 top-0 bottom-0 w-2.5" style={{ background: 'linear-gradient(180deg, #22d3ee, #0891b2)', boxShadow: '0 0 14px #22d3ee' }} />
+           <div className="absolute inset-0 z-0 opacity-30 conveyor-lines"></div>
         </div>
-        
+
         {items.map(item => (
           <div
             key={item.id}
@@ -343,19 +347,20 @@ export function ZigZagGame({ onFinish, onCancel, practiceAttempts, playAttempts,
               animation: `game-fall ${item.duration}s linear forwards`,
             }}
           >
-            <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center text-4xl shadow-lg border-b-4 border-slate-300">
+            <div className="gfx-pop w-14 h-14 rounded-2xl flex items-center justify-center text-4xl border-b-4 border-slate-400"
+              style={{ background: 'linear-gradient(145deg, #ffffff, #dbe2ea)', boxShadow: '0 8px 18px rgba(0,0,0,0.4), inset 0 2px 4px rgba(255,255,255,0.9)' }}>
               {item.icon}
             </div>
           </div>
         ))}
 
-        {/* The Player Ball */}
-        <div 
+        {/* Bola del jugador */}
+        <div
           id="player-ball"
-          className="absolute w-12 h-12 bg-emerald-500 rounded-full border-[3px] border-emerald-200 shadow-[0_0_20px_rgba(16,185,129,0.8)] flex items-center justify-center transform -translate-x-1/2 z-20"
-          style={{ left: playerXRef.current, bottom: playerYRef.current }}
+          className="absolute w-12 h-12 rounded-full border-2 border-emerald-100 flex items-center justify-center transform -translate-x-1/2 z-20"
+          style={{ left: playerXRef.current, bottom: playerYRef.current, background: 'radial-gradient(circle at 35% 30%, #a7f3d0, #10b981 60%, #047857)', boxShadow: '0 0 26px rgba(16,185,129,0.9), inset 0 2px 5px rgba(255,255,255,0.7)' }}
         >
-          <div className="w-4 h-4 bg-emerald-300 rounded-full animate-pulse"></div>
+          <div className="w-3.5 h-3.5 bg-white/80 rounded-full blur-[1px]"></div>
         </div>
       </div>
 

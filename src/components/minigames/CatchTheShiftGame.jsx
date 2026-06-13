@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Clock, Trophy, AlertTriangle, Play, Gamepad2, Info } from 'lucide-react';
+import { GameBackground } from './gameFx';
 
 export function CatchTheShiftGame({ onFinish, onCancel, practiceAttempts, playAttempts, onConsumeAttempt }) {
   const [gameState, setGameState] = useState('intro'); // 'intro', 'countdown', 'playing', 'gameover', 'finished'
@@ -243,7 +244,8 @@ export function CatchTheShiftGame({ onFinish, onCancel, practiceAttempts, playAt
 
   // --- PLAYING / COUNTDOWN SCREEN ---
   return (
-    <div className="fixed inset-0 z-[100] bg-slate-900 overflow-hidden font-sans touch-none" ref={gameAreaRef}>
+    <div className="fixed inset-0 z-[100] bg-[#0b0520] overflow-hidden font-sans touch-none" ref={gameAreaRef}>
+      <GameBackground theme="violet" />
       <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-20">
         <div className="bg-black/50 backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-2 border border-white/10 shadow-lg">
           <Clock size={16} className={timeLeft <= 10 ? 'text-rose-400 animate-pulse' : 'text-emerald-400'} />
@@ -265,9 +267,7 @@ export function CatchTheShiftGame({ onFinish, onCancel, practiceAttempts, playAt
         <X size={20} className="text-white/60" />
       </button>
 
-      <div className="absolute inset-0 pt-20 pb-10">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#2b087a]/40 to-[#1a0b2e] pointer-events-none"></div>
-        
+      <div className="absolute inset-0 pt-20 pb-10 z-10">
         {items.map(item => (
           <div
             key={item.id}
@@ -281,18 +281,23 @@ export function CatchTheShiftGame({ onFinish, onCancel, practiceAttempts, playAt
             }}
           >
             {item.type === 'target' && (
-              <div className="w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center font-black text-white text-3xl shadow-[0_0_20px_rgba(16,185,129,0.5)] border-b-4 border-emerald-700">
-                M
+              <div className="gfx-pop relative w-16 h-16 rounded-2xl flex items-center justify-center font-black text-white text-3xl border-b-4 border-emerald-900"
+                style={{ background: 'radial-gradient(circle at 35% 25%, #6ee7b7, #10b981 55%, #047857)', boxShadow: '0 8px 22px rgba(16,185,129,0.55), inset 0 2px 6px rgba(255,255,255,0.55)' }}>
+                <span className="drop-shadow-[0_2px_2px_rgba(0,0,0,0.3)]">M</span>
+                <span className="absolute top-1.5 left-2 w-4 h-2 bg-white/50 rounded-full blur-[1px]" />
               </div>
             )}
             {item.type === 'decoy' && (
-              <div className="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center font-black text-white text-3xl shadow-[0_0_20px_rgba(59,130,246,0.5)] border-b-4 border-blue-700">
-                T
+              <div className="gfx-pop relative w-16 h-16 rounded-2xl flex items-center justify-center font-black text-white text-3xl border-b-4 border-blue-900"
+                style={{ background: 'radial-gradient(circle at 35% 25%, #93c5fd, #3b82f6 55%, #1d4ed8)', boxShadow: '0 8px 22px rgba(59,130,246,0.55), inset 0 2px 6px rgba(255,255,255,0.55)' }}>
+                <span className="drop-shadow-[0_2px_2px_rgba(0,0,0,0.3)]">T</span>
+                <span className="absolute top-1.5 left-2 w-4 h-2 bg-white/50 rounded-full blur-[1px]" />
               </div>
             )}
             {item.type === 'alarm' && (
-              <div className="w-16 h-16 bg-rose-500 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(244,63,94,0.5)] border-b-4 border-rose-700 animate-pulse">
-                <AlertTriangle size={32} className="text-white" />
+              <div className="gfx-pop relative w-16 h-16 rounded-full flex items-center justify-center border-b-4 border-rose-900 animate-pulse"
+                style={{ background: 'radial-gradient(circle at 35% 25%, #fda4af, #f43f5e 55%, #be123c)', boxShadow: '0 0 28px rgba(244,63,94,0.7), inset 0 2px 6px rgba(255,255,255,0.5)' }}>
+                <AlertTriangle size={32} className="text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.4)]" />
               </div>
             )}
           </div>

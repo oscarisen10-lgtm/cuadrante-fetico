@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Gamepad2, Info, Trophy, RotateCcw, Award, X } from 'lucide-react';
+import { GameBackground } from './gameFx';
 
 export function TorreDeBloquesGame({ onFinish, onCancel, practiceAttempts, playAttempts, onConsumeAttempt }) {
   const [gameState, setGameState] = useState('intro'); // 'intro', 'countdown', 'playing', 'finished'
@@ -359,9 +360,9 @@ export function TorreDeBloquesGame({ onFinish, onCancel, practiceAttempts, playA
 
       // Draw Glowing Gradient Background (Slate to Deep Neon Violet)
       const bgGrad = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
-      bgGrad.addColorStop(0, '#090514');
-      bgGrad.addColorStop(0.5, '#13082a');
-      bgGrad.addColorStop(1, '#22083b');
+      bgGrad.addColorStop(0, 'rgba(9,5,20,0.72)');
+      bgGrad.addColorStop(0.5, 'rgba(19,8,42,0.6)');
+      bgGrad.addColorStop(1, 'rgba(34,8,59,0.5)');
       ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
@@ -624,7 +625,7 @@ export function TorreDeBloquesGame({ onFinish, onCancel, practiceAttempts, playA
   // Playing / Countdown screen
   return (
     <div className="fixed inset-0 z-50 bg-[#090514] flex flex-col font-sans overflow-hidden select-none touch-none">
-      
+      <GameBackground theme="fuchsia" />
       {/* HUD Header */}
       <div className="pt-10 pb-4 px-6 flex items-center justify-between z-10 bg-gradient-to-b from-[#090514] to-transparent pointer-events-none">
         <div className="flex items-center gap-2">
@@ -662,13 +663,13 @@ export function TorreDeBloquesGame({ onFinish, onCancel, practiceAttempts, playA
       )}
 
       {/* Main Canvas view area */}
-      <div 
-        className="flex-1 w-full relative cursor-pointer active:brightness-110 transition-all"
+      <div
+        className="flex-1 w-full relative z-10 cursor-pointer active:brightness-110 transition-all"
         onClick={handleDrop}
       >
-        <canvas 
-          ref={canvasRef} 
-          className="absolute inset-0 w-full h-full block" 
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 w-full h-full block"
         />
         
         {/* Floating tap visual instruction */}

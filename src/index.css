@@ -47,3 +47,70 @@ body {
     animation: decay-bounce 1.5s ease-out forwards;
   }
 }
+
+/* ===== Kit visual de minijuegos (gameFx) ===== */
+.gfx-orb {
+  position: absolute;
+  width: 300px; height: 300px;
+  border-radius: 9999px;
+  filter: blur(72px);
+  opacity: 0.5;
+  will-change: transform;
+  animation: gfx-float 16s ease-in-out infinite;
+}
+@keyframes gfx-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(36px, -28px) scale(1.12); }
+  66%      { transform: translate(-28px, 22px) scale(0.94); }
+}
+.gfx-grid {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.07) 1px, transparent 1px);
+  background-size: 40px 40px;
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 25%, transparent 78%);
+          mask-image: radial-gradient(ellipse at center, #000 25%, transparent 78%);
+  animation: gfx-grid-pan 14s linear infinite;
+}
+@keyframes gfx-grid-pan {
+  0%   { background-position: 0 0, 0 0; }
+  100% { background-position: 40px 40px, 40px 40px; }
+}
+.gfx-scan {
+  background: repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 3px);
+  mix-blend-mode: overlay;
+}
+.gfx-pop  { animation: gfx-pop 0.35s cubic-bezier(.2,.8,.2,1.2) both; }
+@keyframes gfx-pop {
+  0%   { transform: scale(0.3); opacity: 0; }
+  60%  { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.gfx-rise { animation: gfx-rise 0.9s ease-out forwards; }
+@keyframes gfx-rise {
+  0%   { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-70px) scale(1.5); opacity: 0; }
+}
+.gfx-shine {
+  background: linear-gradient(110deg, #fff 35%, rgba(255,255,255,0.45) 50%, #fff 65%);
+  background-size: 220% auto;
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent;
+  animation: gfx-shimmer 3.5s linear infinite;
+}
+@keyframes gfx-shimmer {
+  0%   { background-position: 220% 0; }
+  100% { background-position: -220% 0; }
+}
+/* brillo giratorio para insignias/botones destacados */
+@keyframes gfx-spin { to { transform: rotate(360deg); } }
+.gfx-conic {
+  background: conic-gradient(from 0deg, transparent 0 40%, rgba(255,255,255,0.35) 50%, transparent 60% 100%);
+  animation: gfx-spin 4s linear infinite;
+}
+/* estallido de partículas */
+.gfx-spark { animation: gfx-spark 0.62s ease-out forwards; }
+@keyframes gfx-spark {
+  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+}
