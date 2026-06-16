@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GameShell, clamp } from './GameShell';
 
+const GRACE = 1400; // ms de arranque estable (sin viento) para empezar cómodo
+
 function Play({ end }) {
   const [, render] = useState(0);
-  const leanRef = useRef(0);                          // -100..100 (0 = equilibrio)
-  const dvRef = useRef((Math.random() - 0.5) * 2);    // velocidad de inclinación
-  const tRef = useRef(0);                             // ms de supervivencia
+  const leanRef = useRef(0);          // -100..100 (0 = equilibrio)
+  const dvRef = useRef(0);            // velocidad de inclinación (empieza estable)
+  const tRef = useRef(0);            // ms de supervivencia
   const aliveRef = useRef(true);
   const endRef = useRef(end);
   endRef.current = end;
@@ -16,10 +18,13 @@ function Play({ end }) {
       if (!aliveRef.current) return;
       const dt = Math.min(40, now - last); last = now;
       tRef.current += dt;
-      const gust = 0.0009 + tRef.current / 180000;          // el viento arrecia con el tiempo
-      dvRef.current += (Math.random() - 0.5) * gust * dt;   // ráfagas aleatorias
-      dvRef.current += leanRef.current * 0.00019 * dt;      // inestabilidad: cuanto más inclina, más cae
-      dvRef.current *= 0.985;                               // rozamiento
+      // Durante los primeros instantes no hay viento: la carretilla se mantiene recta.
+      if (tRef.current > GRACE) {
+        const gust = 0.0008 + (tRef.current - GRACE) / 200000;   // el viento arrecia con el tiempo
+        dvRef.current += (Math.random() - 0.5) * gust * dt;       // ráfagas aleatorias
+        dvRef.current += leanRef.current * 0.00018 * dt;          // inestabilidad: cuanto más inclina, más cae
+      }
+      dvRef.current *= 0.985;                                     // rozamiento
       leanRef.current += dvRef.current * dt;
       if (Math.abs(leanRef.current) >= 100) {
         aliveRef.current = false;
@@ -38,15 +43,17 @@ function Play({ end }) {
 
   const lean = leanRef.current;
   const danger = Math.abs(lean) > 64;
+  const calm = tRef.current <= GRACE;
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-between px-6 py-6 select-none">
-      <div className="text-center">
-        <span className={`bg-black/30 font-black px-4 py-1.5 rounded-full text-sm ${danger ? 'text-rose-400 animate-pulse' : 'text-amber-300'}`}>⏱ {(tRef.current / 1000).toFixed(1)}s</span>
-        <p className="text-white/60 font-bold uppercase tracking-widest text-xs mt-4">Mantén la carretilla en equilibrio</p>
-      </div>
+    <div className="flex-1 flex flex-col items-center px-6 pt-3 select-none">
+      <span className={`bg-black/30 font-black px-4 py-1.5 rounded-full text-sm ${danger ? 'text-rose-400 animate-pulse' : 'text-amber-300'}`}>⏱ {(tRef.current / 1000).toFixed(1)}s</span>
+      <p className={`font-bold uppercase tracking-widest text-xs mt-3 ${calm ? 'text-emerald-300 animate-pulse' : 'text-white/60'}`}>
+        {calm ? '¡Prepárate!' : 'Mantén la carretilla en equilibrio'}
+      </p>
 
-      <div className="relative flex-1 w-full flex items-end justify-center pb-1">
+      {/* Escena de la carretilla — colocada en la zona alta de la pantalla */}
+      <div className="relative w-full flex items-end justify-center" style={{ height: 200, marginTop: 28 }}>
         <div style={{ transform: `rotate(${lean * 0.45}deg)`, transformOrigin: '50% 100%' }}>
           <div className="absolute -top-10 left-1/2 -translate-x-1/2 text-5xl drop-shadow-[0_4px_5px_rgba(0,0,0,0.5)]">📦</div>
           <div className="w-48 h-6 rounded-lg"
@@ -56,15 +63,17 @@ function Play({ end }) {
       </div>
 
       {/* Indicador de inclinación */}
-      <div className="w-full max-w-sm h-2.5 bg-black/30 rounded-full relative mb-5">
+      <div className="w-full max-w-sm h-2.5 bg-black/30 rounded-full relative mt-7">
         <div className="absolute top-0 bottom-0 left-1/2 w-1 bg-white/40 -ml-0.5 rounded" />
         <div className="absolute -top-1 w-4 h-4 rounded-full -ml-2" style={{ left: `${clamp(50 + lean / 2, 2, 98)}%`, background: danger ? '#f43f5e' : '#fbbf24', boxShadow: `0 0 12px ${danger ? '#f43f5e' : '#fbbf24'}` }} />
       </div>
 
-      <div className="flex gap-4 w-full max-w-xs">
+      {/* Botones — algo más arriba (separación inferior con el spacer) */}
+      <div className="flex gap-4 w-full max-w-xs mt-8">
         <button onPointerDown={() => push(-1)} className="flex-1 text-amber-950 font-black text-3xl py-6 rounded-2xl border-b-4 border-amber-800 active:scale-95 transition-transform" style={{ background: 'linear-gradient(160deg,#fde68a,#f59e0b)', boxShadow: '0 6px 16px rgba(245,158,11,0.4), inset 0 2px 5px rgba(255,255,255,0.5)' }}>◄</button>
         <button onPointerDown={() => push(1)} className="flex-1 text-amber-950 font-black text-3xl py-6 rounded-2xl border-b-4 border-amber-800 active:scale-95 transition-transform" style={{ background: 'linear-gradient(160deg,#fde68a,#f59e0b)', boxShadow: '0 6px 16px rgba(245,158,11,0.4), inset 0 2px 5px rgba(255,255,255,0.5)' }}>►</button>
       </div>
+      <div className="flex-1" />
     </div>
   );
 }
@@ -75,7 +84,7 @@ export function EquilibrioGame(props) {
       {...props}
       day={18} title="Equilibrio" emoji="⚖️" accent="amber"
       instructions={[
-        <span key="1">La carretilla cargada <strong>se inclina sola</strong> con el viento.</span>,
+        <span key="1">La carretilla cargada <strong>se inclina sola</strong> con el viento (empieza estable un par de segundos).</span>,
         <span key="2">Toca <strong>◄</strong> y <strong>►</strong> para contrarrestar y mantenerla recta.</span>,
         <span key="3">Aguanta lo máximo posible: ¡cada segundo suma! Si vuelca, fin.</span>,
       ]}
