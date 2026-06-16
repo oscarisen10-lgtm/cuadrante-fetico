@@ -4,6 +4,8 @@ import { GameShell, shuffle, rand } from './GameShell';
 const POOL = ['🍎', '🍌', '🥕', '🧀', '🥛', '🍞', '🐟', '🍇'];
 const TOTAL_ROUNDS = 6;
 const SHOW_MS = 3200;
+const SHELVES = 4;
+const SHELF_TOP = [22, 42, 62, 82];  // % de la superficie de cada balda
 
 const makeRound = () => {
   const types = shuffle(POOL).slice(0, 3);
@@ -13,7 +15,7 @@ const makeRound = () => {
   types.forEach((t, ti) => {
     const count = ti === 0 ? targetCount : rand(3, 7);
     for (let i = 0; i < count; i++) {
-      items.push({ id: `${ti}-${i}`, emoji: t, x: rand(6, 86), y: rand(8, 80), rot: rand(-26, 26) });
+      items.push({ id: `${ti}-${i}`, emoji: t, shelf: rand(0, SHELVES - 1), x: rand(8, 88) });
     }
   });
   const opts = new Set([targetCount]);
@@ -28,7 +30,7 @@ function Play({ end }) {
   const [round, setRound] = useState(1);
   const [data, setData] = useState(makeRound);
   const [phase, setPhase] = useState('show');   // show | ask | feedback
-  const [picked, setPicked] = useState(null);    // valor elegido (para feedback)
+  const [picked, setPicked] = useState(null);
   const okRef = useRef(0);
   const endRef = useRef(end);
   endRef.current = end;
@@ -75,23 +77,38 @@ function Play({ end }) {
           <div className="h-1.5 w-full max-w-sm mx-auto bg-black/30 rounded-full overflow-hidden mb-3">
             <div className="h-full rounded-full gfx-bar" style={{ background: 'linear-gradient(90deg,#fde68a,#f59e0b)', animationDuration: `${SHOW_MS}ms` }} />
           </div>
-          <div
-            className="flex-1 relative rounded-3xl overflow-hidden"
-            style={{ background: 'linear-gradient(165deg, #3a2a12, #1c1408)', boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.5), inset 0 0 0 2px rgba(245,158,11,0.25)' }}
-          >
-            {/* baldas de madera */}
-            {[28, 56, 84].map((ty) => (
-              <div key={ty} className="absolute left-0 right-0 h-1.5" style={{ top: `${ty}%`, background: 'linear-gradient(180deg,#a16207,#713f12)', boxShadow: '0 3px 6px rgba(0,0,0,0.45)' }} />
-            ))}
-            {data.items.map((it, i) => (
-              <div
-                key={it.id}
-                className="absolute text-3xl gfx-pop drop-shadow-[0_2px_3px_rgba(0,0,0,0.5)]"
-                style={{ left: `${it.x}%`, top: `${it.y}%`, transform: `rotate(${it.rot}deg)`, animationDelay: `${Math.min(i * 28, 500)}ms` }}
-              >
-                {it.emoji}
+
+          {/* Estantería 3D */}
+          <div className="flex-1 relative" style={{ perspective: '900px' }}>
+            <div className="absolute inset-0" style={{ transformStyle: 'preserve-3d', transform: 'rotateX(7deg)' }}>
+              {/* armario: fondo + laterales + marco */}
+              <div className="absolute inset-0 rounded-xl overflow-hidden" style={{ background: 'linear-gradient(160deg, #2a1c0c 0%, #160f06 100%)', boxShadow: 'inset 0 0 0 6px #5b3a16, inset 0 0 0 8px #3d2710, inset 0 6px 18px rgba(0,0,0,0.6)' }}>
+                {/* veta del fondo */}
+                <div className="absolute inset-0 opacity-30" style={{ background: 'repeating-linear-gradient(90deg, rgba(0,0,0,0.25) 0 2px, transparent 2px 26px)' }} />
+                {/* lateral derecho (profundidad) */}
+                <div className="absolute top-0 bottom-0 right-0 w-3" style={{ background: 'linear-gradient(90deg, rgba(0,0,0,0.4), rgba(0,0,0,0))' }} />
+
+                {/* baldas con productos */}
+                {SHELF_TOP.map((ty, k) => (
+                  <React.Fragment key={k}>
+                    {/* productos sobre la balda */}
+                    {data.items.filter(it => it.shelf === k).map((it, i) => (
+                      <div
+                        key={it.id}
+                        className="absolute text-3xl gfx-pop drop-shadow-[0_3px_2px_rgba(0,0,0,0.55)]"
+                        style={{ left: `${it.x}%`, top: `${ty}%`, transform: 'translate(-50%,-100%)', animationDelay: `${Math.min(i * 26, 400)}ms` }}
+                      >
+                        {it.emoji}
+                      </div>
+                    ))}
+                    {/* superficie superior de la balda (vista desde arriba) */}
+                    <div className="absolute left-1 right-1" style={{ top: `${ty}%`, height: 5, marginTop: -2, background: 'linear-gradient(180deg, #d6a35a, #a16207)', transform: 'scaleY(0.9)' }} />
+                    {/* canto frontal de la balda */}
+                    <div className="absolute left-1 right-1" style={{ top: `${ty}%`, height: 8, background: 'linear-gradient(180deg, #7c4a16, #4a2c0c)', boxShadow: '0 4px 7px rgba(0,0,0,0.5)' }} />
+                  </React.Fragment>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
         </>
       ) : (
@@ -138,7 +155,7 @@ export function CuentaRapidaGame(props) {
       {...props}
       day={29} title="Cuenta Rápida" emoji="🧺" accent="amber"
       instructions={[
-        <span key="1">Verás una estantería revuelta durante <strong>3 segundos</strong>.</span>,
+        <span key="1">Verás una <strong>estantería</strong> con productos colocados en las baldas durante <strong>3 segundos</strong>.</span>,
         <span key="2">Después te preguntaremos <strong>cuántas unidades</strong> había de un producto.</span>,
         <span key="3">6 rondas, 150 puntos por acierto y bonus por pleno. ¡Ojo de inventario!</span>,
       ]}

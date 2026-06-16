@@ -23,7 +23,7 @@ const GAMES = [
   { day: 14, id: 'ahorcado',  title: 'EL AHORCADO',      emoji: '📝', bgClass: 'bg-[#0284c7] border-[#0369a1]',  Component: lazy(() => import('./minigames/AhorcadoGame').then(m => ({ default: m.AhorcadoGame }))) },
   { day: 15, id: 'relampago', title: 'MEMORIA RELÁMPAGO', emoji: '💡', bgClass: 'bg-[#7c3aed] border-[#6d28d9]', Component: lazy(() => import('./minigames/MemoriaRelampagoGame').then(m => ({ default: m.MemoriaRelampagoGame }))) },
   { day: 16, id: 'corta',     title: 'CORTA',            emoji: '🔪', bgClass: 'bg-[#65a30d] border-[#4d7c0f]',  Component: lazy(() => import('./minigames/CortaGame').then(m => ({ default: m.CortaGame }))) },
-  { day: 17, id: 'valida',    title: 'VALIDA',           emoji: '✅', bgClass: 'bg-[#059669] border-[#047857]',  Component: lazy(() => import('./minigames/ValidaGame').then(m => ({ default: m.ValidaGame }))) },
+  { day: 17, id: 'rastreo',   title: 'RASTREO',          emoji: '📡', bgClass: 'bg-[#059669] border-[#047857]',  Component: lazy(() => import('./minigames/SigueGame').then(m => ({ default: m.SigueGame }))) },
   { day: 18, id: 'equilibrio',title: 'EQUILIBRIO',       emoji: '⚖️', bgClass: 'bg-[#d97706] border-[#b45309]',  Component: lazy(() => import('./minigames/EquilibrioGame').then(m => ({ default: m.EquilibrioGame }))) },
   { day: 19, id: 'trilero',   title: 'TRILERO',          emoji: '🥤', bgClass: 'bg-[#e11d48] border-[#be123c]',  Component: lazy(() => import('./minigames/TrileroGame').then(m => ({ default: m.TrileroGame }))) },
   { day: 20, id: 'encesta',   title: 'ENCESTA',          emoji: '🚚', bgClass: 'bg-[#0284c7] border-[#0369a1]',  Component: lazy(() => import('./minigames/EncestaGame').then(m => ({ default: m.EncestaGame }))) },

@@ -330,7 +330,30 @@ export function TorreDeBloquesGame({ onFinish, onCancel, practiceAttempts, playA
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
-    
+
+    // Dibuja un bloque extruido (cara superior + frontal + lateral) -> 3D "desde arriba"
+    const DX = 16, DY = 18;
+    const drawBlock = (x, y, w, h, hue, op, glow) => {
+      // cara superior (la que se ve desde arriba)
+      ctx.fillStyle = `hsla(${hue}, 92%, 66%, ${op})`;
+      ctx.beginPath();
+      ctx.moveTo(x, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w + DX, y - DY); ctx.lineTo(x + DX, y - DY); ctx.closePath();
+      ctx.fill();
+      // cara lateral derecha
+      ctx.fillStyle = `hsla(${hue}, 80%, 38%, ${op})`;
+      ctx.beginPath();
+      ctx.moveTo(x + w, y); ctx.lineTo(x + w + DX, y - DY); ctx.lineTo(x + w + DX, y - DY + h); ctx.lineTo(x + w, y + h); ctx.closePath();
+      ctx.fill();
+      // cara frontal
+      if (glow) { ctx.shadowColor = `hsl(${hue}, 100%, 65%)`; ctx.shadowBlur = 12; }
+      ctx.fillStyle = `hsla(${hue}, 85%, 52%, ${op})`;
+      ctx.fillRect(x, y, w, h);
+      ctx.shadowBlur = 0;
+      // brillo superior del frente
+      ctx.fillStyle = `hsla(${hue}, 100%, 78%, ${op})`;
+      ctx.fillRect(x + 2, y + 2, w - 4, 3);
+    };
+
     // Animation cycle
     const tick = () => {
       // Clear Canvas
@@ -396,18 +419,7 @@ export function TorreDeBloquesGame({ onFinish, onCancel, practiceAttempts, playA
         const distanceToTop = tower.length - 1 - index;
         const opacity = Math.max(0.2, 1 - distanceToTop * 0.06);
         
-        ctx.fillStyle = `hsla(${b.hue}, 85%, 55%, ${opacity})`;
-        ctx.strokeStyle = `hsla(${b.hue}, 100%, 75%, ${opacity * 0.7})`;
-        ctx.lineWidth = 2.5;
-
-        // Draw 3D-like block bevel / isometric look
-        // Front face
-        ctx.fillRect(b.x, b.y, b.width, BLOCK_HEIGHT);
-        ctx.strokeRect(b.x, b.y, b.width, BLOCK_HEIGHT);
-
-        // Highlight top lip
-        ctx.fillStyle = `hsla(${b.hue}, 95%, 72%, ${opacity})`;
-        ctx.fillRect(b.x + 2, b.y + 2, b.width - 4, 3);
+        drawBlock(b.x, b.y, b.width, BLOCK_HEIGHT, b.hue, opacity, false);
       });
 
       // --- 2. Update and Draw Sliding Active Block ---
@@ -423,23 +435,8 @@ export function TorreDeBloquesGame({ onFinish, onCancel, practiceAttempts, playA
           active.speed *= -1;
         }
 
-        // Draw Active Block
-        ctx.fillStyle = `hsl(${active.hue}, 95%, 55%)`;
-        ctx.strokeStyle = `hsl(${active.hue}, 100%, 75%)`;
-        ctx.lineWidth = 3;
-
-        // Glowing shadow effect for active block
-        ctx.shadowColor = `hsl(${active.hue}, 100%, 65%)`;
-        ctx.shadowBlur = 12;
-        ctx.fillRect(active.x, active.y, active.width, BLOCK_HEIGHT);
-        ctx.strokeRect(active.x, active.y, active.width, BLOCK_HEIGHT);
-
-        // Remove shadow settings
-        ctx.shadowBlur = 0;
-
-        // Top highlight
-        ctx.fillStyle = `hsl(${active.hue}, 100%, 80%)`;
-        ctx.fillRect(active.x + 2, active.y + 2, active.width - 4, 3);
+        // Draw Active Block (extruido, con brillo)
+        drawBlock(active.x, active.y, active.width, BLOCK_HEIGHT, active.hue, 1, true);
       }
 
       // --- 3. Update and Draw Sliced Debris (Physics) ---
