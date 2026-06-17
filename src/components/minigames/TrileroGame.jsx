@@ -98,24 +98,24 @@ function Play({ end }) {
       </div>
       <p className={`font-bold uppercase tracking-widest text-xs mb-2 h-5 ${phase === 'guess' ? 'text-rose-300 animate-pulse' : 'text-white/70'}`}>{hint}</p>
 
-      {/* Escena inclinada ~50°: vista bastante cenital de la mesa + frontal de los vasos */}
-      <div className="relative w-full max-w-sm flex-1 flex items-center justify-center" style={{ perspective: '760px' }}>
-        <div className="relative w-full" style={{ height: 300, transformStyle: 'preserve-3d', transform: 'rotateX(50deg)', transformOrigin: '50% 72%' }}>
+      {/* Mesa a 50° (cenital) pero vasos erguidos con contra-rotación -50° */}
+      <div className="relative w-full max-w-sm flex-1 flex items-center justify-center" style={{ perspective: '900px' }}>
+        <div className="relative w-full" style={{ height: 300, transformStyle: 'preserve-3d', transform: 'rotateX(50deg)', transformOrigin: '50% 78%' }}>
           {/* superficie de la mesa (se ve desde arriba) */}
           <div className="absolute left-1/2 -translate-x-1/2 rounded-[50%]" style={{ bottom: '14%', width: '96%', height: 150, background: 'radial-gradient(ellipse at 50% 45%, rgba(135,45,70,0.55), rgba(0,0,0,0) 70%)' }} />
           {/* aros del tapete */}
           <div className="absolute left-1/2 -translate-x-1/2 rounded-[50%]" style={{ bottom: '20%', width: '70%', height: 96, border: '2px solid rgba(244,63,94,0.18)' }} />
 
-          {/* sombras elípticas en el suelo */}
+          {/* sombras elípticas en el suelo (quedan tumbadas en el plano de la mesa) */}
           {[0, 1, 2].map(s => (
-            <div key={`sh${s}`} className="absolute rounded-[50%]" style={{ left: `${slotX(s)}%`, bottom: '30%', width: 74, height: 22, transform: 'translateX(-50%)', background: 'radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.55), rgba(0,0,0,0) 70%)' }} />
+            <div key={`sh${s}`} className="absolute rounded-[50%]" style={{ left: `${slotX(s)}%`, bottom: '24%', width: 78, height: 26, transform: 'translateX(-50%)', background: 'radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.6), rgba(0,0,0,0) 70%)' }} />
           ))}
 
-          {/* Pelota 3D */}
+          {/* Pelota 3D (contra-rotada para que sea esférica) */}
           <div
             className="absolute w-10 h-10 rounded-full transition-opacity duration-200"
             style={{
-              left: `${slotX(ballSlot)}%`, bottom: '31%', transform: 'translateX(-50%)',
+              left: `${slotX(ballSlot)}%`, bottom: '26%', transform: 'translateX(-50%) rotateX(-50deg)', transformOrigin: '50% 50%',
               opacity: showBall ? 1 : 0,
               background: 'radial-gradient(circle at 34% 28%, #ffe4e6 0%, #fb7185 35%, #dc2626 70%, #7f1d1d 100%)',
               boxShadow: '0 6px 12px rgba(0,0,0,0.5), 0 0 22px rgba(220,38,38,0.7), inset 0 -4px 8px rgba(0,0,0,0.4), inset 0 3px 6px rgba(255,255,255,0.7)',
@@ -135,23 +135,34 @@ function Play({ end }) {
                 onPointerDown={() => pick(cup)}
                 className="absolute p-0 border-0 bg-transparent"
                 style={{
-                  left: `${slotX(cup.slot)}%`, bottom: '26%',
-                  width: 88, height: 104, marginLeft: -44,
-                  transform: `translateY(${lifted ? '-50%' : '0'})`,
-                  transition: `left ${swapMs}ms cubic-bezier(.45,.05,.55,.95), transform 0.25s ease-out`,
+                  left: `${slotX(cup.slot)}%`, bottom: '24%',
+                  width: 80, height: 104, marginLeft: -40,
+                  transformOrigin: '50% 100%',
+                  transform: 'rotateX(-50deg)',   // contrarresta la mesa -> el vaso queda de pie
+                  transformStyle: 'preserve-3d',
+                  transition: `left ${swapMs}ms cubic-bezier(.45,.05,.55,.95)`,
                   zIndex: lifted ? 5 : 10,
-                  filter: lifted ? 'drop-shadow(0 16px 18px rgba(0,0,0,0.5))' : 'drop-shadow(0 9px 11px rgba(0,0,0,0.45))',
                 }}
               >
-                {/* apertura inferior (boca apoyada en la mesa) */}
-                <div className="absolute left-1/2 -translate-x-1/2 rounded-[50%]" style={{ bottom: 2, width: 84, height: 22, background: 'radial-gradient(ellipse at 50% 38%, #2a0410, #120207)', boxShadow: 'inset 0 3px 6px rgba(0,0,0,0.7)' }} />
-                {/* cuerpo cilíndrico */}
-                <div className="absolute left-1/2 -translate-x-1/2" style={{ bottom: 11, width: 84, height: 80, clipPath: 'polygon(22% 0, 78% 0, 100% 100%, 0% 100%)', background: bodyGrad, boxShadow: 'inset 0 -10px 16px rgba(0,0,0,0.4)' }}>
-                  <div className="absolute left-0 right-0" style={{ top: '32%', height: 2, background: 'rgba(255,255,255,0.16)' }} />
-                  <div className="absolute left-0 right-0" style={{ top: '62%', height: 2, background: 'rgba(0,0,0,0.16)' }} />
+                {/* el vaso se levanta verticalmente cuando está "lifted" */}
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    transform: `translateY(${lifted ? '-46%' : '0'})`,
+                    transition: 'transform 0.25s ease-out',
+                    filter: lifted ? 'drop-shadow(0 16px 16px rgba(0,0,0,0.5))' : 'drop-shadow(0 10px 10px rgba(0,0,0,0.45))',
+                  }}
+                >
+                  {/* boca inferior (apoyada en la mesa) */}
+                  <div className="absolute left-1/2 -translate-x-1/2 rounded-[50%]" style={{ bottom: 0, width: 76, height: 16, background: 'radial-gradient(ellipse at 50% 38%, #2a0410, #120207)', boxShadow: 'inset 0 3px 6px rgba(0,0,0,0.7)' }} />
+                  {/* cuerpo (estrecho arriba, ancho abajo) */}
+                  <div className="absolute left-1/2 -translate-x-1/2" style={{ bottom: 7, width: 76, height: 88, clipPath: 'polygon(20% 0, 80% 0, 100% 100%, 0% 100%)', background: bodyGrad, boxShadow: 'inset 0 -8px 14px rgba(0,0,0,0.4)' }}>
+                    <div className="absolute left-0 right-0" style={{ top: '30%', height: 2, background: 'rgba(255,255,255,0.16)' }} />
+                    <div className="absolute left-0 right-0" style={{ top: '62%', height: 2, background: 'rgba(0,0,0,0.16)' }} />
+                  </div>
+                  {/* tapa superior (base del vaso) */}
+                  <div className="absolute left-1/2 -translate-x-1/2 rounded-[50%]" style={{ top: 0, width: 46, height: 16, background: isWrongPick ? 'radial-gradient(ellipse at 42% 30%, #fda4af, #9f1239)' : 'radial-gradient(ellipse at 42% 30%, #fff1f2, #e11d48)', boxShadow: '0 3px 5px rgba(0,0,0,0.4), inset 0 2px 3px rgba(255,255,255,0.85)' }} />
                 </div>
-                {/* tapa superior abombada (vista desde arriba) */}
-                <div className="absolute left-1/2 -translate-x-1/2 rounded-[50%]" style={{ top: -2, width: 60, height: 32, background: isWrongPick ? 'radial-gradient(ellipse at 42% 28%, #fda4af, #9f1239)' : 'radial-gradient(ellipse at 42% 28%, #fff1f2, #e11d48)', boxShadow: '0 4px 6px rgba(0,0,0,0.45), inset 0 2px 4px rgba(255,255,255,0.9)' }} />
               </button>
             );
           })}
