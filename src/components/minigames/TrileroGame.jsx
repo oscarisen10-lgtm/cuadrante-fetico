@@ -98,9 +98,9 @@ function Play({ end }) {
       </div>
       <p className={`font-bold uppercase tracking-widest text-xs mb-2 h-5 ${phase === 'guess' ? 'text-rose-300 animate-pulse' : 'text-white/70'}`}>{hint}</p>
 
-      {/* Escena inclinada ~24°: mezcla de vista cenital (mesa) y frontal (vasos) */}
-      <div className="relative w-full max-w-sm flex-1 flex items-center justify-center" style={{ perspective: '820px' }}>
-        <div className="relative w-full" style={{ height: 270, transformStyle: 'preserve-3d', transform: 'rotateX(24deg)', transformOrigin: '50% 70%' }}>
+      {/* Escena inclinada ~50°: vista bastante cenital de la mesa + frontal de los vasos */}
+      <div className="relative w-full max-w-sm flex-1 flex items-center justify-center" style={{ perspective: '760px' }}>
+        <div className="relative w-full" style={{ height: 300, transformStyle: 'preserve-3d', transform: 'rotateX(50deg)', transformOrigin: '50% 72%' }}>
           {/* superficie de la mesa (se ve desde arriba) */}
           <div className="absolute left-1/2 -translate-x-1/2 rounded-[50%]" style={{ bottom: '14%', width: '96%', height: 150, background: 'radial-gradient(ellipse at 50% 45%, rgba(135,45,70,0.55), rgba(0,0,0,0) 70%)' }} />
           {/* aros del tapete */}
@@ -151,7 +151,7 @@ function Play({ end }) {
                   <div className="absolute left-0 right-0" style={{ top: '62%', height: 2, background: 'rgba(0,0,0,0.16)' }} />
                 </div>
                 {/* tapa superior abombada (vista desde arriba) */}
-                <div className="absolute left-1/2 -translate-x-1/2 rounded-[50%]" style={{ top: 0, width: 52, height: 24, background: isWrongPick ? 'radial-gradient(ellipse at 42% 30%, #fda4af, #9f1239)' : 'radial-gradient(ellipse at 42% 30%, #fff1f2, #e11d48)', boxShadow: '0 3px 5px rgba(0,0,0,0.4), inset 0 2px 3px rgba(255,255,255,0.85)' }} />
+                <div className="absolute left-1/2 -translate-x-1/2 rounded-[50%]" style={{ top: -2, width: 60, height: 32, background: isWrongPick ? 'radial-gradient(ellipse at 42% 28%, #fda4af, #9f1239)' : 'radial-gradient(ellipse at 42% 28%, #fff1f2, #e11d48)', boxShadow: '0 4px 6px rgba(0,0,0,0.45), inset 0 2px 4px rgba(255,255,255,0.9)' }} />
               </button>
             );
           })}

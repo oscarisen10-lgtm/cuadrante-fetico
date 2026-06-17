@@ -79,8 +79,8 @@ function Play({ end }) {
           </div>
 
           {/* Estantería 3D */}
-          <div className="flex-1 relative" style={{ perspective: '900px' }}>
-            <div className="absolute inset-0" style={{ transformStyle: 'preserve-3d', transform: 'rotateX(7deg)' }}>
+          <div className="flex-1 relative" style={{ perspective: '820px' }}>
+            <div className="absolute inset-0" style={{ transformStyle: 'preserve-3d', transform: 'rotateX(20deg)', transformOrigin: '50% 60%' }}>
               {/* armario: fondo + laterales + marco */}
               <div className="absolute inset-0 rounded-xl overflow-hidden" style={{ background: 'linear-gradient(160deg, #2a1c0c 0%, #160f06 100%)', boxShadow: 'inset 0 0 0 6px #5b3a16, inset 0 0 0 8px #3d2710, inset 0 6px 18px rgba(0,0,0,0.6)' }}>
                 {/* veta del fondo */}
