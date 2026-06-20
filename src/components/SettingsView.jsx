@@ -151,7 +151,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                       <option value="Charcutería" className="text-slate-800">Charcutería</option>
                       <option value="Carnicería" className="text-slate-800">Carnicería</option>
                       <option value="Pescadería" className="text-slate-800">Pescadería</option>
-                      <option value="Panadería" className="text-slate-800">Panadería</option>
+                      <option value="Panadería" className="text-slate-800">Panadería/Platos</option>
                       <option value="Frutería" className="text-slate-800">Frutería</option>
                       <option value="Sala" className="text-slate-800">Sala</option>
                     </select>
