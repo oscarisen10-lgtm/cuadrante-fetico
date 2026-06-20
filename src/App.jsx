@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, Suspense, lazy, useCallback } from 'react';
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Network } from '@capacitor/network';
@@ -8,7 +8,7 @@ import { useNews } from './hooks/useNews';
 import { useTimer } from './hooks/useTimer';
 import { useShifts } from './hooks/useShifts';
 import { useNotifications } from './hooks/useNotifications';
-import { Clock, Calendar as CalendarIcon, PieChart, FileText, Settings, LogOut, WifiOff, Fingerprint, Trophy } from 'lucide-react';
+import { Clock, Calendar as CalendarIcon, PieChart, FileText, Settings, LogOut, WifiOff, Fingerprint, Trophy, X } from 'lucide-react';
 import { getFormattedDate } from './utils/dateUtils';
 import { ADMIN_EMAIL } from './constants/config';
 import { NavItem } from './components/UIComponents';
@@ -82,6 +82,22 @@ function AppContent({ user, authHook }) {
   const [showConfirmLogout, setShowConfirmLogout] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [gameActive, setGameActive] = useState(false); // true mientras se juega un minijuego (oculta cabecera y barra)
+
+  // ── Cartel flotante ──
+  // El cartel = la noticia más reciente que lleva imagen. Aparece a pantalla casi
+  // completa (flotando) una vez por cada cartel nuevo; al cerrarlo se marca como visto
+  // en el dispositivo y se vuelve a Resumen, donde el cartel sigue en "Noticias".
+  const navigate = useNavigate();
+  const activeCartel = useMemo(() => newsList.find(n => n.imageUrl && !n.isPushRequest) || null, [newsList]);
+  const [seenCartelId, setSeenCartelId] = useState(() => { try { return localStorage.getItem('cartelSeenId'); } catch { return null; } });
+  const showCartel = !!activeCartel && !gameActive && String(activeCartel.id) !== String(seenCartelId);
+  const dismissCartel = useCallback(() => {
+    if (activeCartel?.id != null) {
+      try { localStorage.setItem('cartelSeenId', String(activeCartel.id)); } catch { /* almacenamiento no disponible */ }
+      setSeenCartelId(String(activeCartel.id));
+    }
+    navigate('/dashboard');
+  }, [activeCartel, navigate]);
 
   useEffect(() => {
     const checkNetwork = async () => {
@@ -195,6 +211,34 @@ function AppContent({ user, authHook }) {
                 <button onClick={handleLogout} className="flex-1 bg-rose-500 text-white py-3.5 rounded-xl font-black text-xs uppercase shadow-md active:scale-95 transition-all">SALIR</button>
                 <button onClick={() => setShowConfirmLogout(false)} className="flex-1 bg-slate-100 text-slate-600 py-3.5 rounded-xl font-black text-xs uppercase active:scale-95 transition-all hover:bg-slate-200">CANCELAR</button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {showCartel && (
+          <div
+            className="fixed inset-0 z-[120] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in"
+            role="dialog" aria-modal="true" aria-label="Cartel"
+            onClick={dismissCartel}
+          >
+            <button
+              onClick={dismissCartel}
+              className="absolute right-4 z-10 bg-white/15 text-white p-2.5 rounded-full backdrop-blur active:scale-90 transition-transform"
+              style={{ top: 'calc(env(safe-area-inset-top) + 12px)' }}
+              aria-label="Cerrar cartel"
+            >
+              <X size={22} />
+            </button>
+            <div className="flex flex-col items-center max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+              <img
+                src={activeCartel.imageUrl}
+                alt={activeCartel.title || 'Cartel'}
+                className="max-w-full max-h-[82vh] w-auto rounded-2xl shadow-2xl object-contain animate-in zoom-in-95"
+              />
+              {activeCartel.title && (
+                <p className="text-white font-black uppercase tracking-tight text-center mt-4 px-4 text-sm">{activeCartel.title}</p>
+              )}
+              <p className="text-white/50 text-[10px] font-bold uppercase tracking-widest mt-3">Toca fuera o ✕ para cerrar</p>
             </div>
           </div>
         )}
