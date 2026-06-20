@@ -136,7 +136,7 @@ function AppContent({ user, authHook }) {
       <div className="w-full max-w-md bg-white h-full flex flex-col relative overflow-hidden">
         
         {!gameActive && (
-        <header className="bg-emerald-600 text-white py-2 px-3 rounded-b-xl shadow-lg shrink-0 z-10 relative" role="banner">
+        <header className="bg-emerald-600 text-white pb-2 px-3 rounded-b-xl shadow-lg shrink-0 z-10 relative" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }} role="banner">
           <div className="flex justify-between items-center px-1">
             <div>
               <h1 className="font-black text-base italic leading-tight">Hola, {user.fullName?.split(' ')[0]}</h1>
