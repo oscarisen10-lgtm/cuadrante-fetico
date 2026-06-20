@@ -7,7 +7,7 @@ import { toast, confirm } from './Toast';
 import { storage } from '../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
-export const DashboardView = React.memo(function DashboardView({ user, stats, newsList, addNews, deleteNews, permissionState, requestTokenManually }) {
+export const DashboardView = React.memo(function DashboardView({ user, stats, newsList, addNews, deleteNews, permissionState, requestTokenManually, onImageClick }) {
   const [showAddNewsModal, setShowAddNewsModal] = useState(false);
 
   const [formTitle, setFormTitle] = useState("");
@@ -205,7 +205,14 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
                               </button>
                             )}
                         </div>
-                        {news.imageUrl && <img src={news.imageUrl} alt="Noticia" className="w-full h-auto rounded-xl mb-4 border border-white/10 shadow-sm animate-in fade-in" />}
+                        {news.imageUrl && (
+                          <img
+                            src={news.imageUrl}
+                            alt="Noticia"
+                            onClick={() => onImageClick?.(news.imageUrl, news.title)}
+                            className="w-full h-auto rounded-xl mb-4 border border-white/10 shadow-sm animate-in fade-in cursor-zoom-in active:scale-[0.99] transition-transform"
+                          />
+                        )}
                         
                         <h4 className="text-sm font-black text-white uppercase leading-tight mb-2 tracking-tight">{news.title}</h4>
                         <p className="text-xs text-white/60 leading-relaxed whitespace-pre-wrap">{news.desc}</p>

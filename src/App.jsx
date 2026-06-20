@@ -90,14 +90,19 @@ function AppContent({ user, authHook }) {
   const navigate = useNavigate();
   const activeCartel = useMemo(() => newsList.find(n => n.imageUrl && !n.isPushRequest) || null, [newsList]);
   const [seenCartelId, setSeenCartelId] = useState(() => { try { return localStorage.getItem('cartelSeenId'); } catch { return null; } });
-  const showCartel = !!activeCartel && !gameActive && String(activeCartel.id) !== String(seenCartelId);
-  const dismissCartel = useCallback(() => {
-    if (activeCartel?.id != null) {
+  const [manualImg, setManualImg] = useState(null); // imagen ampliada manualmente desde Resumen { url, title }
+
+  // El cartel salta solo (una vez por cartel nuevo). Ampliar manualmente desde Resumen tiene prioridad.
+  const autoCartelOpen = !!activeCartel && !gameActive && String(activeCartel.id) !== String(seenCartelId);
+  const lightbox = manualImg || (autoCartelOpen ? { url: activeCartel.imageUrl, title: activeCartel.title, isAuto: true } : null);
+  const closeLightbox = useCallback(() => {
+    if (lightbox?.isAuto && activeCartel?.id != null) {
       try { localStorage.setItem('cartelSeenId', String(activeCartel.id)); } catch { /* almacenamiento no disponible */ }
       setSeenCartelId(String(activeCartel.id));
+      navigate('/dashboard'); // el cartel "vuelve a su sitio" en Resumen
     }
-    navigate('/dashboard');
-  }, [activeCartel, navigate]);
+    setManualImg(null);
+  }, [lightbox, activeCartel, navigate]);
 
   useEffect(() => {
     const checkNetwork = async () => {
@@ -173,7 +178,7 @@ function AppContent({ user, authHook }) {
           <Suspense fallback={<div className="flex-1 flex items-center justify-center text-emerald-500 font-bold text-xs italic" role="status" aria-label="Cargando contenido">Cargando...</div>}>
             <Routes>
               <Route path="/dashboard" element={
-                <DashboardView user={user} stats={stats} newsList={newsList} addNews={addNews} deleteNews={deleteNews} permissionState={permissionState} requestTokenManually={requestTokenManually} />
+                <DashboardView user={user} stats={stats} newsList={newsList} addNews={addNews} deleteNews={deleteNews} permissionState={permissionState} requestTokenManually={requestTokenManually} onImageClick={(url, title) => setManualImg({ url, title })} />
               } />
               <Route path="/track" element={
                 <TrackerView 
@@ -215,14 +220,14 @@ function AppContent({ user, authHook }) {
           </div>
         )}
 
-        {showCartel && (
+        {lightbox && (
           <div
             className="fixed inset-0 z-[120] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in"
             role="dialog" aria-modal="true" aria-label="Cartel"
-            onClick={dismissCartel}
+            onClick={closeLightbox}
           >
             <button
-              onClick={dismissCartel}
+              onClick={closeLightbox}
               className="absolute right-4 z-10 bg-white/15 text-white p-2.5 rounded-full backdrop-blur active:scale-90 transition-transform"
               style={{ top: 'calc(env(safe-area-inset-top) + 12px)' }}
               aria-label="Cerrar cartel"
@@ -231,12 +236,12 @@ function AppContent({ user, authHook }) {
             </button>
             <div className="flex flex-col items-center max-w-md w-full" onClick={(e) => e.stopPropagation()}>
               <img
-                src={activeCartel.imageUrl}
-                alt={activeCartel.title || 'Cartel'}
+                src={lightbox.url}
+                alt={lightbox.title || 'Cartel'}
                 className="max-w-full max-h-[82vh] w-auto rounded-2xl shadow-2xl object-contain animate-in zoom-in-95"
               />
-              {activeCartel.title && (
-                <p className="text-white font-black uppercase tracking-tight text-center mt-4 px-4 text-sm">{activeCartel.title}</p>
+              {lightbox.title && (
+                <p className="text-white font-black uppercase tracking-tight text-center mt-4 px-4 text-sm">{lightbox.title}</p>
               )}
               <p className="text-white/50 text-[10px] font-bold uppercase tracking-widest mt-3">Toca fuera o ✕ para cerrar</p>
             </div>
