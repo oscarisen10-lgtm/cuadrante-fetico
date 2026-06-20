@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 
 export function NavItem({ icon, label, isActive, onClick }) {
   return (
@@ -35,17 +36,31 @@ export function StatBar({ label, currentValue, totalValue, percentage, color, la
 
 export function InputGroup({ label, name, icon, type = "text", maxLength, minLength, small = false, ...props }) {
   const inputId = `input-${name}`;
+  const isPassword = type === "password";
+  const [show, setShow] = useState(false);
+  const inputType = isPassword ? (show ? "text" : "password") : type;
   return (
     <div className="space-y-1.5 flex flex-col">
       <label htmlFor={inputId} className="text-xs font-black text-emerald-600 uppercase ml-1 tracking-tight">{label}</label>
       <div className="relative">
         {icon && <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" aria-hidden="true">{React.cloneElement(icon, { size: 18 })}</div>}
-        <input 
+        <input
           id={inputId}
-          name={name} type={type} maxLength={maxLength} minLength={minLength} required 
-          className={`w-full ${icon ? 'pl-10' : 'px-3'} bg-slate-50 border-none ${small ? 'p-3 text-sm' : 'p-3.5 text-base'} rounded-xl outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm text-slate-800 leading-none`} 
+          name={name} type={inputType} maxLength={maxLength} minLength={minLength} required
+          className={`w-full ${icon ? 'pl-10' : 'px-3'} ${isPassword ? 'pr-11' : ''} bg-slate-50 border-none ${small ? 'p-3 text-sm' : 'p-3.5 text-base'} rounded-xl outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm text-slate-800 leading-none`}
           {...props}
         />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setShow(s => !s)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-600 p-1.5 rounded-lg active:scale-90 transition-all"
+            aria-label={show ? "Ocultar contraseña" : "Mostrar contraseña"}
+            tabIndex={-1}
+          >
+            {show ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        )}
       </div>
     </div>
   );
