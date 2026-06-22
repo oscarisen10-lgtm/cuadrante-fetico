@@ -1,44 +1,86 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GameShell, clamp } from './GameShell';
 
-const GRACE = 1200;     // ms de arranque estable (sin viento)
+const GRACE = 1200;     // ms de arranque estable
 const CENTER = 50;      // centro de la pista (%)
 const BAR_START = 62;   // ancho inicial de la barra (%)
 const BAR_MIN = 15;     // ancho mínimo (%)
+const BAR_Y = 112;      // posición vertical de la barra dentro de la escena (px)
+
+// Caja de madera (CSS): tablones, aspas en X y esquineras metálicas.
+function Crate({ danger }) {
+  return (
+    <div
+      className="relative w-[52px] h-[52px] rounded-[4px] overflow-hidden"
+      style={{
+        background: 'linear-gradient(180deg,#d9a85c,#7c4a16)',
+        border: `2px solid ${danger ? '#9f1239' : '#5b3410'}`,
+        boxShadow: danger
+          ? '0 5px 12px rgba(0,0,0,0.45), 0 0 18px rgba(225,29,72,0.6), inset 0 2px 3px rgba(255,255,255,0.4)'
+          : '0 6px 14px rgba(0,0,0,0.45), inset 0 2px 3px rgba(255,255,255,0.45), inset 0 -5px 9px rgba(0,0,0,0.3)',
+      }}
+    >
+      {/* vetas verticales de los tablones */}
+      <div className="absolute inset-0 opacity-40" style={{ background: 'repeating-linear-gradient(90deg, rgba(0,0,0,0.20) 0 1px, transparent 1px 12px)' }} />
+      {/* aspas en X */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-45 w-[150%] h-[6px]" style={{ background: 'linear-gradient(180deg,#ecc680,#a9722e)', boxShadow: '0 1px 1px rgba(0,0,0,0.35)' }} />
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-45 w-[150%] h-[6px]" style={{ background: 'linear-gradient(180deg,#ecc680,#a9722e)', boxShadow: '0 1px 1px rgba(0,0,0,0.35)' }} />
+      {/* marco superior/inferior (listones) */}
+      <div className="absolute top-0 left-0 right-0 h-[6px]" style={{ background: 'linear-gradient(180deg,#e6bd76,#b07e34)' }} />
+      <div className="absolute bottom-0 left-0 right-0 h-[6px]" style={{ background: 'linear-gradient(0deg,#6b3f12,#9c6a28)' }} />
+      {/* esquineras metálicas */}
+      <span className="absolute top-[3px] left-[3px] w-2 h-2 rounded-[2px]" style={{ background: 'linear-gradient(150deg,#9ca3af,#374151)', boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.4)' }} />
+      <span className="absolute top-[3px] right-[3px] w-2 h-2 rounded-[2px]" style={{ background: 'linear-gradient(150deg,#9ca3af,#374151)', boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.4)' }} />
+      <span className="absolute bottom-[3px] left-[3px] w-2 h-2 rounded-[2px]" style={{ background: 'linear-gradient(150deg,#9ca3af,#374151)', boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.4)' }} />
+      <span className="absolute bottom-[3px] right-[3px] w-2 h-2 rounded-[2px]" style={{ background: 'linear-gradient(150deg,#9ca3af,#374151)', boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.4)' }} />
+    </div>
+  );
+}
 
 function Play({ end }) {
   const [, render] = useState(0);
-  const posRef = useRef(CENTER);   // posición horizontal de la caja (%)
-  const velRef = useRef(0);        // velocidad horizontal
-  const tRef = useRef(0);          // ms de supervivencia
+  const offRef = useRef(0);        // posición de la caja relativa al centro de la barra (%)
+  const velRef = useRef(0);        // velocidad horizontal de la caja
+  const tRef = useRef(0);
   const aliveRef = useRef(true);
   const endRef = useRef(end);
   endRef.current = end;
 
-  const barWidth = () => Math.max(BAR_MIN, BAR_START - (tRef.current / 1000) * 0.78); // se encoge con el tiempo
+  const barWidth = () => Math.max(BAR_MIN, BAR_START - (tRef.current / 1000) * 0.78); // se encoge
+  const ramp = () => clamp((tRef.current - GRACE) / 4000, 0, 1);                      // arranque suave del movimiento
+  const barTiltAt = () => {
+    const after = Math.max(0, tRef.current - GRACE);
+    const amp = ramp() * Math.min(12, 5 + (after / 1000) * 0.15);
+    return Math.sin(tRef.current * 0.00085) * amp;                                    // la viga cabecea
+  };
+  const barCenterAt = () => {
+    const after = Math.max(0, tRef.current - GRACE);
+    const amp = ramp() * Math.min(9, 4 + (after / 1000) * 0.1);
+    return CENTER + Math.sin(tRef.current * 0.0011) * amp;                            // y oscila de lado
+  };
 
   useEffect(() => {
     let raf, last = performance.now();
     const loop = (now) => {
       if (!aliveRef.current) return;
       const dt = Math.min(40, now - last); last = now;
-      const f = dt / 16.67;           // nº de frames (~1 a 60fps): estable en cualquier móvil
+      const f = dt / 16.67;
       tRef.current += dt;
 
       if (tRef.current > GRACE) {
         const tSec = (tRef.current - GRACE) / 1000;
-        const wind = 0.05 + tSec * 0.0009;                          // el viento arrecia poco a poco
-        velRef.current += (Math.random() - 0.5) * wind * f;          // ráfagas aleatorias
-        velRef.current += (posRef.current - CENTER) * 0.0018 * f;    // inestabilidad: cuanto más desviada, más se va
+        const tilt = barTiltAt();
+        velRef.current += Math.sin(tilt * Math.PI / 180) * 0.55 * f;     // la inclinación de la barra hace resbalar la caja
+        velRef.current += (Math.random() - 0.5) * (0.04 + tSec * 0.0007) * f; // ráfagas de viento
+        velRef.current += offRef.current * 0.0008 * f;                   // ligera inestabilidad
       }
-      velRef.current *= Math.pow(0.9, f);                           // rozamiento
+      velRef.current *= Math.pow(0.9, f);
       velRef.current = clamp(velRef.current, -2, 2);
-      posRef.current += velRef.current * f;
+      offRef.current += velRef.current * f;
 
-      // ¿se sale de la barra? -> cae
-      if (Math.abs(posRef.current - CENTER) > barWidth() / 2) {
+      if (Math.abs(offRef.current) > barWidth() / 2) {                   // se sale de la barra -> cae
         aliveRef.current = false;
-        endRef.current(clamp(Math.round(tRef.current / 100), 0, 2000)); // ~10 pts por segundo
+        endRef.current(clamp(Math.round(tRef.current / 100), 0, 2000));
         return;
       }
       render(n => n + 1);
@@ -49,14 +91,14 @@ function Play({ end }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Empuje suave y controlable para reconducir la caja al centro.
-  const push = (dir) => { velRef.current = clamp(velRef.current + dir * 0.2, -2, 2); posRef.current += dir * 0.7; };
+  const push = (dir) => { velRef.current = clamp(velRef.current + dir * 0.2, -2, 2); offRef.current += dir * 0.7; };
 
-  const pos = posRef.current;
+  const off = offRef.current;
   const bw = barWidth();
-  const off = pos - CENTER;
+  const barCenter = barCenterAt();
+  const barTilt = barTiltAt();
   const danger = Math.abs(off) > bw / 2 * 0.72;
-  const tilt = clamp(velRef.current * 9 + off * 0.5, -32, 32);   // la caja se inclina según su balanceo
+  const boxWobble = clamp(velRef.current * 7 + off * 0.4, -22, 22);
   const calm = tRef.current <= GRACE;
 
   return (
@@ -68,31 +110,37 @@ function Play({ end }) {
 
       {/* Escena centrada verticalmente */}
       <div className="flex-1 w-full flex items-center justify-center">
-        <div className="relative w-full max-w-sm" style={{ height: 180 }}>
-          {/* Barra estabilizadora (se encoge) */}
+        <div className="relative w-full max-w-sm" style={{ height: 190 }}>
+          {/* GRUPO viga+caja: oscila de lado (translateX) y cabecea (rotate) */}
           <div
-            className="absolute left-1/2 -translate-x-1/2 rounded-full"
-            style={{
-              top: 104, height: 12, width: `${bw}%`,
-              background: danger ? 'linear-gradient(180deg,#fb7185,#be123c)' : 'linear-gradient(180deg,#fcd34d,#d97706)',
-              boxShadow: danger ? '0 0 26px rgba(225,29,72,0.7)' : '0 6px 16px rgba(0,0,0,0.45), inset 0 2px 4px rgba(255,255,255,0.5)',
-            }}
-          />
-          {/* marca de centro */}
-          <div className="absolute left-1/2 -translate-x-1/2 rounded-full bg-white/30" style={{ top: 102, height: 16, width: 2 }} />
-
-          {/* Caja que se balancea encima de la barra */}
-          <div
-            className="absolute"
-            style={{
-              left: `${pos}%`, top: 104, transform: `translateX(-50%) translateY(-100%) rotate(${tilt}deg)`,
-              transformOrigin: '50% 100%', transition: 'none',
-            }}
+            className="absolute inset-x-0 top-0 h-full"
+            style={{ transformOrigin: `50% ${BAR_Y}px`, transform: `translateX(${barCenter - CENTER}%) rotate(${barTilt}deg)` }}
           >
+            {/* sombra de la caja sobre la barra */}
+            <div className="absolute rounded-[50%] bg-black/35" style={{ left: `${CENTER + off}%`, top: BAR_Y - 2, width: 46, height: 10, transform: 'translateX(-50%)' }} />
+
+            {/* Barra estabilizadora (se encoge y se mueve) */}
             <div
-              className="w-12 h-12 rounded-md flex items-center justify-center text-2xl"
-              style={{ background: 'linear-gradient(150deg,#fde68a,#b45309)', boxShadow: '0 4px 10px rgba(0,0,0,0.45), inset 0 2px 4px rgba(255,255,255,0.5), inset 0 -4px 8px rgba(0,0,0,0.25)', border: '1px solid #92400e' }}
-            >📦</div>
+              className="absolute left-1/2 -translate-x-1/2 rounded-full"
+              style={{
+                top: BAR_Y, height: 13, width: `${bw}%`,
+                background: danger ? 'linear-gradient(180deg,#fb7185,#be123c)' : 'linear-gradient(180deg,#fde68a,#d97706)',
+                boxShadow: danger ? '0 0 26px rgba(225,29,72,0.7), inset 0 2px 3px rgba(255,255,255,0.4)' : '0 8px 18px rgba(0,0,0,0.45), inset 0 2px 4px rgba(255,255,255,0.6), 0 0 18px rgba(245,158,11,0.35)',
+              }}
+            />
+            {/* topes en los extremos de la barra */}
+            <div className="absolute rounded-full" style={{ left: `${CENTER - bw / 2}%`, top: BAR_Y - 2, width: 6, height: 17, transform: 'translateX(-50%)', background: '#92400e' }} />
+            <div className="absolute rounded-full" style={{ left: `${CENTER + bw / 2}%`, top: BAR_Y - 2, width: 6, height: 17, transform: 'translateX(-50%)', background: '#92400e' }} />
+            {/* marca de centro */}
+            <div className="absolute left-1/2 -translate-x-1/2 rounded-full bg-white/40" style={{ top: BAR_Y + 1, height: 9, width: 2 }} />
+
+            {/* Caja que se balancea encima */}
+            <div
+              className="absolute"
+              style={{ left: `${CENTER + off}%`, top: BAR_Y, transform: `translateX(-50%) translateY(-100%) rotate(${boxWobble}deg)`, transformOrigin: '50% 100%' }}
+            >
+              <Crate danger={danger} />
+            </div>
           </div>
         </div>
       </div>
@@ -112,9 +160,9 @@ export function EquilibrioGame(props) {
       {...props}
       day={18} title="Equilibrio" emoji="⚖️" accent="amber"
       instructions={[
-        <span key="1">La <strong>caja se desliza e inclina sola</strong> con el viento sobre una barra.</span>,
-        <span key="2">Toca <strong>◄</strong> y <strong>►</strong> para mantenerla <strong>centrada en la barra</strong> y que no se caiga.</span>,
-        <span key="3">¡Ojo! La <strong>barra se va haciendo más pequeña</strong>. Aguanta lo máximo: cada segundo suma.</span>,
+        <span key="1">Una <strong>viga flotante</strong> se balancea y cabecea, y la <strong>caja resbala</strong> con ella.</span>,
+        <span key="2">Toca <strong>◄</strong> y <strong>►</strong> para mantener la caja <strong>centrada sobre la barra</strong>.</span>,
+        <span key="3">¡La <strong>barra se va encogiendo</strong>! Aguanta lo máximo: cada segundo suma.</span>,
       ]}
     >
       {({ end }) => <Play end={end} />}
