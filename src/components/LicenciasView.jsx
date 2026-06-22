@@ -2,12 +2,24 @@ import React, { useState } from 'react';
 import { FileText, ChevronDown, ChevronUp, Info, Users, Clock, ClipboardCheck, Bot, Sparkles } from 'lucide-react';
 import { LICENCIAS_CATEGORIES, GRADOS_CONSANGUINIDAD } from '../constants/licenciasData';
 import { ChatModal } from './ChatModal';
+import { ADMIN_EMAIL } from '../constants/config';
 
 export const LicenciasView = React.memo(function LicenciasView({ user, permissionState, requestTokenManually }) {
   const [expandedLicencia, setExpandedLicencia] = useState(null);
   const [showGrados, setShowGrados] = useState(false);
-  const [showGeneral, setShowGeneral] = useState(false);
+  const [showGeneral, setShowGeneral] = useState(true); // abierto por defecto al entrar
   const [showChat, setShowChat] = useState(false);
+  const [fontScale, setFontScale] = useState(() => {
+    try { return parseFloat(localStorage.getItem('licFontScale')) || 1; } catch { return 1; }
+  });
+
+  // Mientras la IA está en pruebas, el asistente solo lo ve el admin.
+  const isAdmin = !!(user?.email && ADMIN_EMAIL && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase());
+  const changeScale = (delta) => setFontScale((s) => {
+    const n = Math.min(1.5, Math.max(0.8, Math.round((s + delta) * 100) / 100));
+    try { localStorage.setItem('licFontScale', String(n)); } catch { /* almacenamiento no disponible */ }
+    return n;
+  });
 
   const toggleLicencia = (id) => {
     setExpandedLicencia(expandedLicencia === id ? null : id);
@@ -41,7 +53,15 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
         </div>
       )}
       
-      <div className="flex flex-col animate-in fade-in duration-500 gap-6 pb-24 flex-1">
+      {/* Control de tamaño de letra de este apartado (se guarda en el dispositivo) */}
+      <div className="flex items-center justify-end gap-2 mb-3">
+        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mr-1">Letra</span>
+        <button onClick={() => changeScale(-0.1)} disabled={fontScale <= 0.8} aria-label="Reducir tamaño de letra" className="w-9 h-9 rounded-xl bg-white border border-slate-200 shadow-sm text-slate-600 font-black text-xs flex items-center justify-center active:scale-90 transition disabled:opacity-30">A-</button>
+        <span className="text-[10px] font-black text-slate-500 w-10 text-center tabular-nums">{Math.round(fontScale * 100)}%</span>
+        <button onClick={() => changeScale(0.1)} disabled={fontScale >= 1.5} aria-label="Agrandar tamaño de letra" className="w-9 h-9 rounded-xl bg-emerald-600 text-white shadow-sm font-black text-base flex items-center justify-center active:scale-90 transition disabled:opacity-30">A+</button>
+      </div>
+
+      <div style={{ zoom: fontScale }} className="flex flex-col animate-in fade-in duration-500 gap-6 pb-24 flex-1">
         {/* Header Informativo */}
         <div className="bg-emerald-50 border border-emerald-100 rounded-[2rem] p-5 flex items-start gap-4 shadow-sm">
           <div className="bg-emerald-600 p-2.5 rounded-2xl text-white shadow-md shrink-0">
@@ -55,8 +75,9 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
           </div>
         </div>
 
-        {/* Tarjeta de Acceso al Asistente IA */}
-        <button 
+        {/* Tarjeta de Acceso al Asistente IA — solo visible para el admin (en pruebas) */}
+        {isAdmin && (
+        <button
           onClick={() => setShowChat(true)}
           className="w-full relative overflow-hidden group bg-gradient-to-br from-emerald-600 to-emerald-800 rounded-[2rem] p-5 shadow-lg shadow-emerald-600/20 active:scale-[0.98] transition-all flex flex-col text-left"
         >
@@ -97,6 +118,7 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
             </div>
           </div>
         </button>
+        )}
 
         {/* Botón Principal Desplegable: Licencias y Grados */}
         <button 
