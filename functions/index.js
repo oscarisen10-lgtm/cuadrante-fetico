@@ -67,11 +67,18 @@ exports.sendPushNotification = onDocumentCreated("noticias/{docId}", async (even
       },
     },
     apns: {
+      // Notificación VISIBLE en iOS. Antes llevaba "content-available: 1" sin "alert",
+      // lo que la convertía en push silencioso de fondo (apns-push-type: background) y
+      // el iPhone no mostraba ningún aviso. Ahora es una alerta explícita.
+      headers: {
+        "apns-priority": "10",
+        "apns-push-type": "alert",
+      },
       payload: {
         aps: {
-          badge: 1,
+          alert: { title: title, body: body },
           sound: "default",
-          "content-available": 1,
+          badge: 1,
         },
       },
     },
