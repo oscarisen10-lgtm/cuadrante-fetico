@@ -119,7 +119,11 @@ export const migrateShiftsToSubcollection = async (uid, shiftsArray) => {
 };
 
 export const loginUser = async (email, password) => {
-  return await withTimeout(signInWithEmailAndPassword(auth, email, password));
+  const res = await withTimeout(signInWithEmailAndPassword(auth, email, password));
+  // Auto-reparación: si el doc de Firestore no existe (registro a medias, doc borrado…),
+  // lo creamos para que el usuario deje de ser "huérfano" (Auth sin documento).
+  await ensureUserDoc(res.user).catch((e) => console.error('ensureUserDoc (login):', e?.message));
+  return res;
 };
 
 export const registerUser = async (email, password, profileData) => {
@@ -144,7 +148,7 @@ export const registerUser = async (email, password, profileData) => {
 export const signInWithGoogle = async () => {
   const provider = new GoogleAuthProvider();
   const res = await signInWithPopup(auth, provider);
-  await checkAndCreateSocialUserDoc(res.user);
+  await ensureUserDoc(res.user);
   return res;
 };
 
@@ -153,11 +157,14 @@ export const signInWithApple = async () => {
   provider.addScope('email');
   provider.addScope('name');
   const res = await signInWithPopup(auth, provider);
-  await checkAndCreateSocialUserDoc(res.user);
+  await ensureUserDoc(res.user);
   return res;
 };
 
-const checkAndCreateSocialUserDoc = async (user) => {
+// Crea el documento users/{uid} si no existe (auto-reparación de "huérfanos":
+// cuentas de Auth sin documento en Firestore). Se usa en login email, Google y Apple,
+// y al arrancar la sesión desde useAuth. Si el doc ya existe, no hace nada.
+export const ensureUserDoc = async (user) => {
   const userDocRef = doc(db, "users", user.uid);
   const userDoc = await getDoc(userDocRef);
   if (!userDoc.exists()) {

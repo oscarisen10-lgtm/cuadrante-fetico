@@ -3,10 +3,11 @@ import {
   subscribeToAuth, 
   subscribeToUserDoc, 
   subscribeToShifts,
-  saveUserData, 
+  saveUserData,
   saveShiftsBatch,
   deleteShiftsBatch,
-  logoutUser 
+  logoutUser,
+  ensureUserDoc
 } from '../services/firebaseService';
 import { toast } from '../components/Toast';
 
@@ -70,11 +71,16 @@ export const useAuth = () => {
             setIsBreakActive(data.isBreakActive || false);
             setBreakStartTime(data.breakStartTime || null);
           } else {
-             console.warn("User doc doesn't exist for authenticated user, creating default local profile");
+             console.warn("User doc doesn't exist for authenticated user — auto-reparando en Firestore");
+             // Auto-reparación de "huérfano": el usuario está autenticado pero no tiene
+             // documento (registro a medias, doc borrado, etc.). Lo creamos en Firestore;
+             // como la suscripción onSnapshot sigue viva, al crearse volverá a dispararse
+             // con exists()=true y cargará el perfil real. Mientras, perfil local instantáneo.
+             ensureUserDoc(firebaseUser).catch((e) => console.error("Auto-reparación de doc falló:", e?.message));
              setUser({
                uid: firebaseUser.uid,
                email: firebaseUser.email || "usuario@ejemplo.com",
-               fullName: "Usuario Recuperado",
+               fullName: firebaseUser.displayName || "Compañero/a",
                company: "Supercor",
                store: "Centro sin definir",
                rank: "Personal base"
