@@ -17,15 +17,17 @@ function Play({ end }) {
     const loop = (now) => {
       if (!aliveRef.current) return;
       const dt = Math.min(40, now - last); last = now;
+      const f = dt / 16.67;   // nº de frames (~1 a 60fps): física estable e independiente del framerate
       tRef.current += dt;
       // Durante los primeros instantes no hay viento: la carretilla se mantiene recta.
       if (tRef.current > GRACE) {
-        const gust = 0.0008 + (tRef.current - GRACE) / 200000;   // el viento arrecia con el tiempo
-        dvRef.current += (Math.random() - 0.5) * gust * dt;       // ráfagas aleatorias
-        dvRef.current += leanRef.current * 0.00018 * dt;          // inestabilidad: cuanto más inclina, más cae
+        const wind = 0.05 + (tRef.current - GRACE) / 120000;      // el viento arrecia poco a poco
+        dvRef.current += (Math.random() - 0.5) * wind * f;         // ráfagas aleatorias suaves
+        dvRef.current += leanRef.current * 0.0016 * f;            // inestabilidad: cuanto más inclina, más cae
       }
-      dvRef.current *= 0.985;                                     // rozamiento
-      leanRef.current += dvRef.current * dt;
+      dvRef.current *= Math.pow(0.95, f);                         // rozamiento
+      dvRef.current = clamp(dvRef.current, -3, 3);                // tope de velocidad (evita catapultazos)
+      leanRef.current += dvRef.current * f;
       if (Math.abs(leanRef.current) >= 100) {
         aliveRef.current = false;
         endRef.current(clamp(Math.round(tRef.current / 100), 0, 2000)); // ~10 pts por segundo
@@ -39,7 +41,8 @@ function Play({ end }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const push = (dir) => { dvRef.current += dir * 1.15; leanRef.current += dir * 4; };
+  // Empuje suave y controlable: frena la caída y endereza poco a poco (antes era brutal).
+  const push = (dir) => { dvRef.current = clamp(dvRef.current + dir * 0.45, -3, 3); leanRef.current += dir * 2; };
 
   const lean = leanRef.current;
   const danger = Math.abs(lean) > 64;
