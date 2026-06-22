@@ -41,23 +41,13 @@ function Play({ end }) {
   const [, render] = useState(0);
   const offRef = useRef(0);        // posición de la caja relativa al centro de la barra (%)
   const velRef = useRef(0);        // velocidad horizontal de la caja
+  const tiltRef = useRef(0);       // inclinación REAL de la viga (basculа según la caja, suavizada)
   const tRef = useRef(0);
   const aliveRef = useRef(true);
   const endRef = useRef(end);
   endRef.current = end;
 
   const barWidth = () => Math.max(BAR_MIN, BAR_START - (tRef.current / 1000) * 0.78); // se encoge
-  const ramp = () => clamp((tRef.current - GRACE) / 4000, 0, 1);                      // arranque suave del movimiento
-  const barTiltAt = () => {
-    const after = Math.max(0, tRef.current - GRACE);
-    const amp = ramp() * Math.min(12, 5 + (after / 1000) * 0.15);
-    return Math.sin(tRef.current * 0.00085) * amp;                                    // la viga cabecea
-  };
-  const barCenterAt = () => {
-    const after = Math.max(0, tRef.current - GRACE);
-    const amp = ramp() * Math.min(9, 4 + (after / 1000) * 0.1);
-    return CENTER + Math.sin(tRef.current * 0.0011) * amp;                            // y oscila de lado
-  };
 
   useEffect(() => {
     let raf, last = performance.now();
@@ -67,12 +57,16 @@ function Play({ end }) {
       const f = dt / 16.67;
       tRef.current += dt;
 
+      // La viga BASCULA según dónde esté la caja (balanza): caja a la izquierda -> baja
+      // por la izquierda, y viceversa. Se suaviza para que se balancee con "peso".
+      const targetTilt = clamp(offRef.current * 0.9, -16, 16);
+      tiltRef.current += (targetTilt - tiltRef.current) * Math.min(1, 0.16 * f);
+
       if (tRef.current > GRACE) {
         const tSec = (tRef.current - GRACE) / 1000;
-        const tilt = barTiltAt();
-        velRef.current += Math.sin(tilt * Math.PI / 180) * 0.55 * f;     // la inclinación de la barra hace resbalar la caja
-        velRef.current += (Math.random() - 0.5) * (0.04 + tSec * 0.0007) * f; // ráfagas de viento
-        velRef.current += offRef.current * 0.0008 * f;                   // ligera inestabilidad
+        // la inclinación de la viga hace resbalar la caja hacia el lado bajo (inestable)
+        velRef.current += Math.sin(tiltRef.current * Math.PI / 180) * 0.32 * f;
+        velRef.current += (Math.random() - 0.5) * (0.05 + tSec * 0.0008) * f; // viento
       }
       velRef.current *= Math.pow(0.9, f);
       velRef.current = clamp(velRef.current, -2, 2);
@@ -95,10 +89,10 @@ function Play({ end }) {
 
   const off = offRef.current;
   const bw = barWidth();
-  const barCenter = barCenterAt();
-  const barTilt = barTiltAt();
+  const barTilt = tiltRef.current;                           // la viga basculа según la caja
+  const bob = Math.sin(tRef.current * 0.0014) * 4;           // leve flotación
   const danger = Math.abs(off) > bw / 2 * 0.72;
-  const boxWobble = clamp(velRef.current * 7 + off * 0.4, -22, 22);
+  const boxWobble = clamp(velRef.current * 5, -12, 12);
   const calm = tRef.current <= GRACE;
 
   return (
@@ -111,10 +105,14 @@ function Play({ end }) {
       {/* Escena centrada verticalmente */}
       <div className="flex-1 w-full flex items-center justify-center">
         <div className="relative w-full max-w-sm" style={{ height: 190 }}>
-          {/* GRUPO viga+caja: oscila de lado (translateX) y cabecea (rotate) */}
+          {/* Fulcro (pivote) fijo: la viga basculа sobre él como una balanza */}
+          <div className="absolute left-1/2 -translate-x-1/2" style={{ top: BAR_Y + 8, width: 0, height: 0, borderLeft: '16px solid transparent', borderRight: '16px solid transparent', borderBottom: `28px solid ${danger ? '#9f1239' : '#475569'}` }} />
+          <div className="absolute left-1/2 -translate-x-1/2 rounded-full" style={{ top: BAR_Y + 35, width: 56, height: 8, background: '#334155', boxShadow: '0 4px 8px rgba(0,0,0,0.45)' }} />
+
+          {/* GRUPO viga+caja: basculа (rotate) según la caja + leve flotación */}
           <div
             className="absolute inset-x-0 top-0 h-full"
-            style={{ transformOrigin: `50% ${BAR_Y}px`, transform: `translateX(${barCenter - CENTER}%) rotate(${barTilt}deg)` }}
+            style={{ transformOrigin: `50% ${BAR_Y}px`, transform: `translateY(${bob}px) rotate(${barTilt}deg)` }}
           >
             {/* sombra de la caja sobre la barra */}
             <div className="absolute rounded-[50%] bg-black/35" style={{ left: `${CENTER + off}%`, top: BAR_Y - 2, width: 46, height: 10, transform: 'translateX(-50%)' }} />
