@@ -10,17 +10,17 @@ export function toast(message, type = 'info') {
 }
 
 const ICONS = {
-  success: <CheckCircle size={18} className="text-emerald-400 shrink-0" />,
-  error: <XCircle size={18} className="text-rose-400 shrink-0" />,
-  warning: <AlertTriangle size={18} className="text-amber-400 shrink-0" />,
-  info: <Info size={18} className="text-sky-400 shrink-0" />,
+  success: <CheckCircle size={17} className="text-white" />,
+  error: <XCircle size={17} className="text-white" />,
+  warning: <AlertTriangle size={17} className="text-white" />,
+  info: <Info size={17} className="text-white" />,
 };
 
-const BG = {
-  success: 'bg-emerald-900/95 border-emerald-700/50',
-  error: 'bg-rose-900/95 border-rose-700/50',
-  warning: 'bg-amber-900/95 border-amber-700/50',
-  info: 'bg-slate-800/95 border-slate-600/50',
+const ACCENT = {
+  success: { bar: '5,150,105', chip: 'linear-gradient(180deg,#34d399,#059669)' },
+  error: { bar: '225,29,72', chip: 'linear-gradient(180deg,#fb7185,#e11d48)' },
+  warning: { bar: '217,119,6', chip: 'linear-gradient(180deg,#fbbf24,#d97706)' },
+  info: { bar: '2,132,199', chip: 'linear-gradient(180deg,#38bdf8,#0284c7)' },
 };
 
 export function ToastContainer() {
@@ -44,17 +44,24 @@ export function ToastContainer() {
 
   return (
     <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] flex flex-col gap-2 w-full max-w-sm px-4 pointer-events-none">
-      {toasts.map(t => (
-        <div key={t.id}
-          className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl border backdrop-blur-md animate-in slide-in-from-top-2 fade-in duration-300 ${BG[t.type] || BG.info}`}
-        >
-          {ICONS[t.type] || ICONS.info}
-          <span className="text-white text-xs font-bold flex-1 leading-snug">{t.message}</span>
-          <button onClick={() => remove(t.id)} className="text-white/40 hover:text-white/80 shrink-0">
-            <X size={14} />
-          </button>
-        </div>
-      ))}
+      {toasts.map(t => {
+        const a = ACCENT[t.type] || ACCENT.info;
+        return (
+          <div key={t.id}
+            className="pointer-events-auto relative flex items-center gap-3 pl-4 pr-2.5 py-3 rounded-2xl overflow-hidden animate-in slide-in-from-top-3 fade-in zoom-in-95 duration-300"
+            style={{ background: 'linear-gradient(180deg, rgba(28,30,38,0.97), rgba(16,18,25,0.97))', border: '1px solid rgba(255,255,255,0.08)', boxShadow: `0 14px 32px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.08)`, backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+          >
+            <div className="absolute left-0 top-0 bottom-0 w-1.5" style={{ background: a.chip }} />
+            <div className="grid place-items-center w-8 h-8 rounded-xl shrink-0" style={{ background: a.chip, boxShadow: `0 4px 9px rgba(${a.bar},0.45), inset 0 1px 1px rgba(255,255,255,0.45)` }}>
+              {ICONS[t.type] || ICONS.info}
+            </div>
+            <span className="text-white text-xs font-bold flex-1 leading-snug">{t.message}</span>
+            <button onClick={() => remove(t.id)} className="text-white/40 hover:text-white/80 shrink-0 p-1.5">
+              <X size={14} />
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -87,12 +94,12 @@ export function ConfirmDialog() {
 
   return (
     <div className="fixed inset-0 z-[210] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in">
-      <div className="bg-white rounded-[2rem] p-6 shadow-2xl w-full max-w-xs text-center border border-slate-100 animate-in zoom-in-95">
-        <div className="mb-4 text-amber-500 flex justify-center"><AlertTriangle size={40}/></div>
+      <div className="rounded-[2rem] p-6 w-full max-w-xs text-center animate-in zoom-in-95" style={{ background: 'linear-gradient(180deg,#ffffff,#f4f5f7)', boxShadow: '0 24px 60px rgba(0,0,0,0.4), inset 0 1.5px 1px rgba(255,255,255,0.9)', border: '1px solid rgba(0,0,0,0.05)' }}>
+        <div className="mx-auto mb-4 grid place-items-center w-16 h-16 rounded-full text-white" style={{ background: 'linear-gradient(180deg,#fbbf24,#d97706)', boxShadow: '0 8px 18px rgba(217,119,6,0.45), inset 0 2px 2px rgba(255,255,255,0.55)' }}><AlertTriangle size={32}/></div>
         <p className="text-sm font-bold text-slate-700 mb-6 leading-relaxed">{msg}</p>
         <div className="flex gap-3">
-          <button onClick={() => handle(true)} className="flex-1 bg-emerald-600 text-white py-3.5 rounded-xl font-black text-xs uppercase shadow-md active:scale-95 transition-all">CONFIRMAR</button>
-          <button onClick={() => handle(false)} className="flex-1 bg-slate-100 text-slate-600 py-3.5 rounded-xl font-black text-xs uppercase active:scale-95 transition-all hover:bg-slate-200">CANCELAR</button>
+          <button onClick={() => handle(true)} className="btn3d flex-1 text-white py-3.5 rounded-2xl font-black text-xs uppercase" style={{ background: 'linear-gradient(180deg,#34d399,#059669)', boxShadow: '0 6px 14px rgba(5,150,105,0.4), inset 0 1.5px 1px rgba(255,255,255,0.45)' }}>CONFIRMAR</button>
+          <button onClick={() => handle(false)} className="btn3d flex-1 text-slate-600 py-3.5 rounded-2xl font-black text-xs uppercase" style={{ background: 'linear-gradient(180deg,#f1f3f5,#e2e5e9)', boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.9), 0 2px 4px rgba(0,0,0,0.08)' }}>CANCELAR</button>
         </div>
       </div>
     </div>

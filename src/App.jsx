@@ -209,13 +209,13 @@ function AppContent({ user, authHook }) {
 
         {showConfirmLogout && (
           <div className="fixed inset-0 z-[110] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in" role="dialog" aria-modal="true" aria-label="Confirmar cierre de sesión">
-            <div className="bg-white rounded-[2rem] p-6 shadow-2xl w-full max-w-xs text-center border border-emerald-50 animate-in zoom-in-95">
-              <div className="mb-4 text-emerald-600 flex justify-center" aria-hidden="true"><LogOut size={40}/></div>
+            <div className="rounded-[2rem] p-6 w-full max-w-xs text-center animate-in zoom-in-95" style={{ background: 'linear-gradient(180deg,#ffffff,#f4f5f7)', boxShadow: '0 24px 60px rgba(0,0,0,0.4), inset 0 1.5px 1px rgba(255,255,255,0.9)', border: '1px solid rgba(0,0,0,0.05)' }}>
+              <div className="mx-auto mb-4 grid place-items-center w-16 h-16 rounded-full text-white" aria-hidden="true" style={{ background: 'linear-gradient(180deg,#fb7185,#e11d48)', boxShadow: '0 8px 18px rgba(225,29,72,0.45), inset 0 2px 2px rgba(255,255,255,0.5)' }}><LogOut size={30}/></div>
               <h3 className="text-base font-black text-slate-800 mb-2 uppercase italic leading-none tracking-tight">¿Cerrar sesión?</h3>
               <p className="text-[11px] text-slate-500 mb-6 uppercase font-bold tracking-widest leading-relaxed">Tus registros están<br/>seguros en la nube.</p>
               <div className="flex gap-3">
-                <button onClick={handleLogout} className="flex-1 bg-rose-500 text-white py-3.5 rounded-xl font-black text-xs uppercase shadow-md active:scale-95 transition-all">SALIR</button>
-                <button onClick={() => setShowConfirmLogout(false)} className="flex-1 bg-slate-100 text-slate-600 py-3.5 rounded-xl font-black text-xs uppercase active:scale-95 transition-all hover:bg-slate-200">CANCELAR</button>
+                <button onClick={handleLogout} className="btn3d flex-1 text-white py-3.5 rounded-2xl font-black text-xs uppercase" style={{ background: 'linear-gradient(180deg,#fb7185,#e11d48)', boxShadow: '0 6px 14px rgba(225,29,72,0.4), inset 0 1.5px 1px rgba(255,255,255,0.4)' }}>SALIR</button>
+                <button onClick={() => setShowConfirmLogout(false)} className="btn3d flex-1 text-slate-600 py-3.5 rounded-2xl font-black text-xs uppercase" style={{ background: 'linear-gradient(180deg,#f1f3f5,#e2e5e9)', boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.9), 0 2px 4px rgba(0,0,0,0.08)' }}>CANCELAR</button>
               </div>
             </div>
           </div>
@@ -311,18 +311,20 @@ export default function App() {
 
   if (settings?.useBiometric && !isUnlocked) {
     return (
-      <div className="h-[100dvh] bg-emerald-700 flex flex-col items-center justify-center p-6 text-white text-center" role="dialog" aria-label="Pantalla de bloqueo biométrico">
-        <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mb-6 shadow-xl backdrop-blur-md animate-pulse" aria-hidden="true">
-           <Fingerprint size={48} className="text-white"/>
+      <div className="h-[100dvh] flex flex-col items-center justify-center p-6 text-white text-center relative overflow-hidden" style={{ background: 'radial-gradient(120% 90% at 50% -10%, #10b981 0%, #047857 50%, #064e3b 100%)' }} role="dialog" aria-label="Pantalla de bloqueo biométrico">
+        <div className="pointer-events-none absolute -top-20 -left-16 w-72 h-72 rounded-full" style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.14), transparent 70%)' }} />
+        <div className="pointer-events-none absolute bottom-0 -right-16 w-80 h-80 rounded-full" style={{ background: 'radial-gradient(circle, rgba(16,185,129,0.4), transparent 70%)' }} />
+        <div className="relative w-28 h-28 mb-7 grid place-items-center rounded-full breathe" aria-hidden="true" style={{ background: 'rgba(255,255,255,0.16)', boxShadow: '0 0 40px rgba(255,255,255,0.25), inset 0 2px 4px rgba(255,255,255,0.4), inset 0 -6px 12px rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.3)' }}>
+           <Fingerprint size={52} className="text-white"/>
         </div>
-        <h1 className="text-2xl font-black italic mb-2">Aplicación Bloqueada</h1>
-        <p className="text-sm font-medium text-emerald-100 mb-8 max-w-xs">Usa tu huella dactilar o FaceID para acceder a tu información privada.</p>
-        
+        <h1 className="relative text-2xl font-black italic mb-2" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>Aplicación Bloqueada</h1>
+        <p className="relative text-sm font-medium text-emerald-50/90 mb-8 max-w-xs">Usa tu huella dactilar o FaceID para acceder a tu información privada.</p>
+
         {biometricError && (
-           <p className="text-xs text-rose-300 font-bold bg-rose-900/30 px-4 py-2 rounded-xl mb-6" role="alert">Error al verificar identidad. Inténtalo de nuevo.</p>
+           <p className="relative text-xs text-white font-bold px-4 py-2 rounded-xl mb-6" style={{ background: 'rgba(190,18,60,0.5)', border: '1px solid rgba(251,113,133,0.4)' }} role="alert">Error al verificar identidad. Inténtalo de nuevo.</p>
         )}
 
-        <button onClick={verifyBiometric} className="bg-white text-emerald-700 font-black px-8 py-3.5 rounded-full uppercase text-sm shadow-xl hover:scale-105 active:scale-95 transition-all" aria-label="Desbloquear aplicación con biometría">
+        <button onClick={verifyBiometric} className="btn3d relative text-emerald-700 font-black px-9 py-4 rounded-full uppercase text-sm" style={{ background: 'linear-gradient(180deg,#ffffff,#e8efe9)', boxShadow: '0 10px 24px rgba(0,0,0,0.3), inset 0 2px 2px rgba(255,255,255,0.9)' }} aria-label="Desbloquear aplicación con biometría">
           Desbloquear
         </button>
       </div>

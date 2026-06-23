@@ -23,18 +23,30 @@ export function NavItem({ icon, label, isActive, onClick }) {
 }
 
 export function StatBar({ label, currentValue, totalValue, percentage, color, large = false }) {
-  const clampedPercentage = Math.min(percentage, 100);
-  
+  const clampedPercentage = Math.max(0, Math.min(percentage, 100));
+
   return (
-    <div className="space-y-3 flex flex-col" role="meter" aria-label={label} aria-valuenow={clampedPercentage} aria-valuemin={0} aria-valuemax={100}>
-      <div className="flex justify-between font-black uppercase tracking-widest items-end leading-none">
-        <span className={large ? "text-xs text-slate-500 font-bold tracking-tight" : "text-[10px] text-slate-400"}>{label}</span>
-        <span className={`text-slate-400 ${large ? "text-lg font-bold tracking-normal mr-1" : "text-xs mr-1"}`}>
-          {currentValue} / <span className={`${large ? "text-2xl font-black tracking-tighter" : "text-sm font-black"} text-slate-900`}>{totalValue}</span>
+    <div className="space-y-2.5 flex flex-col" role="meter" aria-label={label} aria-valuenow={clampedPercentage} aria-valuemin={0} aria-valuemax={100}>
+      <div className="flex justify-between items-end leading-none">
+        <span className={`font-black uppercase ${large ? "text-xs text-slate-500 tracking-tight" : "text-[10px] text-slate-400 tracking-widest"}`}>{label}</span>
+        <span className={`font-bold text-slate-400 ${large ? "text-base mr-0.5" : "text-xs mr-1"}`}>
+          {currentValue} <span className="text-slate-300">/</span> <span className={`${large ? "text-2xl font-black tracking-tighter" : "text-sm font-black"} text-slate-900`}>{totalValue}</span>
         </span>
       </div>
-      <div className={`w-full bg-slate-100 rounded-full overflow-hidden border border-slate-50 shadow-inner ${large ? "h-4" : "h-3.5"}`} role="progressbar" aria-valuenow={clampedPercentage} aria-valuemin={0} aria-valuemax={100}>
-        <div className={`${color} h-full transition-all duration-1000 shadow-sm`} style={{ width: `${clampedPercentage}%` }}></div>
+      <div
+        className={`relative w-full rounded-full overflow-hidden ${large ? "h-4" : "h-3.5"}`}
+        style={{ background: 'linear-gradient(180deg,#e6e8eb,#f1f3f5)', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.14), inset 0 -1px 0 rgba(255,255,255,0.85)' }}
+        role="progressbar" aria-valuenow={clampedPercentage} aria-valuemin={0} aria-valuemax={100}
+      >
+        <div
+          className={`${color} h-full rounded-full relative transition-[width] duration-1000 ease-out`}
+          style={{ width: `${clampedPercentage}%`, boxShadow: '0 1px 3px rgba(0,0,0,0.22), inset 0 -3px 5px rgba(0,0,0,0.18)' }}
+        >
+          {/* brillo superior (volumen) */}
+          <div className="absolute inset-x-0 top-0 h-1/2 rounded-full pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.55), transparent)' }} />
+          {/* destello que recorre la barra */}
+          {clampedPercentage > 6 && <div className="absolute inset-0 sheen rounded-full" />}
+        </div>
       </div>
     </div>
   );

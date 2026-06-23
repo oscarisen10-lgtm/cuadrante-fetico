@@ -140,9 +140,9 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
           )}
         </div>
       )}
-      <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 flex flex-col min-h-[300px]">
-        <h2 className="text-sm font-black text-slate-800 uppercase italic tracking-widest border-b border-slate-100 pb-3 flex items-center gap-2 mb-6 shrink-0">
-          <PieChart size={18} className="text-emerald-600" /> Resumen Calendario
+      <div className="rounded-[2rem] p-6 flex flex-col min-h-[300px]" style={{ background: 'linear-gradient(180deg,#ffffff,#f8f9fb)', boxShadow: '0 14px 34px -16px rgba(30,41,59,0.25), inset 0 1.5px 1px rgba(255,255,255,0.9)', border: '1px solid rgba(15,23,42,0.05)' }}>
+        <h2 className="text-sm font-black text-slate-800 uppercase italic tracking-widest border-b border-slate-100 pb-3 flex items-center gap-2.5 mb-6 shrink-0">
+          <span className="grid place-items-center w-8 h-8 rounded-xl text-white shrink-0" style={{ background: 'linear-gradient(180deg,#34d399,#059669)', boxShadow: '0 4px 10px rgba(5,150,105,0.4), inset 0 1px 1px rgba(255,255,255,0.5)' }}><PieChart size={16} /></span> Resumen Calendario
         </h2>
         <div className="flex-1 flex flex-col justify-between py-2 space-y-5">
           <StatBar label="Horas Anuales" currentValue={formatTotalTime(stats.horasTotales)} percentage={(stats.horasTotales/(stats.targets?.horas || 1770))*100} totalValue={`${stats.targets?.horas || 1770}h`} color="bg-emerald-500" large={true} />
@@ -169,7 +169,7 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
 
       {/* Sección de Noticias (Solo visible si hay noticias o si el usuario es Admin) */}
       {(newsList.filter(n => !n.isPushRequest).length > 0 || (user?.email && ADMIN_EMAIL && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase())) && (
-        <div className="bg-slate-900 rounded-[2rem] p-6 flex flex-col min-h-[350px]">
+        <div className="rounded-[2rem] p-6 flex flex-col min-h-[350px]" style={{ background: 'linear-gradient(180deg,#1e293b,#0f172a)', boxShadow: '0 16px 38px -14px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.06)' }}>
           <div className="flex justify-between items-center mb-6 shrink-0 border-b border-white/5 pb-3">
             <h3 className="text-xs font-black text-white/50 uppercase tracking-widest flex items-center gap-2">
                 <Newspaper size={14}/> Noticias
@@ -193,7 +193,7 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
                 </div>
               ) : (
                 newsList.filter(n => !n.isPushRequest).map(news => (
-                    <div key={news.id} className="bg-white/5 p-4 rounded-2xl border border-white/5 flex flex-col">
+                    <div key={news.id} className="p-4 rounded-2xl flex flex-col" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))', border: '1px solid rgba(255,255,255,0.08)', boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.06)' }}>
                         <div className="flex justify-between items-center mb-3 border-b border-white/5 pb-2">
                             <div className="flex items-center gap-2">
                               <span className="text-[9px] font-black text-emerald-400 uppercase tracking-tighter bg-emerald-400/10 px-2 py-0.5 rounded-md">{news.tag}</span>
