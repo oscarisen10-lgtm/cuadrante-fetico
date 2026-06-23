@@ -62,8 +62,8 @@ workflows:
           sed -i '' "s/MARKETING_VERSION = [^;]*;/MARKETING_VERSION = $NEW_VERSION;/g" "$XCODE_PROJECT/project.pbxproj"
           echo "Marketing version -> $NEW_VERSION"
           grep -m2 "MARKETING_VERSION" "$XCODE_PROJECT/project.pbxproj"
-          # Build number interno (161: el 160 ya se subió a App Store Connect)
-          NEW_BUILD=161
+          # Build number interno (162: el 161 ya se subió a App Store Connect)
+          NEW_BUILD=162
           echo "Build number -> $NEW_BUILD"
           cd ios/App
           agvtool new-version -all "$NEW_BUILD"
