@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { GameShell, clamp, shuffle, fx } from './GameShell';
+import { GameShell, clamp, shuffle, fx , ScoreBurst } from './GameShell';
 
 const EMOJIS = ['🍎', '🥖', '🧀', '🥛', '🍫', '🧃', '🥚', '🍌'];
 
@@ -38,6 +38,7 @@ function Play({ end }) {
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-5 pb-6">
+      <ScoreBurst value={matched.length} color="#f9a8d4" />
       <p className="text-white/60 font-bold uppercase tracking-widest text-xs mb-4">Movimientos: {moves}</p>
       <div className="grid grid-cols-4 gap-2.5 w-full max-w-sm">
         {cards.map(card => {

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { GameShell, clamp, shuffle } from './GameShell';
+import { GameShell, clamp, shuffle , ScoreBurst } from './GameShell';
 
 function Play({ end }) {
   const [numbers] = useState(() => shuffle(Array.from({ length: 20 }, (_, i) => i + 1)));
@@ -28,6 +28,7 @@ function Play({ end }) {
     <div className="flex-1 flex flex-col items-center justify-center px-5 pb-6">
       <div className="flex items-center gap-4 mb-5">
         <span className="hud-chip text-white font-black px-4 py-1.5 rounded-full text-sm">Busca el <span className="text-lime-400">{next}</span></span>
+        <ScoreBurst value={next} color="#a3e635" />
         <span className="hud-chip text-rose-400 font-black px-4 py-1.5 rounded-full text-sm">✗ {errors}</span>
       </div>
       <div className="grid grid-cols-4 gap-2.5 w-full max-w-sm">
