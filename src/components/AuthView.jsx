@@ -150,14 +150,17 @@ export default function AuthView() {
   };
 
   return (
-    <div className="h-[100dvh] bg-emerald-50 flex flex-col items-center justify-center p-4 font-sans overflow-hidden text-slate-800">
-      <div className="w-full max-w-sm bg-white rounded-[2rem] shadow-xl border border-emerald-100 flex flex-col max-h-[95vh] overflow-hidden">
-        <div className="bg-emerald-600 p-4 text-center text-white shrink-0 relative z-10">
-          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center mx-auto mb-1 shadow-inner shrink-0">
-            <span className="text-emerald-600 font-black text-xl italic leading-none">F</span>
+    <div className="h-[100dvh] flex flex-col items-center justify-center p-4 font-sans overflow-hidden text-slate-800 relative" style={{ background: 'radial-gradient(120% 90% at 50% -10%, #ecfdf5 0%, #d1fae5 50%, #a7f3d0 100%)' }}>
+      <div className="pointer-events-none absolute -top-16 -left-12 w-72 h-72 rounded-full" style={{ background: 'radial-gradient(circle, rgba(16,185,129,0.25), transparent 70%)' }} />
+      <div className="pointer-events-none absolute -bottom-16 -right-12 w-80 h-80 rounded-full" style={{ background: 'radial-gradient(circle, rgba(5,150,105,0.22), transparent 70%)' }} />
+      <div className="relative w-full max-w-sm rounded-[2rem] flex flex-col max-h-[95vh] overflow-hidden" style={{ background: '#ffffff', boxShadow: '0 30px 70px -20px rgba(5,80,60,0.45), inset 0 1.5px 1px rgba(255,255,255,0.9)', border: '1px solid rgba(16,185,129,0.15)' }}>
+        <div className="p-5 text-center text-white shrink-0 relative z-10 overflow-hidden" style={{ background: 'linear-gradient(160deg,#10b981,#059669 55%,#047857)' }}>
+          <div className="pointer-events-none absolute -top-8 -right-4 w-32 h-32 rounded-full" style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.2), transparent 70%)' }} />
+          <div className="relative w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-2 shrink-0" style={{ background: 'linear-gradient(180deg,#fff,#e8efe9)', boxShadow: '0 6px 14px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.9)' }}>
+            <span className="text-emerald-600 font-black text-2xl italic leading-none">F</span>
           </div>
-          <h1 className="text-base font-black italic uppercase tracking-tight leading-none">Mi Cuadrante</h1>
-          <p className="text-emerald-100 text-[8px] uppercase font-bold tracking-widest mt-1">Registro Horario</p>
+          <h1 className="relative text-lg font-black italic uppercase tracking-tight leading-none">Mi Cuadrante</h1>
+          <p className="relative text-emerald-100 text-[8px] uppercase font-bold tracking-[0.25em] mt-1.5">Registro Horario</p>
         </div>
 
         <form onSubmit={handleAuth} className="p-4 flex flex-col overflow-hidden relative z-0">
@@ -231,7 +234,7 @@ export default function AuthView() {
             )}
           </div>
           <div className="mt-4 space-y-2 shrink-0">
-            <button type="submit" disabled={isLoading} className={`w-full bg-emerald-600 text-white font-black py-2.5 rounded-xl uppercase text-sm active:scale-95 transition-all shadow-md ${isLoading ? 'opacity-70' : ''}`}>
+            <button type="submit" disabled={isLoading} className="btn3d sheen w-full text-white font-black py-3 rounded-2xl uppercase text-sm" style={{ background: 'linear-gradient(180deg,#34d399,#059669)', boxShadow: '0 8px 18px rgba(5,150,105,0.4), inset 0 1.5px 1px rgba(255,255,255,0.45)' }}>
               {isLoading ? 'CONECTANDO...' : (isRegistering && ALLOW_REGISTRATION ? 'CREAR CUENTA' : 'ENTRAR')}
             </button>
 
@@ -263,7 +266,8 @@ export default function AuthView() {
                     type="button"
                     onClick={handleGoogleLogin}
                     disabled={isLoading}
-                    className="flex items-center justify-center gap-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 py-2 rounded-xl text-xs font-black text-slate-700 active:scale-95 transition-all animate-in fade-in"
+                    className="btn3d flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-xs font-black text-slate-700"
+                    style={{ background: 'linear-gradient(180deg,#ffffff,#f1f3f5)', boxShadow: '0 3px 8px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.9)', border: '1px solid rgba(0,0,0,0.06)' }}
                   >
                     <svg className="w-4 h-4" viewBox="0 0 24 24">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -277,7 +281,8 @@ export default function AuthView() {
                     type="button"
                     onClick={handleAppleLogin}
                     disabled={isLoading}
-                    className="flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-black py-2 rounded-xl text-xs font-black text-white active:scale-95 transition-all shadow-sm"
+                    className="btn3d flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-xs font-black text-white"
+                    style={{ background: 'linear-gradient(180deg,#334155,#0f172a)', boxShadow: '0 4px 10px rgba(15,23,42,0.4), inset 0 1px 1px rgba(255,255,255,0.15)' }}
                   >
                     <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
                       <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-.96.04-2.13.64-2.82 1.45-.6.7-1.13 1.84-.99 2.94.1.08.2.12.3.12.9 0 2.02-.65 2.52-1.45z"/>
@@ -293,15 +298,15 @@ export default function AuthView() {
 
       {showForgotModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in">
-          <div className="bg-white rounded-[2rem] p-5 shadow-2xl w-full max-w-sm border border-emerald-50 relative animate-in zoom-in-95">
-              <button onClick={() => { setShowForgotModal(false); setRecoveryError(""); }} className="absolute top-4 right-4 text-slate-300"><X size={20} /></button>
-              <div className="text-emerald-600 flex justify-center mb-1"><KeyRound size={28}/></div>
+          <div className="rounded-[2rem] p-5 w-full max-w-sm relative animate-in zoom-in-95" style={{ background: 'linear-gradient(180deg,#ffffff,#f4f6f7)', boxShadow: '0 24px 60px rgba(0,0,0,0.4), inset 0 1.5px 1px rgba(255,255,255,0.9)', border: '1px solid rgba(0,0,0,0.05)' }}>
+              <button onClick={() => { setShowForgotModal(false); setRecoveryError(""); }} className="absolute top-4 right-4 text-slate-300 hover:text-slate-500"><X size={20} /></button>
+              <div className="mx-auto mb-2 grid place-items-center w-14 h-14 rounded-2xl text-white" style={{ background: 'linear-gradient(180deg,#34d399,#059669)', boxShadow: '0 6px 14px rgba(5,150,105,0.4), inset 0 1px 1px rgba(255,255,255,0.45)' }}><KeyRound size={26}/></div>
               <h3 className="text-base font-black text-center text-slate-800 mb-1 italic uppercase leading-none">Recuperar Acceso</h3>
               <p className="text-center text-slate-500 text-[10px] mb-4 uppercase font-bold tracking-tight">Recibirás un email seguro para cambiar contraseña</p>
               <form onSubmit={handleRecovery} className="space-y-4">
                   <InputGroup label="Email Registrado" name="email" type="email" icon={<Mail size={14}/>} />
                   {recoveryError && <div className={`p-1.5 rounded text-center text-[9px] font-black uppercase ${recoveryError.includes('Éxito') ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>{recoveryError}</div>}
-                  <button type="submit" disabled={isLoading} className={`w-full bg-emerald-600 text-white font-black py-3 rounded-xl uppercase text-xs mt-2 shadow-md ${isLoading ? 'opacity-70' : ''}`}>
+                  <button type="submit" disabled={isLoading} className="btn3d w-full text-white font-black py-3 rounded-2xl uppercase text-xs mt-2" style={{ background: 'linear-gradient(180deg,#34d399,#059669)', boxShadow: '0 7px 16px rgba(5,150,105,0.4), inset 0 1.5px 1px rgba(255,255,255,0.45)' }}>
                     {isLoading ? 'ENVIANDO...' : 'ENVIAR EMAIL DE RECUPERACIÓN'}
                   </button>
               </form>

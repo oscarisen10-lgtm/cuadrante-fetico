@@ -65,18 +65,18 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
 
   return (
     <div className="flex flex-col space-y-5 animate-in fade-in duration-300 pb-20">
-      <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 flex items-center gap-5">
-        <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center border-2 border-white shadow-sm shrink-0"><User className="text-emerald-700" size={32}/></div>
+      <div className="rounded-[2rem] p-6 flex items-center gap-5" style={{ background: 'linear-gradient(180deg,#ffffff,#f8f9fb)', boxShadow: '0 14px 34px -16px rgba(30,41,59,0.25), inset 0 1.5px 1px rgba(255,255,255,0.9)', border: '1px solid rgba(15,23,42,0.05)' }}>
+        <div className="w-16 h-16 rounded-full grid place-items-center shrink-0 text-white" style={{ background: 'linear-gradient(180deg,#34d399,#059669)', boxShadow: '0 8px 18px rgba(5,150,105,0.4), inset 0 2px 2px rgba(255,255,255,0.5)' }}><User size={30}/></div>
         <div className="flex-1">
           <h3 className="text-sm font-black text-slate-800 uppercase italic">Soporte Tecnico</h3>
           <p className="text-[11px] text-slate-500 font-bold mt-1 tracking-wide leading-relaxed">Contacta con tu delegado de zona para consultas o sugerencias.</p>
         </div>
       </div>
 
-      <div className="bg-slate-900 rounded-[2rem] p-6 flex flex-col">
+      <div className="rounded-[2rem] p-6 flex flex-col" style={{ background: 'linear-gradient(180deg,#1e293b,#0f172a)', boxShadow: '0 16px 38px -14px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.06)' }}>
         <h3 className="text-xs font-black text-white/50 uppercase tracking-widest mb-6 flex items-center gap-2 border-b border-white/5 pb-3"><Settings size={16}/> Preferencias</h3>
         <div className="space-y-6">
-          <div className="flex flex-col gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
+          <div className="flex flex-col gap-4 bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
              <div className="flex items-center gap-2 mb-1">
                 <Building2 size={14} className="text-emerald-500" />
                 <span className="text-xs font-bold text-white uppercase leading-none">Mi Puesto</span>
@@ -162,7 +162,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                 </div>
           </div>
 
-          <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/5">
+          <div className="flex justify-between items-center bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
              <div className="flex flex-col">
                 <span className="text-xs font-bold text-white uppercase leading-none flex items-center gap-1.5"><RefreshCw size={14} className="text-emerald-500"/> Sincronización</span>
                 <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Sincroniza las noticias y avisos</span>
@@ -176,7 +176,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
              )}
           </div>
 
-          <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/5">
+          <div className="flex justify-between items-center bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
             <div className="flex flex-col">
                 <span className="text-xs font-bold text-white uppercase leading-none">Alarmas Locales</span>
                 <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Vibracion al terminar descanso</span>
@@ -190,7 +190,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
             </button>
           </div>
 
-          <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/5">
+          <div className="flex justify-between items-center bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
             <div className="flex flex-col">
                 <span className="text-xs font-bold text-white uppercase leading-none flex items-center gap-1.5"><Fingerprint size={14} className="text-emerald-500"/> Bloqueo Biométrico</span>
                 <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Exigir FaceID/Huella al abrir app</span>
