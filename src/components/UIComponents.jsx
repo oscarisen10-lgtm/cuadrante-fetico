@@ -65,7 +65,8 @@ export function InputGroup({ label, name, icon, type = "text", maxLength, minLen
         <input
           id={inputId}
           name={name} type={inputType} maxLength={maxLength} minLength={minLength} required
-          className={`w-full ${icon ? 'pl-10' : 'px-3'} ${isPassword ? 'pr-11' : ''} bg-slate-50 border-none ${small ? 'p-3 text-sm' : 'p-3.5 text-base'} rounded-xl outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm text-slate-800 leading-none`}
+          className={`w-full ${icon ? 'pl-10' : 'px-3'} ${isPassword ? 'pr-11' : ''} border-none ${small ? 'p-3 text-sm' : 'p-3.5 text-base'} rounded-2xl outline-none text-slate-800 leading-none transition-all ring-1 ring-slate-200/80 shadow-[inset_0_2px_4px_rgba(15,23,42,0.07)] focus:ring-2 focus:ring-emerald-500 focus:shadow-[0_0_0_4px_rgba(16,185,129,0.16)]`}
+          style={{ background: 'linear-gradient(180deg,#f6f7f9,#eef0f3)' }}
           {...props}
         />
         {isPassword && (
