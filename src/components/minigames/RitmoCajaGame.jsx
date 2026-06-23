@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameShell, clamp, rand } from './GameShell';
+import { GameShell, clamp, rand , ScoreBurst } from './GameShell';
 
 const COLS = 4;
 const HIT_FROM = 55;   // zona válida de pulsación (%)
@@ -74,6 +74,7 @@ function Play({ end }) {
 
   return (
     <div className="flex-1 flex flex-col px-5 pb-6 select-none">
+      <ScoreBurst value={st.current.hits} color="#c4b5fd" />
       <p className="text-center text-white/60 font-bold uppercase tracking-widest text-xs mb-3">
         Cobrados: <span className="text-violet-400">{st.current.hits}</span>
       </p>

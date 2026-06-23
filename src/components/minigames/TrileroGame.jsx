@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameShell, clamp, rand } from './GameShell';
+import { GameShell, clamp, rand , ScoreBurst } from './GameShell';
 
 const slotX = (slot) => 18 + slot * 32; // % horizontal de los 3 huecos: 18, 50, 82
 
@@ -94,6 +94,7 @@ function Play({ end }) {
     <div className="flex-1 flex flex-col items-center px-6 pb-8 select-none">
       <div className="flex items-center gap-3 mb-4">
         <span className="hud-chip text-rose-300 font-black px-4 py-1.5 rounded-full text-sm">Nivel {level}</span>
+        <ScoreBurst value={level} color="#fda4af" />
         <span className="hud-chip text-white font-black px-4 py-1.5 rounded-full text-sm">{swapsFor(level)} mezclas</span>
       </div>
       <p className={`font-bold uppercase tracking-widest text-xs mb-2 h-5 ${phase === 'guess' ? 'text-rose-300 animate-pulse' : 'text-white/70'}`}>{hint}</p>

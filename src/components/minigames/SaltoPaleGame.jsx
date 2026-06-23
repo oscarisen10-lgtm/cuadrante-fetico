@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameShell, clamp, rand } from './GameShell';
+import { GameShell, clamp, rand , ScoreBurst } from './GameShell';
 
 const GROUND = 74;        // % vertical del suelo (pies del corredor)
 const GRAVITY = 0.0030;
@@ -86,6 +86,7 @@ function Play({ end }) {
 
   return (
     <div className="flex-1 flex flex-col px-5 pb-6 select-none" onPointerDown={down} onPointerUp={up} onPointerLeave={up}>
+      <ScoreBurst value={st.current.passed} color="#a3e635" />
       <p className="text-center text-white/60 font-bold uppercase tracking-widest text-xs mb-3">
         Palés <span className="text-lime-400">{st.current.passed}</span> · Cajas <span className="text-amber-300">{st.current.picked}</span>
       </p>

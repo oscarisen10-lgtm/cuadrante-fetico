@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameShell, clamp } from './GameShell';
+import { GameShell, clamp , ScoreBurst } from './GameShell';
 
 const PADDLE_Y = 88;
 const PADDLE_W = 26;
@@ -101,6 +101,7 @@ function Play({ end }) {
 
   return (
     <div className="flex-1 flex flex-col px-5 pb-6">
+      <ScoreBurst value={st.current.hits} color="#c4b5fd" />
       <p className="text-center text-white/60 font-bold uppercase tracking-widest text-xs mb-3">
         Toques: <span className="text-violet-400">{st.current.hits}</span> · 🍉 {balls.current.length}
       </p>

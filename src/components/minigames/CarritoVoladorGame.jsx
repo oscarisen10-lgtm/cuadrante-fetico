@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameShell, clamp, rand } from './GameShell';
+import { GameShell, clamp, rand , ScoreBurst } from './GameShell';
 
 const GRAVITY = 0.0021;
 const FLAP_V = -0.62;
@@ -64,6 +64,7 @@ function Play({ end }) {
 
   return (
     <div className="flex-1 flex flex-col px-5 pb-6 select-none" onPointerDown={flap}>
+      <ScoreBurst value={st.current.score} color="#67e8f9" />
       <p className="text-center text-white/60 font-bold uppercase tracking-widest text-xs mb-3">
         Pasillos cruzados: <span className="text-cyan-400">{st.current.score}</span>
       </p>

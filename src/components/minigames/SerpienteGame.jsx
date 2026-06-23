@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameShell, clamp, rand } from './GameShell';
+import { GameShell, clamp, rand , ScoreBurst } from './GameShell';
 
 const SIZE = 13; // tablero 13x13
 
@@ -64,6 +64,7 @@ function Play({ end }) {
   const cell = 100 / SIZE;
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-5 pb-4 select-none">
+      <ScoreBurst value={apples.current} color="#a3e635" />
       <p className="text-white/60 font-bold uppercase tracking-widest text-xs mb-3">🍎 Manzanas: <span className="text-lime-400">{apples.current}</span></p>
       <div
         className="relative w-full max-w-sm aspect-square bg-black/40 border-2 border-lime-500/30 rounded-2xl overflow-hidden touch-none"
