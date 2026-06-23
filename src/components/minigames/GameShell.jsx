@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Play, Info } from 'lucide-react';
 import { GameBackground } from './gameFx';
+import { hapticLight, hapticSuccess } from '../../utils/haptics';
 export { fx } from './gameFx';
 
 // Utilidades compartidas por los minijuegos
@@ -34,7 +35,7 @@ const THEMES = {
  * El juego solo implementa su fase "playing" vía children({ mode, end }).
  */
 export function GameShell({
-  day, title, emoji, accent = 'emerald', instructions = [],
+  day, title, emoji, accent = 'emerald', instructions = [], bestScore = 0,
   onFinish, onCancel, practiceAttempts, playAttempts, onConsumeAttempt, children,
 }) {
   const t = THEMES[accent] || THEMES.emerald;
@@ -79,6 +80,7 @@ export function GameShell({
 
   const start = (m) => {
     if (m === 'jugar' ? playAttempts <= 0 : practiceAttempts <= 0) return;
+    hapticLight();
     onConsumeAttempt(m);
     setMode(m);
     setCountdown(3);
@@ -90,7 +92,10 @@ export function GameShell({
     endedRef.current = true;
     setScore(Math.max(0, Math.round(s || 0)));
     setPhase('finished');
+    hapticSuccess();
   };
+
+  const isRecord = mode === 'jugar' && score > (bestScore || 0);
 
   const Header = () => (
     <div className="pt-12 pb-4 px-6 flex items-center justify-between z-10 bg-black/20">
@@ -197,8 +202,13 @@ export function GameShell({
           {confetti.map(c => (
             <span key={c.id} className="confetti" style={{ left: `${c.x}%`, background: c.color, animationDuration: `${c.dur}s`, animationDelay: `${c.delay}s`, transform: `rotate(${c.rot}deg)`, boxShadow: `0 0 6px ${c.color}` }} />
           ))}
-          <div className="relative text-7xl mb-5 count-pop" style={{ filter: 'drop-shadow(0 6px 18px rgba(0,0,0,0.5)) drop-shadow(0 0 26px rgba(255,255,255,0.35))' }}>{emoji}</div>
-          <p className="relative text-white/80 font-black uppercase tracking-[0.25em] text-sm mb-4">¡Partida completada!</p>
+          <div className="relative text-7xl mb-4 count-pop" style={{ filter: 'drop-shadow(0 6px 18px rgba(0,0,0,0.5)) drop-shadow(0 0 26px rgba(255,255,255,0.35))' }}>{emoji}</div>
+          {isRecord && (
+            <div className="relative mb-3 px-4 py-1.5 rounded-full count-pop" style={{ background: 'linear-gradient(180deg,#fde68a,#f59e0b)', boxShadow: '0 6px 16px rgba(245,158,11,0.55), inset 0 1px 1px rgba(255,255,255,0.6)' }}>
+              <span className="text-amber-950 font-black uppercase tracking-widest text-xs flex items-center gap-1.5">⭐ ¡Nueva marca!</span>
+            </div>
+          )}
+          <p className="relative text-white/80 font-black uppercase tracking-[0.25em] text-sm mb-4">{isRecord ? '¡Has superado tu récord!' : '¡Partida completada!'}</p>
           <div className="relative p-7 rounded-[2rem] text-center w-full max-w-sm mb-8" style={{ background: 'linear-gradient(180deg, rgba(40,33,82,0.92), rgba(20,14,45,0.92))', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 18px 44px rgba(0,0,0,0.55), inset 0 1.5px 1px rgba(255,255,255,0.18)' }}>
             <p className="text-white/55 font-bold uppercase tracking-widest text-[10px] mb-1">Puntuación obtenida</p>
             <p className="text-[4.2rem] font-black text-white leading-none tabular-nums" style={{ textShadow: '0 4px 18px rgba(0,0,0,0.5)' }}>{displayScore}</p>

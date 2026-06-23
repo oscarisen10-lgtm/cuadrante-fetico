@@ -132,6 +132,14 @@ export function ArenaView({ user, onPlayingChange }) {
     return { background: g.bg, boxShadow: `0 9px 20px -7px ${g.glow}, 0 2px 4px rgba(0,0,0,0.15), inset 0 1.5px 1px rgba(255,255,255,0.4), inset 0 -7px 16px rgba(0,0,0,0.22)` };
   };
   const initialsOf = (n) => (n || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+  // Color de avatar consistente por usuario (hash → paleta)
+  const AVATAR_PALETTES = [['#fda4af', '#e11d48'], ['#6ee7b7', '#059669'], ['#93c5fd', '#2563eb'], ['#fcd34d', '#d97706'], ['#c4b5fd', '#7c3aed'], ['#67e8f9', '#0891b2'], ['#f9a8d4', '#db2777']];
+  const avatarGrad = (key) => {
+    const s = String(key || '?'); let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    const [a, b] = AVATAR_PALETTES[h % AVATAR_PALETTES.length];
+    return `linear-gradient(135deg,${a},${b})`;
+  };
 
   const launchGame = (game) => { setSelectedGame(game); setShowPicker(false); setIsPlaying(true); };
 
@@ -273,8 +281,12 @@ export function ArenaView({ user, onPlayingChange }) {
 
       {/* Podio (Top 3) */}
       {players.length === 0 ? (
-        <div className="text-center px-8 mb-8 mt-2">
-          <p className="text-slate-400 font-bold text-sm leading-relaxed">Aún no hay puntuaciones hoy.<br/>¡Sé el primero en jugar! 🏆</p>
+        <div className="flex flex-col items-center text-center px-8 mb-8 mt-2 pop-in">
+          <div className="grid place-items-center w-20 h-20 rounded-full mb-3" style={{ background: 'linear-gradient(180deg,#fef3c7,#fcd34d)', boxShadow: '0 8px 20px rgba(245,158,11,0.35), inset 0 2px 3px rgba(255,255,255,0.7)' }}>
+            <Trophy size={34} className="text-amber-600 fill-amber-500/40" />
+          </div>
+          <p className="text-slate-500 font-black text-sm leading-relaxed">Aún no hay puntuaciones hoy</p>
+          <p className="text-slate-400 font-bold text-xs mt-0.5">¡Sé el primero en jugar! 🏆</p>
         </div>
       ) : (
         <>
@@ -348,11 +360,16 @@ export function ArenaView({ user, onPlayingChange }) {
       <div className="flex flex-col gap-3 px-6 pb-6">
         {activeTab === 'puntuacion' ? (
           players.length === 0 ? (
-            <p className="text-center text-slate-400 font-bold text-sm py-6">Nadie ha jugado todavía hoy.</p>
+            <div className="flex flex-col items-center text-center py-8 pop-in">
+              <div className="grid place-items-center w-16 h-16 rounded-full mb-3" style={{ background: 'linear-gradient(180deg,#e2e8f0,#cbd5e1)', boxShadow: 'inset 0 2px 3px rgba(255,255,255,0.7), 0 4px 10px rgba(0,0,0,0.08)' }}>
+                <Gamepad2 size={28} className="text-slate-400" />
+              </div>
+              <p className="text-slate-400 font-bold text-sm">Nadie ha jugado todavía hoy.</p>
+            </div>
           ) : players.map((p, i) => (
             <div key={p.uid} className={`rounded-[1.4rem] p-3.5 flex items-center text-white relative rise-in ${p.uid === user?.uid ? 'ring-2 ring-amber-300' : ''}`} style={{ ...rankStyle(i), animationDelay: `${Math.min(i * 0.05, 0.4)}s` }}>
               <span className="w-9 h-9 mr-3 grid place-items-center rounded-full text-[15px] font-black shrink-0" style={{ background: 'rgba(0,0,0,0.22)', boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.28), inset 0 -2px 3px rgba(0,0,0,0.28)', textShadow: '0 1px 2px rgba(0,0,0,0.4)' }}>{i + 1}</span>
-              <div className="w-11 h-11 rounded-full mr-3 grid place-items-center font-black shrink-0" style={{ background: 'rgba(255,255,255,0.2)', boxShadow: 'inset 0 2px 3px rgba(255,255,255,0.35), inset 0 -3px 5px rgba(0,0,0,0.22)', textShadow: '0 1px 2px rgba(0,0,0,0.35)' }}>{initialsOf(p.name)}</div>
+              <div className="w-11 h-11 rounded-full mr-3 grid place-items-center font-black shrink-0 text-white" style={{ background: avatarGrad(p.uid || p.name), boxShadow: 'inset 0 2px 3px rgba(255,255,255,0.4), inset 0 -3px 5px rgba(0,0,0,0.28), 0 2px 4px rgba(0,0,0,0.2)', textShadow: '0 1px 2px rgba(0,0,0,0.4)' }}>{initialsOf(p.name)}</div>
               <div className="flex flex-col min-w-0">
                 <span className="font-black text-[16px] leading-tight" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>{p.score} <span className="text-[11px] font-bold opacity-80">PTS</span></span>
                 <span className="text-[13px] font-medium opacity-90 truncate">{p.name}{p.uid === user?.uid ? ' · tú' : ''}</span>
@@ -403,6 +420,7 @@ export function ArenaView({ user, onPlayingChange }) {
             <PlayComp
               practiceAttempts={99}
               playAttempts={playAttemptsLeft}
+              bestScore={pg.id === activeGame.id ? (myEntry?.score || 0) : 0}
               onConsumeAttempt={() => {}}
               onCancel={() => setIsPlaying(false)}
               onFinish={handleFinish}

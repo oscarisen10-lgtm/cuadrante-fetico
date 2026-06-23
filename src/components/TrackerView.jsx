@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Play, Square, Timer, Coffee } from 'lucide-react';
 import { formatTime, formatCountdown } from '../utils/dateUtils';
 import { CONFIG } from '../constants/config';
+import { hapticMedium } from '../utils/haptics';
 
 export const TrackerView = React.memo(function TrackerView({ 
   activeShift, isBreakActive, workTimeAccumulated, breakStartTime,
@@ -47,6 +48,7 @@ export const TrackerView = React.memo(function TrackerView({
 
       <button
         onClick={() => {
+          hapticMedium();
           if (activeShift) {
              const currentSessionSeconds = isBreakActive ? 0 : Math.floor((Date.now() - activeShift.startTime) / 1000);
              const rawElapsed = (workTimeAccumulated || 0) + currentSessionSeconds;

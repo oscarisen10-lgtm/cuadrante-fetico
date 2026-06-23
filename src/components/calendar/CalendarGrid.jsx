@@ -119,7 +119,6 @@ export const DayCell = memo(function DayCell({ d, targetYear, targetMonth, shift
   return (
     <button 
       onClick={() => onDayClick(dStr)} 
-      onDoubleClick={() => onDayDoubleClick(dStr)}
       className={`flex flex-col items-center justify-center rounded-xl font-bold relative transition-all active:scale-95 ${isSelected ? 'ring-4 ring-emerald-400 bg-white scale-90 z-10 shadow-lg' : style} ${isDayHoliday && !isSelected ? 'ring-2 ring-slate-300 ring-inset' : ''} h-11 sm:h-12 w-full text-[11px]`}
       style={isSelected ? {} : (isRest ? {} : inlineStyle)}
       aria-label={`Día ${d}, ${label || 'sin registro'}. ${isSelected ? 'Seleccionado' : ''}`}

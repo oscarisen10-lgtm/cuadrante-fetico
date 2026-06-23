@@ -126,9 +126,11 @@ export function DateDetailPanel({ selectedDates, shiftsMap, setSelectedDates, ma
         ) : (
           <div className="grid grid-cols-2 gap-3 animate-in fade-in duration-300" role="toolbar" aria-label="Acciones para las fechas seleccionadas">
             <button onClick={() => markMulti('rest')} className="bg-amber-500 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all" aria-label="Marcar como día libre">Marcar Libre</button>
+            {/* Ocultado temporalmente a petición del usuario:
             {canRequestOff && (
               <button onClick={() => setShowNoteInput(true)} className="bg-emerald-400 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all" aria-label="Solicitar día libre al jefe">Solicitar Libre</button>
             )}
+            */}
             
             <select 
                onChange={(e) => { 
@@ -143,7 +145,7 @@ export function DateDetailPanel({ selectedDates, shiftsMap, setSelectedDates, ma
                <option value="sick" className="text-slate-800 bg-white font-bold">Marcar Baja Laboral</option>
             </select>
             
-            <button onClick={() => openEditHours(selectedDates[0])} className="bg-blue-600 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all" aria-label="Ajustar horas trabajadas">Ajustar Horas</button>
+            <button onClick={() => openEditHours(selectedDates[0])} className="col-span-2 bg-blue-600 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all" aria-label="Ajustar horas trabajadas">Ajustar Horas</button>
             
             <button onClick={deleteSelectedDates} className="col-span-2 bg-rose-500 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all" aria-label="Borrar registro de las fechas seleccionadas">Borrar Registro</button>
           </div>
