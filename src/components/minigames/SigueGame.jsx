@@ -83,8 +83,8 @@ function Play({ end }) {
   return (
     <div className="flex-1 flex flex-col px-5 pb-6 select-none">
       <div className="flex items-center justify-center gap-3 mb-3">
-        <span className="bg-black/30 text-emerald-400 font-black px-4 py-1.5 rounded-full text-sm">🎯 {Math.round(st.current.scoreMs / 40)}</span>
-        <span className="bg-black/30 font-black px-3 py-1.5 rounded-full text-sm">{'❤️'.repeat(livesLeft)}{'🖤'.repeat(strikes)}</span>
+        <span className="hud-chip text-emerald-400 font-black px-4 py-1.5 rounded-full text-sm">🎯 {Math.round(st.current.scoreMs / 40)}</span>
+        <span className="hud-chip font-black px-3 py-1.5 rounded-full text-sm">{'❤️'.repeat(livesLeft)}{'🖤'.repeat(strikes)}</span>
       </div>
       <div
         ref={arenaRef}

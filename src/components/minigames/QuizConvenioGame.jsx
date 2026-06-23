@@ -62,9 +62,9 @@ function Play({ end }) {
   return (
     <div className={`flex-1 flex flex-col items-center justify-center px-6 pb-8 transition-colors ${feedback === 'ok' ? 'bg-emerald-500/10' : feedback === 'ko' ? 'bg-rose-500/20' : ''}`}>
       <div className="flex items-center gap-4 mb-6">
-        <span className="bg-black/30 text-white font-black px-4 py-1.5 rounded-full text-sm">{idx + 1}/{TOTAL}</span>
-        <span className={`bg-black/30 font-black px-4 py-1.5 rounded-full text-sm ${timeLeft <= 3 ? 'text-rose-400 animate-pulse' : 'text-white'}`}>⏱ {timeLeft}s</span>
-        <span className="bg-black/30 text-emerald-400 font-black px-4 py-1.5 rounded-full text-sm">✓ {okRef.current}</span>
+        <span className="hud-chip text-white font-black px-4 py-1.5 rounded-full text-sm">{idx + 1}/{TOTAL}</span>
+        <span className={`hud-chip font-black px-4 py-1.5 rounded-full text-sm ${timeLeft <= 3 ? 'text-rose-400 animate-pulse' : 'text-white'}`}>⏱ {timeLeft}s</span>
+        <span className="hud-chip text-emerald-400 font-black px-4 py-1.5 rounded-full text-sm">✓ {okRef.current}</span>
       </div>
       <div className="rounded-3xl px-6 py-8 mb-8 min-h-[140px] flex items-center max-w-sm w-full" style={fx.panel}>
         <p className="text-white text-lg font-bold text-center leading-relaxed w-full">

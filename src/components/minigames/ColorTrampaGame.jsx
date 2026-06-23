@@ -68,9 +68,9 @@ function Play({ end }) {
   return (
     <div className={`flex-1 flex flex-col items-center justify-center px-6 pb-8 transition-colors duration-150 ${flash === 'ok' ? 'bg-emerald-500/10' : flash === 'ko' ? 'bg-rose-500/30' : ''}`}>
       <div className="flex items-center gap-3 mb-6">
-        <span className={`bg-black/30 font-black px-4 py-1.5 rounded-full text-sm ${timeLeft <= 10 ? 'text-rose-400 animate-pulse' : 'text-white'}`}>⏱ {timeLeft}s</span>
-        <span className="bg-black/30 text-cyan-400 font-black px-4 py-1.5 rounded-full text-sm">Nivel {level}</span>
-        <span className="bg-black/30 text-emerald-400 font-black px-4 py-1.5 rounded-full text-sm">✓ {okRef.current}</span>
+        <span className={`hud-chip font-black px-4 py-1.5 rounded-full text-sm ${timeLeft <= 10 ? 'text-rose-400 animate-pulse' : 'text-white'}`}>⏱ {timeLeft}s</span>
+        <span className="hud-chip text-cyan-400 font-black px-4 py-1.5 rounded-full text-sm">Nivel {level}</span>
+        <span className="hud-chip text-emerald-400 font-black px-4 py-1.5 rounded-full text-sm">✓ {okRef.current}</span>
       </div>
       <p className="text-white/70 font-bold uppercase tracking-widest text-xs mb-4 text-center max-w-[280px] leading-relaxed">Pulsa el botón del <strong className="text-white">COLOR de la tinta</strong>, no el que dice la palabra</p>
       <div className="rounded-3xl px-10 py-10 mb-8" style={fx.panel}>

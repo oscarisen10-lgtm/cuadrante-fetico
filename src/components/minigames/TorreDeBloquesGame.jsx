@@ -604,7 +604,7 @@ export function TorreDeBloquesGame({ onFinish, onCancel, practiceAttempts, playA
                 className="flex-1 bg-gradient-to-r from-fuchsia-500 to-pink-500 text-white font-black py-4 rounded-2xl shadow-[0_0_25px_rgba(217,70,239,0.35)] disabled:opacity-20 active:scale-95 transition-transform flex flex-col items-center justify-center border-b-4 border-fuchsia-700"
               >
                 <span className="text-base uppercase tracking-wider flex items-center gap-1.5"><Play size={16} fill="currentColor" /> Jugar</span>
-                <span className="text-[9px] text-fuchsia-100 font-bold bg-black/25 px-2 py-0.5 rounded-full mt-1">{playAttempts} INTENTOS</span>
+                <span className="text-[9px] text-fuchsia-100 font-bold hud-chip px-2 py-0.5 rounded-full mt-1">{playAttempts} INTENTOS</span>
               </button>
             </div>
             <button 

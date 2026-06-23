@@ -93,9 +93,9 @@ function Play({ end }) {
   return (
     <div className={`flex-1 flex flex-col items-center justify-center px-6 pb-8 transition-colors duration-200 ${feedback === 'ok' ? 'bg-emerald-500/10' : feedback === 'ko' ? 'bg-rose-500/20' : ''}`}>
       <div className="flex items-center gap-3 mb-6">
-        <span className={`bg-black/30 font-black px-4 py-1.5 rounded-full text-sm ${timeLeft <= 10 ? 'text-rose-400 animate-pulse' : 'text-white'}`}>⏱ {timeLeft}s</span>
-        <span className="bg-black/30 text-emerald-400 font-black px-4 py-1.5 rounded-full text-sm">✓ {okRef.current}</span>
-        <span className="bg-black/30 font-black px-3 py-1.5 rounded-full text-sm">{'❤️'.repeat(livesLeft)}{'🖤'.repeat(fails)}</span>
+        <span className={`hud-chip font-black px-4 py-1.5 rounded-full text-sm ${timeLeft <= 10 ? 'text-rose-400 animate-pulse' : 'text-white'}`}>⏱ {timeLeft}s</span>
+        <span className="hud-chip text-emerald-400 font-black px-4 py-1.5 rounded-full text-sm">✓ {okRef.current}</span>
+        <span className="hud-chip font-black px-3 py-1.5 rounded-full text-sm">{'❤️'.repeat(livesLeft)}{'🖤'.repeat(fails)}</span>
       </div>
       <p className="text-white/60 font-bold uppercase tracking-widest text-xs mb-3">Nivel {level} · cobra al cliente</p>
       <div className="rounded-3xl px-8 py-6 mb-8 text-center" style={fx.panel}>

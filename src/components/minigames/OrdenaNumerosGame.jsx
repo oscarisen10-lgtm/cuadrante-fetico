@@ -27,8 +27,8 @@ function Play({ end }) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-5 pb-6">
       <div className="flex items-center gap-4 mb-5">
-        <span className="bg-black/30 text-white font-black px-4 py-1.5 rounded-full text-sm">Busca el <span className="text-lime-400">{next}</span></span>
-        <span className="bg-black/30 text-rose-400 font-black px-4 py-1.5 rounded-full text-sm">✗ {errors}</span>
+        <span className="hud-chip text-white font-black px-4 py-1.5 rounded-full text-sm">Busca el <span className="text-lime-400">{next}</span></span>
+        <span className="hud-chip text-rose-400 font-black px-4 py-1.5 rounded-full text-sm">✗ {errors}</span>
       </div>
       <div className="grid grid-cols-4 gap-2.5 w-full max-w-sm">
         {numbers.map((n, i) => {

@@ -62,7 +62,7 @@ function Play({ end }) {
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-6 pb-8 select-none" onPointerDown={tap}>
-      <span className="bg-black/30 text-pink-300 font-black px-5 py-1.5 rounded-full text-sm mb-5">🎯 {scoreRef.current}</span>
+      <span className="hud-chip text-pink-300 font-black px-5 py-1.5 rounded-full text-sm mb-5">🎯 {scoreRef.current}</span>
       <p className="text-white/60 font-bold uppercase tracking-widest text-xs mb-7 text-center max-w-[260px] leading-relaxed">Toca cuando el punto pase por la <strong className="text-emerald-300">zona verde</strong></p>
 
       <svg viewBox="0 0 200 200" className="w-72 h-72">

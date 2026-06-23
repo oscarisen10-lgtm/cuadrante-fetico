@@ -97,7 +97,7 @@ function Play({ end }) {
 
   return (
     <div className="flex-1 flex flex-col items-center px-6 pt-3 select-none">
-      <span className={`bg-black/30 font-black px-4 py-1.5 rounded-full text-sm ${danger ? 'text-rose-400 animate-pulse' : 'text-amber-300'}`}>⏱ {(tRef.current / 1000).toFixed(1)}s</span>
+      <span className={`hud-chip font-black px-4 py-1.5 rounded-full text-sm ${danger ? 'text-rose-400 animate-pulse' : 'text-amber-300'}`}>⏱ {(tRef.current / 1000).toFixed(1)}s</span>
       <p className={`font-bold uppercase tracking-widest text-xs mt-3 ${calm ? 'text-emerald-300 animate-pulse' : 'text-white/60'}`}>
         {calm ? '¡Prepárate!' : 'Mantén la caja sobre la barra'}
       </p>

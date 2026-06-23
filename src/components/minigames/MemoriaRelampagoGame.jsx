@@ -51,8 +51,8 @@ function Play({ end }) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-6 pb-8">
       <div className="flex items-center gap-3 mb-3">
-        <span className="bg-black/30 text-violet-300 font-black px-4 py-1.5 rounded-full text-sm">Nivel {level}</span>
-        <span className="bg-black/30 text-white font-black px-4 py-1.5 rounded-full text-sm">{litRef.current.length} casillas</span>
+        <span className="hud-chip text-violet-300 font-black px-4 py-1.5 rounded-full text-sm">Nivel {level}</span>
+        <span className="hud-chip text-white font-black px-4 py-1.5 rounded-full text-sm">{litRef.current.length} casillas</span>
       </div>
       <p className={`font-black text-lg mb-5 ${phase === 'show' ? 'text-amber-400 animate-pulse' : 'text-emerald-400'}`}>
         {phase === 'show' ? '👀 MEMORIZA' : '✋ ¡REPÍTELAS!'}

@@ -128,7 +128,7 @@ export function FrenoEnSecoGame({ onFinish, onCancel, practiceAttempts, playAtte
                 className="flex-1 bg-white/10 text-white font-bold py-4 rounded-2xl disabled:opacity-30 disabled:scale-100 active:scale-95 transition-all flex flex-col items-center justify-center"
               >
                 <span className="text-lg mb-1">Prueba</span>
-                <span className="text-[10px] text-white/50 bg-black/30 px-2 py-0.5 rounded-full">{practiceAttempts} INTENTOS</span>
+                <span className="text-[10px] text-white/50 hud-chip px-2 py-0.5 rounded-full">{practiceAttempts} INTENTOS</span>
               </button>
               <button 
                 onClick={() => startGame('jugar')}
@@ -136,7 +136,7 @@ export function FrenoEnSecoGame({ onFinish, onCancel, practiceAttempts, playAtte
                 className="flex-1 bg-gradient-to-b from-red-400 to-red-600 text-white font-bold py-4 rounded-2xl shadow-[0_0_20px_rgba(239,68,68,0.4)] disabled:opacity-30 disabled:scale-100 active:scale-95 transition-all flex flex-col items-center justify-center"
               >
                 <span className="text-lg mb-1 flex items-center gap-1"><Play size={18} fill="currentColor" /> Jugar</span>
-                <span className="text-[10px] text-red-100 bg-black/20 px-2 py-0.5 rounded-full">{playAttempts} INTENTOS</span>
+                <span className="text-[10px] text-red-100 hud-chip px-2 py-0.5 rounded-full">{playAttempts} INTENTOS</span>
               </button>
             </div>
             <button 

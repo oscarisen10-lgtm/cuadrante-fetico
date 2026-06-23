@@ -94,9 +94,9 @@ function Play({ end }) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-6 pb-8">
       <div className="flex items-center gap-2.5 mb-5 flex-wrap justify-center">
-        <span className={`bg-black/30 font-black px-4 py-1.5 rounded-full text-sm ${timeLeft <= 10 ? 'text-rose-400 animate-pulse' : 'text-white'}`}>⏱ {timeLeft}s</span>
-        <span className="bg-black/30 text-orange-400 font-black px-4 py-1.5 rounded-full text-sm">🐭 {hits}</span>
-        <span className="bg-black/30 font-black px-3 py-1.5 rounded-full text-sm">{'❤️'.repeat(lives)}{'🖤'.repeat(MAX_LIVES - lives)}</span>
+        <span className={`hud-chip font-black px-4 py-1.5 rounded-full text-sm ${timeLeft <= 10 ? 'text-rose-400 animate-pulse' : 'text-white'}`}>⏱ {timeLeft}s</span>
+        <span className="hud-chip text-orange-400 font-black px-4 py-1.5 rounded-full text-sm">🐭 {hits}</span>
+        <span className="hud-chip font-black px-3 py-1.5 rounded-full text-sm">{'❤️'.repeat(lives)}{'🖤'.repeat(MAX_LIVES - lives)}</span>
       </div>
       <p className="text-white/60 font-bold uppercase tracking-widest text-xs mb-5 text-center">¡Caza ratones y <span className="text-rose-400">NO toques las 💣</span>!</p>
       <div className="grid grid-cols-3 gap-3.5 w-full max-w-xs">

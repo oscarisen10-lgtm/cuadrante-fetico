@@ -148,7 +148,7 @@ export function GameShell({
                 style={{ boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.2), inset 0 -3px 6px rgba(0,0,0,0.25)' }}
               >
                 <span className="text-lg mb-1">Prueba</span>
-                <span className="text-[10px] text-white/50 bg-black/30 px-2 py-0.5 rounded-full">{practiceAttempts} INTENTOS</span>
+                <span className="text-[10px] text-white/50 hud-chip px-2 py-0.5 rounded-full">{practiceAttempts} INTENTOS</span>
               </button>
               <button
                 onClick={() => start('jugar')}
@@ -157,7 +157,7 @@ export function GameShell({
                 style={{ boxShadow: 'inset 0 2px 2px rgba(255,255,255,0.3), inset 0 -4px 8px rgba(0,0,0,0.28), 0 8px 18px rgba(0,0,0,0.3)' }}
               >
                 <span className="text-lg mb-1 flex items-center gap-1"><Play size={18} fill="currentColor" /> Jugar</span>
-                <span className="text-[10px] bg-black/20 px-2 py-0.5 rounded-full">{playAttempts} INTENTOS</span>
+                <span className="text-[10px] hud-chip px-2 py-0.5 rounded-full">{playAttempts} INTENTOS</span>
               </button>
             </div>
             <button

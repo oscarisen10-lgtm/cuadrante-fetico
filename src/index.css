@@ -157,3 +157,14 @@ body {
 /* Aparición tipo "pop" para números/iconos destacados */
 .count-pop { animation: count-pop .5s cubic-bezier(.2,.8,.2,1.45) both; }
 @keyframes count-pop { 0% { opacity: 0; transform: scale(.55); } 60% { transform: scale(1.14); } 100% { opacity: 1; transform: scale(1); } }
+
+/* Chip de HUD premium (marcadores dentro de los juegos). Sin backdrop-blur:
+   barato a 60fps aunque el fondo cambie cada frame. Reemplaza a bg-black/30. */
+.hud-chip {
+  background: linear-gradient(180deg, rgba(20,20,28,0.62), rgba(0,0,0,0.5));
+  border: 1px solid rgba(255,255,255,0.16);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,0.2), 0 4px 12px rgba(0,0,0,0.4);
+}
+/* "Pop" del marcador al subir la puntuación */
+.hud-pop { animation: hud-pop .34s cubic-bezier(.2,.8,.2,1.5) both; }
+@keyframes hud-pop { 0% { transform: scale(1); } 40% { transform: scale(1.22); } 100% { transform: scale(1); } }

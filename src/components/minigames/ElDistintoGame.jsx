@@ -54,8 +54,8 @@ function Play({ end }) {
   return (
     <div className={`flex-1 flex flex-col items-center justify-center px-5 pb-6 transition-colors ${flash === 'ok' ? 'bg-emerald-500/10' : flash === 'ko' ? 'bg-rose-500/20' : ''}`}>
       <div className="flex items-center gap-4 mb-5">
-        <span className="bg-black/30 text-white font-black px-4 py-1.5 rounded-full text-sm">⏱ {timeLeft}s</span>
-        <span className="bg-black/30 text-pink-400 font-black px-4 py-1.5 rounded-full text-sm">✓ {okRef.current}</span>
+        <span className="hud-chip text-white font-black px-4 py-1.5 rounded-full text-sm">⏱ {timeLeft}s</span>
+        <span className="hud-chip text-pink-400 font-black px-4 py-1.5 rounded-full text-sm">✓ {okRef.current}</span>
       </div>
       <p className="text-white/60 font-bold uppercase tracking-widest text-xs mb-4">¡Toca el que es diferente!</p>
       <div className="grid gap-2 w-full max-w-sm" style={{ gridTemplateColumns: `repeat(${data.size}, minmax(0, 1fr))` }}>

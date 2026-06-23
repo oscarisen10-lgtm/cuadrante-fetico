@@ -64,8 +64,8 @@ function Play({ end }) {
   return (
     <div className="flex-1 flex flex-col px-5 pb-6">
       <div className="flex items-center justify-center gap-3 mb-3">
-        <span className="bg-black/30 text-white font-black px-4 py-1.5 rounded-full text-sm">Ronda {round}/{TOTAL_ROUNDS}</span>
-        <span className="bg-black/30 text-amber-300 font-black px-4 py-1.5 rounded-full text-sm">✓ {okRef.current}</span>
+        <span className="hud-chip text-white font-black px-4 py-1.5 rounded-full text-sm">Ronda {round}/{TOTAL_ROUNDS}</span>
+        <span className="hud-chip text-amber-300 font-black px-4 py-1.5 rounded-full text-sm">✓ {okRef.current}</span>
       </div>
 
       {phase === 'show' ? (
@@ -74,7 +74,7 @@ function Play({ end }) {
             <span className="animate-pulse">👀</span> ¡Memoriza la estantería!
           </p>
           {/* barra de cuenta atrás */}
-          <div className="h-1.5 w-full max-w-sm mx-auto bg-black/30 rounded-full overflow-hidden mb-3">
+          <div className="h-1.5 w-full max-w-sm mx-auto hud-chip rounded-full overflow-hidden mb-3">
             <div className="h-full rounded-full gfx-bar" style={{ background: 'linear-gradient(90deg,#fde68a,#f59e0b)', animationDuration: `${SHOW_MS}ms` }} />
           </div>
 

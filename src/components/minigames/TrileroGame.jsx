@@ -93,8 +93,8 @@ function Play({ end }) {
   return (
     <div className="flex-1 flex flex-col items-center px-6 pb-8 select-none">
       <div className="flex items-center gap-3 mb-4">
-        <span className="bg-black/30 text-rose-300 font-black px-4 py-1.5 rounded-full text-sm">Nivel {level}</span>
-        <span className="bg-black/30 text-white font-black px-4 py-1.5 rounded-full text-sm">{swapsFor(level)} mezclas</span>
+        <span className="hud-chip text-rose-300 font-black px-4 py-1.5 rounded-full text-sm">Nivel {level}</span>
+        <span className="hud-chip text-white font-black px-4 py-1.5 rounded-full text-sm">{swapsFor(level)} mezclas</span>
       </div>
       <p className={`font-bold uppercase tracking-widest text-xs mb-2 h-5 ${phase === 'guess' ? 'text-rose-300 animate-pulse' : 'text-white/70'}`}>{hint}</p>
 

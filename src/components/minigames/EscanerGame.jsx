@@ -79,9 +79,9 @@ function Play({ end }) {
       onPointerDown={scan}
     >
       <div className="flex items-center gap-3 mb-8">
-        <span className="bg-black/30 text-cyan-300 font-black px-4 py-1.5 rounded-full text-sm">Nivel {level}</span>
-        <span className="bg-black/30 text-emerald-400 font-black px-4 py-1.5 rounded-full text-sm">✓ {hits}</span>
-        <span className="bg-black/30 font-black px-3 py-1.5 rounded-full text-sm">{'❤️'.repeat(livesLeft)}{'🖤'.repeat(fails)}</span>
+        <span className="hud-chip text-cyan-300 font-black px-4 py-1.5 rounded-full text-sm">Nivel {level}</span>
+        <span className="hud-chip text-emerald-400 font-black px-4 py-1.5 rounded-full text-sm">✓ {hits}</span>
+        <span className="hud-chip font-black px-3 py-1.5 rounded-full text-sm">{'❤️'.repeat(livesLeft)}{'🖤'.repeat(fails)}</span>
       </div>
       <p className="text-white/70 font-bold uppercase tracking-widest text-xs mb-6 text-center max-w-[280px] leading-relaxed">Pulsa cuando el láser cruce el <strong className="text-cyan-300">código de barras</strong></p>
 
