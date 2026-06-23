@@ -44,8 +44,9 @@ function NavigationBar({ isAdmin }) {
   ];
 
   return (
-    <nav 
-      className="h-20 bg-white/95 backdrop-blur-md border-t border-slate-100 flex justify-around items-center px-3 shrink-0"
+    <nav
+      className="h-20 flex justify-around items-center px-3 shrink-0"
+      style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,249,0.96))', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', boxShadow: '0 -1px 0 rgba(255,255,255,0.9) inset, 0 -8px 22px rgba(15,40,30,0.07)' }}
       role="tablist"
       aria-label="Navegación principal"
     >
@@ -157,16 +158,16 @@ function AppContent({ user, authHook }) {
       <div className="w-full max-w-md bg-white h-full flex flex-col relative overflow-hidden">
         
         {!gameActive && (
-        <header className="bg-emerald-600 text-white pb-2 px-3 rounded-b-xl shadow-lg shrink-0 z-10 relative" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }} role="banner">
-          <div className="flex justify-between items-center px-1">
-            <div>
-              <h1 className="font-black text-base italic leading-tight">Hola, {user.fullName?.split(' ')[0]}</h1>
-            </div>
-            <button onClick={() => setShowConfirmLogout(true)} className="bg-white/10 p-2 rounded-lg hover:bg-white/20" aria-label="Cerrar sesión"><LogOut size={16} /></button>
+        <header className="text-white pb-3 px-4 rounded-b-[1.5rem] shrink-0 z-10 relative overflow-hidden" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.6rem)', background: 'linear-gradient(160deg, #10b981 0%, #059669 55%, #047857 100%)', boxShadow: '0 8px 22px rgba(5,120,87,0.35), inset 0 2px 2px rgba(255,255,255,0.3)' }} role="banner">
+          <div className="pointer-events-none absolute -top-10 -right-4 w-40 h-40 rounded-full" style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.18), transparent 70%)' }} />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.16), transparent)' }} />
+          <div className="relative z-10 flex justify-between items-center px-1">
+            <h1 className="font-black text-lg italic leading-tight" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.18)' }}>Hola, {user.fullName?.split(' ')[0]}</h1>
+            <button onClick={() => setShowConfirmLogout(true)} className="btn3d p-2.5 rounded-xl" style={{ background: 'rgba(255,255,255,0.16)', boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.4), inset 0 -2px 4px rgba(0,0,0,0.15)' }} aria-label="Cerrar sesión"><LogOut size={16} /></button>
           </div>
-          
+
           {isOffline && (
-            <div className="mt-2 bg-orange-500/90 backdrop-blur text-white text-[10px] font-bold py-1.5 px-3 rounded-full flex items-center justify-center gap-2 animate-in slide-in-from-top-2" role="alert">
+            <div className="relative z-10 mt-2 bg-orange-500/90 backdrop-blur text-white text-[10px] font-bold py-1.5 px-3 rounded-full flex items-center justify-center gap-2 animate-in slide-in-from-top-2" role="alert">
               <WifiOff size={12} aria-hidden="true" />
               <span>Estás sin conexión. Usando datos guardados.</span>
             </div>
@@ -296,8 +297,13 @@ export default function App() {
   }, [loading, user, settings?.useBiometric, isUnlocked, verifyBiometric]);
 
   if (loading) return (
-    <div className="h-screen flex items-center justify-center text-emerald-600 font-bold italic text-sm" role="status" aria-label="Cargando aplicación">
-      <span className="animate-pulse">Sincronizando Google...</span>
+    <div className="h-screen flex flex-col items-center justify-center gap-5" style={{ background: 'radial-gradient(circle at 50% 35%, #ecfdf5, #d1fae5 60%, #a7f3d0)' }} role="status" aria-label="Cargando aplicación">
+      <div className="relative w-16 h-16">
+        <div className="absolute inset-0 rounded-full" style={{ border: '4px solid rgba(5,150,105,0.18)' }} />
+        <div className="absolute inset-0 rounded-full animate-spin" style={{ border: '4px solid transparent', borderTopColor: '#059669', borderRightColor: '#10b981' }} />
+        <div className="absolute inset-0 grid place-items-center text-2xl">🗓️</div>
+      </div>
+      <span className="text-emerald-700 font-black italic text-sm tracking-wide animate-pulse">Sincronizando…</span>
     </div>
   );
 

@@ -3,15 +3,21 @@ import { Eye, EyeOff } from 'lucide-react';
 
 export function NavItem({ icon, label, isActive, onClick }) {
   return (
-    <button 
-      onClick={onClick} 
-      className={`flex flex-col items-center gap-1.5 transition-all flex-1 ${isActive ? 'text-emerald-700' : 'text-slate-400'}`}
+    <button
+      onClick={onClick}
+      className="btn3d flex flex-col items-center gap-1 flex-1"
       role="tab"
       aria-selected={isActive}
       aria-label={`${label}${isActive ? ' (pestaña activa)' : ''}`}
     >
-      <div className={`p-2 rounded-2xl transition-all ${isActive ? 'bg-emerald-50 shadow-inner scale-110' : 'hover:bg-slate-100'}`} aria-hidden="true">{React.cloneElement(icon, { size: 20, strokeWidth: isActive ? 3 : 2 })}</div>
-      <span className={`text-[9px] uppercase tracking-tighter leading-none ${isActive ? 'font-black' : 'font-bold'}`}>{label}</span>
+      <div
+        className={`grid place-items-center w-11 h-11 rounded-2xl transition-all duration-200 ${isActive ? 'text-white -translate-y-0.5' : 'text-slate-400'}`}
+        style={isActive ? { background: 'linear-gradient(180deg,#34d399,#059669)', boxShadow: '0 7px 15px rgba(5,150,105,0.45), inset 0 1.5px 1px rgba(255,255,255,0.55), inset 0 -3px 6px rgba(4,120,87,0.55)' } : {}}
+        aria-hidden="true"
+      >
+        {React.cloneElement(icon, { size: 20, strokeWidth: isActive ? 2.6 : 2 })}
+      </div>
+      <span className={`text-[9px] uppercase tracking-tight leading-none ${isActive ? 'font-black text-emerald-700' : 'font-bold text-slate-400'}`}>{label}</span>
     </button>
   );
 }

@@ -146,3 +146,14 @@ body {
 /* Destello giratorio (corona / campeón) */
 .twinkle { animation: twinkle 2.4s ease-in-out infinite; }
 @keyframes twinkle { 0%,100% { opacity:.5; transform: scale(.85) rotate(0deg); } 50% { opacity:1; transform: scale(1.1) rotate(180deg); } }
+
+/* Confeti de victoria (cae y gira) */
+.confetti { position: absolute; top: -24px; width: 9px; height: 14px; border-radius: 2px; will-change: transform, opacity; animation: confetti-fall linear forwards; }
+@keyframes confetti-fall {
+  0%   { transform: translateY(-24px) rotate(0deg);   opacity: 1; }
+  100% { transform: translateY(105vh)  rotate(620deg); opacity: 0; }
+}
+
+/* Aparición tipo "pop" para números/iconos destacados */
+.count-pop { animation: count-pop .5s cubic-bezier(.2,.8,.2,1.45) both; }
+@keyframes count-pop { 0% { opacity: 0; transform: scale(.55); } 60% { transform: scale(1.14); } 100% { opacity: 1; transform: scale(1); } }

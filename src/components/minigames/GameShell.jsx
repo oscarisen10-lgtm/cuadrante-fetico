@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Play, Info } from 'lucide-react';
 import { GameBackground } from './gameFx';
 export { fx } from './gameFx';
@@ -42,6 +42,7 @@ export function GameShell({
   const [mode, setMode] = useState(null);
   const [countdown, setCountdown] = useState(3);
   const [score, setScore] = useState(0);
+  const [displayScore, setDisplayScore] = useState(0);
   const endedRef = useRef(false);
 
   useEffect(() => {
@@ -53,6 +54,28 @@ export function GameShell({
     endedRef.current = false;
     setPhase('playing');
   }, [phase, countdown]);
+
+  // Cuenta progresiva de la puntuación en la pantalla final (sensación "premium").
+  useEffect(() => {
+    if (phase !== 'finished') { setDisplayScore(0); return; }
+    let raf; const start = performance.now(); const dur = 750;
+    const tick = (now) => {
+      const p = Math.min(1, (now - start) / dur);
+      setDisplayScore(Math.round(score * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [phase, score]);
+
+  const CONFETTI_COLORS = ['#fbbf24', '#34d399', '#60a5fa', '#f472b6', '#a78bfa', '#fb7185'];
+  const confetti = useMemo(
+    () => phase === 'finished'
+      ? Array.from({ length: 28 }, (_, i) => ({ id: i, x: Math.random() * 100, color: CONFETTI_COLORS[i % CONFETTI_COLORS.length], dur: 1.8 + Math.random() * 1.6, delay: Math.random() * 0.5, rot: Math.random() * 360 }))
+      : [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [phase]
+  );
 
   const start = (m) => {
     if (m === 'jugar' ? playAttempts <= 0 : practiceAttempts <= 0) return;
@@ -116,7 +139,8 @@ export function GameShell({
               <button
                 onClick={() => start('prueba')}
                 disabled={practiceAttempts <= 0}
-                className="flex-1 bg-white/10 text-white font-bold py-4 rounded-2xl disabled:opacity-30 active:scale-95 transition-all flex flex-col items-center justify-center"
+                className="btn3d flex-1 bg-white/10 text-white font-bold py-4 rounded-2xl flex flex-col items-center justify-center"
+                style={{ boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.2), inset 0 -3px 6px rgba(0,0,0,0.25)' }}
               >
                 <span className="text-lg mb-1">Prueba</span>
                 <span className="text-[10px] text-white/50 bg-black/30 px-2 py-0.5 rounded-full">{practiceAttempts} INTENTOS</span>
@@ -124,7 +148,8 @@ export function GameShell({
               <button
                 onClick={() => start('jugar')}
                 disabled={playAttempts <= 0}
-                className={`flex-1 ${t.grad} text-white font-bold py-4 rounded-2xl ${t.glow} disabled:opacity-30 active:scale-95 transition-all flex flex-col items-center justify-center`}
+                className={`btn3d sheen flex-1 ${t.grad} text-white font-bold py-4 rounded-2xl ${t.glow} flex flex-col items-center justify-center`}
+                style={{ boxShadow: 'inset 0 2px 2px rgba(255,255,255,0.3), inset 0 -4px 8px rgba(0,0,0,0.28), 0 8px 18px rgba(0,0,0,0.3)' }}
               >
                 <span className="text-lg mb-1 flex items-center gap-1"><Play size={18} fill="currentColor" /> Jugar</span>
                 <span className="text-[10px] bg-black/20 px-2 py-0.5 rounded-full">{playAttempts} INTENTOS</span>
@@ -155,23 +180,34 @@ export function GameShell({
       </div>
 
       {phase === 'countdown' && (
-        <div className="absolute inset-0 z-40 bg-black/80 backdrop-blur-sm flex items-center justify-center flex-col">
-          <p className={`${t.text} font-bold uppercase tracking-widest mb-4 text-center px-8`}>Modo: {mode === 'jugar' ? 'Ranking' : 'Prueba'}</p>
-          <div className="text-9xl font-black text-white animate-bounce drop-shadow-[0_0_30px_rgba(255,255,255,0.5)]">{countdown}</div>
+        <div className="absolute inset-0 z-40 flex items-center justify-center flex-col" style={{ background: 'radial-gradient(circle at 50% 45%, rgba(18,10,42,0.92), rgba(0,0,0,0.94))', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}>
+          <p className={`${t.text} font-black uppercase tracking-[0.3em] mb-7 text-xs`}>Modo: {mode === 'jugar' ? 'Ranking' : 'Prueba'}</p>
+          <div key={countdown} className="relative count-pop">
+            <div className="absolute -inset-12 rounded-full" style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.14), transparent 70%)' }} />
+            <span className="relative text-[9rem] font-black text-white leading-none" style={{ textShadow: '0 0 44px rgba(255,255,255,0.55)' }}>{countdown > 0 ? countdown : '¡YA!'}</span>
+          </div>
         </div>
       )}
 
       {phase === 'finished' && (
-        <div className="absolute inset-0 z-40 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center px-6">
-          <div className="text-7xl mb-6">{emoji}</div>
-          <div className={`bg-[#1e1b4b] border ${t.border} p-8 rounded-[2rem] text-center w-full max-w-sm mb-8 shadow-2xl`}>
-            <p className="text-white/60 font-bold uppercase tracking-widest text-xs mb-2">Puntuación obtenida</p>
-            <p className="text-6xl font-black text-white">{score}</p>
-            <p className={`${t.text} text-sm mt-2 font-bold`}>PUNTOS</p>
+        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center px-6 overflow-hidden" style={{ background: 'radial-gradient(circle at 50% 32%, #241a4d, #090418 72%)' }}>
+          {/* rayos de victoria (giro lento) */}
+          <div className="absolute left-1/2 top-[34%] -translate-x-1/2 -translate-y-1/2 w-[160vmax] h-[160vmax] pointer-events-none opacity-[0.10]" style={{ background: 'repeating-conic-gradient(from 0deg, #fff 0deg 6deg, transparent 6deg 18deg)', animation: 'gfx-spin 16s linear infinite' }} />
+          {/* confeti */}
+          {confetti.map(c => (
+            <span key={c.id} className="confetti" style={{ left: `${c.x}%`, background: c.color, animationDuration: `${c.dur}s`, animationDelay: `${c.delay}s`, transform: `rotate(${c.rot}deg)`, boxShadow: `0 0 6px ${c.color}` }} />
+          ))}
+          <div className="relative text-7xl mb-5 count-pop" style={{ filter: 'drop-shadow(0 6px 18px rgba(0,0,0,0.5)) drop-shadow(0 0 26px rgba(255,255,255,0.35))' }}>{emoji}</div>
+          <p className="relative text-white/80 font-black uppercase tracking-[0.25em] text-sm mb-4">¡Partida completada!</p>
+          <div className="relative p-7 rounded-[2rem] text-center w-full max-w-sm mb-8" style={{ background: 'linear-gradient(180deg, rgba(40,33,82,0.92), rgba(20,14,45,0.92))', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 18px 44px rgba(0,0,0,0.55), inset 0 1.5px 1px rgba(255,255,255,0.18)' }}>
+            <p className="text-white/55 font-bold uppercase tracking-widest text-[10px] mb-1">Puntuación obtenida</p>
+            <p className="text-[4.2rem] font-black text-white leading-none tabular-nums" style={{ textShadow: '0 4px 18px rgba(0,0,0,0.5)' }}>{displayScore}</p>
+            <p className={`${t.text} text-xs mt-1.5 font-black tracking-[0.3em]`}>PUNTOS</p>
           </div>
           <button
             onClick={() => onFinish(score, mode)}
-            className={`w-full max-w-sm ${t.grad} text-white font-black py-5 rounded-[1.5rem] text-lg ${t.glow} active:scale-95 transition-transform`}
+            className={`btn3d sheen w-full max-w-sm ${t.grad} text-white font-black py-5 rounded-[1.6rem] text-lg`}
+            style={{ boxShadow: 'inset 0 2px 2px rgba(255,255,255,0.35), inset 0 -4px 8px rgba(0,0,0,0.3), 0 12px 26px rgba(0,0,0,0.42)' }}
           >
             Continuar
           </button>
