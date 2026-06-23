@@ -89,6 +89,7 @@ function AppContent({ user, authHook }) {
   // completa (flotando) una vez por cada cartel nuevo; al cerrarlo se marca como visto
   // en el dispositivo y se vuelve a Resumen, donde el cartel sigue en "Noticias".
   const navigate = useNavigate();
+  const location = useLocation();
   const activeCartel = useMemo(() => newsList.find(n => n.imageUrl && !n.isPushRequest) || null, [newsList]);
   const [seenCartelId, setSeenCartelId] = useState(() => { try { return localStorage.getItem('cartelSeenId'); } catch { return null; } });
   const [manualImg, setManualImg] = useState(null); // imagen ampliada manualmente desde Resumen { url, title }
@@ -176,6 +177,7 @@ function AppContent({ user, authHook }) {
         )}
 
         <main className="flex-1 p-4 overflow-y-auto scrollbar-hide flex flex-col min-h-0 relative z-0" role="main">
+          <div key={location.pathname} className="flex-1 flex flex-col min-h-0 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <Suspense fallback={<div className="flex-1 flex items-center justify-center text-emerald-500 font-bold text-xs italic" role="status" aria-label="Cargando contenido">Cargando...</div>}>
             <Routes>
               <Route path="/dashboard" element={
@@ -203,6 +205,7 @@ function AppContent({ user, authHook }) {
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </Suspense>
+          </div>
         </main>
 
         {!gameActive && <NavigationBar isAdmin={isAdmin} />}

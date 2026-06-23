@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
+import { hapticLight } from '../utils/haptics';
 
 export function NavItem({ icon, label, isActive, onClick }) {
   return (
     <button
-      onClick={onClick}
+      onClick={() => { hapticLight(); onClick(); }}
       className="btn3d flex flex-col items-center gap-1 flex-1"
       role="tab"
       aria-selected={isActive}

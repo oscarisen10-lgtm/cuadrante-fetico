@@ -343,17 +343,23 @@ export function ArenaView({ user, onPlayingChange }) {
       )}
 
       {/* Tabs Clasificación / Puntuación */}
-      <div className="mx-6 rounded-full p-1 flex mb-6" style={{ background: 'linear-gradient(180deg,#2c2c2c,#191919)', boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.65), 0 1px 0 rgba(255,255,255,0.06)' }}>
-        {[['clasificacion', 'Clasificación'], ['puntuacion', 'Puntuación']].map(([id, label]) => (
-          <button
-            key={id}
-            onClick={() => setActiveTab(id)}
-            className={`btn3d flex-1 py-3 rounded-full text-[13px] font-black transition-all ${activeTab === id ? 'text-white' : 'text-slate-400'}`}
-            style={activeTab === id ? { background: 'linear-gradient(180deg,#5e5e5e,#2e2e2e)', boxShadow: '0 4px 8px rgba(0,0,0,0.5), inset 0 1.5px 1px rgba(255,255,255,0.28)' } : {}}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="mx-6 rounded-full p-1 mb-6 relative" style={{ background: 'linear-gradient(180deg,#2c2c2c,#191919)', boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.65), 0 1px 0 rgba(255,255,255,0.06)' }}>
+        {/* indicador deslizante */}
+        <div
+          className="absolute top-1 bottom-1 rounded-full transition-transform duration-300 ease-out pointer-events-none"
+          style={{ width: 'calc(50% - 4px)', left: 4, transform: activeTab === 'clasificacion' ? 'translateX(0%)' : 'translateX(100%)', background: 'linear-gradient(180deg,#5e5e5e,#2e2e2e)', boxShadow: '0 4px 8px rgba(0,0,0,0.5), inset 0 1.5px 1px rgba(255,255,255,0.28)' }}
+        />
+        <div className="relative flex">
+          {[['clasificacion', 'Clasificación'], ['puntuacion', 'Puntuación']].map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={`flex-1 py-3 rounded-full text-[13px] font-black transition-colors duration-200 z-10 ${activeTab === id ? 'text-white' : 'text-slate-400'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Lista de Ranking */}
