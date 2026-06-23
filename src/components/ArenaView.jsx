@@ -120,7 +120,17 @@ export function ArenaView({ user, onPlayingChange }) {
   const myEntry = players.find(p => p.uid === user?.uid);
   const myRank = myEntry ? players.indexOf(myEntry) + 1 : null;
 
-  const RANK_COLORS = ['bg-[#e56b6f]', 'bg-[#1b998b]', 'bg-[#9d8df1]', 'bg-[#4a4e69]', 'bg-[#577590]'];
+  const RANK_GRADIENTS = [
+    { bg: 'linear-gradient(135deg,#f3989b,#d9534f)', glow: 'rgba(217,83,79,0.5)' },
+    { bg: 'linear-gradient(135deg,#34c2b1,#138f80)', glow: 'rgba(19,143,128,0.5)' },
+    { bg: 'linear-gradient(135deg,#b8abf9,#7c6ce8)', glow: 'rgba(124,108,232,0.5)' },
+    { bg: 'linear-gradient(135deg,#5f6590,#3a3e5c)', glow: 'rgba(58,62,92,0.5)' },
+    { bg: 'linear-gradient(135deg,#728fab,#46647f)', glow: 'rgba(70,100,127,0.5)' },
+  ];
+  const rankStyle = (i) => {
+    const g = RANK_GRADIENTS[i % RANK_GRADIENTS.length];
+    return { background: g.bg, boxShadow: `0 9px 20px -7px ${g.glow}, 0 2px 4px rgba(0,0,0,0.15), inset 0 1.5px 1px rgba(255,255,255,0.4), inset 0 -7px 16px rgba(0,0,0,0.22)` };
+  };
   const initialsOf = (n) => (n || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
   const launchGame = (game) => { setSelectedGame(game); setShowPicker(false); setIsPlaying(true); };
@@ -139,30 +149,42 @@ export function ArenaView({ user, onPlayingChange }) {
   };
 
   return (
-    <div className="h-full bg-[#f6f5ef] text-slate-800 overflow-y-auto scrollbar-hide relative font-sans">
+    <div className="h-full text-slate-800 overflow-y-auto scrollbar-hide relative font-sans" style={{ background: 'radial-gradient(125% 90% at 50% -8%, #fffdf7 0%, #f3eddd 46%, #e6ddc8 100%)' }}>
+      {/* Capa decorativa de profundidad: orbes de color + retícula sutil (gradientes estáticos = baratos) */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" style={{ zIndex: -1 }}>
+        <div className="absolute -top-24 -left-20 w-72 h-72 rounded-full" style={{ background: 'radial-gradient(circle, rgba(124,58,237,0.18), transparent 70%)' }} />
+        <div className="absolute top-44 -right-24 w-80 h-80 rounded-full" style={{ background: 'radial-gradient(circle, rgba(245,158,11,0.18), transparent 70%)' }} />
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-[130%] h-72 rounded-[50%]" style={{ background: 'radial-gradient(ellipse at 50% 100%, rgba(16,185,129,0.14), transparent 72%)' }} />
+        <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px)', backgroundSize: '22px 22px', maskImage: 'radial-gradient(ellipse at 50% 30%, #000 40%, transparent 85%)', WebkitMaskImage: 'radial-gradient(ellipse at 50% 30%, #000 40%, transparent 85%)' }} />
+      </div>
+
       {/* Cabecera */}
-      <header className="flex justify-center items-center gap-2 py-2 sticky top-0 bg-[#f6f5ef]/90 backdrop-blur-md z-50 border-b border-slate-200/50 px-4">
-         <div className="bg-white rounded-full px-4 py-1.5 font-black text-[13px] flex items-center gap-2 shadow-sm text-slate-800">
-           <span className="flex items-center gap-1" title="Partidas que te quedan hoy">🎮 {isAdmin ? '∞' : playAttemptsLeft}</span>
-           <span className="text-slate-200 px-1">|</span>
-           <span className="flex items-center gap-1" title="Tu posición en el ranking de hoy">{myRank ? `#${myRank}` : '—'} <Trophy size={14} className="text-amber-500 fill-amber-500"/></span>
+      <header className="flex justify-center items-center gap-2 py-2.5 sticky top-0 z-50 px-4" style={{ background: 'linear-gradient(180deg, rgba(255,253,247,0.92), rgba(243,237,221,0.72))', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', boxShadow: '0 1px 0 rgba(255,255,255,0.7) inset, 0 2px 12px rgba(120,90,40,0.07)' }}>
+         <div className="rounded-full px-4 py-2 font-black text-[13px] flex items-center gap-2.5 text-slate-800" style={{ background: 'linear-gradient(180deg, #ffffff, #f1ece0)', boxShadow: '0 2px 6px rgba(120,90,40,0.18), inset 0 1px 2px rgba(255,255,255,0.95), inset 0 -2px 4px rgba(120,90,40,0.08)' }}>
+           <span className="flex items-center gap-1.5" title="Partidas que te quedan hoy"><span className="text-base leading-none">🎮</span> {isAdmin ? '∞' : playAttemptsLeft}</span>
+           <span className="w-px h-4 bg-slate-300/70" />
+           <span className="flex items-center gap-1.5" title="Tu posición en el ranking de hoy">{myRank ? `#${myRank}` : '—'} <Trophy size={14} className="text-amber-500 fill-amber-500 drop-shadow-[0_1px_1px_rgba(180,120,0,0.4)]"/></span>
          </div>
          {isAdmin && (
-           <button onClick={() => setShowPicker(true)} className="bg-violet-600 text-white rounded-full px-3 py-1.5 font-black text-[11px] flex items-center gap-1.5 shadow-sm active:scale-95">
+           <button onClick={() => setShowPicker(true)} className="btn3d text-white rounded-full px-3.5 py-2 font-black text-[11px] flex items-center gap-1.5" style={{ background: 'linear-gradient(180deg, #a78bfa, #7c3aed 60%, #6d28d9)', boxShadow: '0 4px 10px rgba(124,58,237,0.45), inset 0 1px 2px rgba(255,255,255,0.6), inset 0 -3px 6px rgba(76,29,149,0.5)' }}>
              <Gamepad2 size={14}/> TODOS
            </button>
          )}
       </header>
 
       {/* Título Principal */}
-      <h1 className="text-center font-black text-5xl uppercase tracking-tighter mt-3 mb-4 text-black" style={{ textShadow: '2px 2px 0px rgba(0,0,0,0.1)' }}>HOY</h1>
+      <h1 className="text-center font-black text-[3.4rem] uppercase tracking-tighter mt-4 mb-5 leading-none breathe" style={{ background: 'linear-gradient(180deg, #1f2937 0%, #4b5563 55%, #1f2937 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', filter: 'drop-shadow(0 2px 0 rgba(255,255,255,0.6)) drop-shadow(0 4px 8px rgba(0,0,0,0.18))' }}>HOY</h1>
 
       {/* Tarjeta del Minijuego */}
       <div
         onClick={() => launchGame(activeGame)}
-        className={`mx-6 ${activeGame.bgClass} rounded-[2rem] relative shadow-2xl mb-12 flex flex-col items-center justify-center min-h-[220px] border cursor-pointer active:scale-95 transition-transform`}
+        className={`group mx-6 ${activeGame.bgClass} rounded-[2.2rem] relative mb-14 flex flex-col items-center justify-center min-h-[232px] border cursor-pointer btn3d`}
+        style={{ boxShadow: '0 22px 46px -14px rgba(0,0,0,0.6), 0 8px 18px rgba(0,0,0,0.25)' }}
       >
-        <div className="absolute inset-0 rounded-[2rem] overflow-hidden pointer-events-none z-0">
+        {/* brillo superior tipo cristal + aro interior de luz (profundidad) */}
+        <div className="absolute inset-x-0 top-0 h-1/2 rounded-t-[2.2rem] pointer-events-none z-[1]" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.28), rgba(255,255,255,0) 80%)' }} />
+        <div className="absolute inset-0 rounded-[2.2rem] pointer-events-none z-[1]" style={{ boxShadow: 'inset 0 1.5px 0 rgba(255,255,255,0.5), inset 0 0 0 1.5px rgba(255,255,255,0.16), inset 0 -16px 32px rgba(0,0,0,0.34)' }} />
+        <div className="sheen absolute inset-0 rounded-[2.2rem] overflow-hidden pointer-events-none z-0">
           {activeGame.id === 'zigzag' && (
              <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 40px, #475569 40px, #475569 80px)', animation: 'belt-move 1.5s linear infinite' }}></div>
           )}
@@ -177,13 +199,13 @@ export function ArenaView({ user, onPlayingChange }) {
              </div>
           )}
         </div>
-        <div className="absolute top-4 left-4 bg-black/40 text-white text-[11px] font-black px-3 py-1.5 rounded-full z-10">{gameNumberStr}</div>
-        <div className="absolute top-4 right-4 bg-black/40 text-white text-[11px] font-black px-3 py-1.5 rounded-full flex items-center gap-1.5 z-10">
+        <div className="absolute top-4 left-4 text-white text-[11px] font-black px-3 py-1.5 rounded-full z-10" style={{ background: 'rgba(0,0,0,0.34)', boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.28), 0 2px 6px rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.14)' }}>{gameNumberStr}</div>
+        <div className="absolute top-4 right-4 text-white text-[11px] font-black px-3 py-1.5 rounded-full flex items-center gap-1.5 z-10" style={{ background: 'rgba(0,0,0,0.34)', boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.28), 0 2px 6px rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.14)' }}>
           <Timer size={14} className="animate-pulse" /> {timeLeftStr}
         </div>
-        
+
         {/* Gráfico decorativo: Botones cayendo o Productos según el juego */}
-        <div className="relative mt-6 w-full h-28 pointer-events-none flex items-center justify-center">
+        <div className="relative z-10 mt-6 w-full h-28 pointer-events-none flex items-center justify-center">
           {activeGame.id === 'zigzag' && (
             <>
               <div className="absolute top-0 left-1/4 w-10 h-10 bg-white border-b-4 border-slate-300 rounded-xl shadow-lg rotate-12 flex items-center justify-center animate-bounce">
@@ -236,15 +258,16 @@ export function ArenaView({ user, onPlayingChange }) {
           )}
           {!['zigzag', 'catch', 'freno', 'torre'].includes(activeGame.id) && (
             <>
-              <div className="absolute top-0 left-1/4 text-4xl opacity-70 animate-bounce">{activeGame.emoji}</div>
-              <div className="text-7xl drop-shadow-2xl z-10" style={{ animation: 'bounce 2.6s infinite 0.1s' }}>{activeGame.emoji}</div>
-              <div className="absolute bottom-2 right-1/4 text-4xl opacity-70" style={{ animation: 'bounce 2.2s infinite 0.5s' }}>{activeGame.emoji}</div>
+              <div className="absolute top-0 left-1/4 text-4xl opacity-60 float-soft" style={{ animationDelay: '0.6s' }}>{activeGame.emoji}</div>
+              <div className="text-[5rem] float-soft z-10" style={{ filter: 'drop-shadow(0 12px 16px rgba(0,0,0,0.45))' }}>{activeGame.emoji}</div>
+              <div className="absolute bottom-2 right-1/4 text-4xl opacity-60 float-soft" style={{ animationDelay: '1.1s' }}>{activeGame.emoji}</div>
             </>
           )}
         </div>
 
-        <div className="absolute -bottom-5 bg-white text-black font-black uppercase tracking-tighter px-8 py-3 rounded-full text-sm shadow-[0_4px_15px_rgba(0,0,0,0.1)] border-2 border-slate-100 z-20">
-          JUGAR: {activeGame.title}
+        <div className="btn3d sheen absolute -bottom-5 text-slate-900 font-black uppercase tracking-tight px-6 py-3 rounded-full text-sm z-20 flex items-center gap-2" style={{ background: 'linear-gradient(180deg, #ffffff, #ece9e1)', boxShadow: '0 9px 20px rgba(0,0,0,0.24), inset 0 2px 2px rgba(255,255,255,0.95), inset 0 -3px 6px rgba(120,90,40,0.14)', border: '1px solid rgba(255,255,255,0.85)' }}>
+          <span className="grid place-items-center w-5 h-5 rounded-full text-white text-[10px] pl-0.5" style={{ background: 'linear-gradient(180deg,#34d399,#059669)', boxShadow: '0 1px 3px rgba(5,150,105,0.55), inset 0 1px 1px rgba(255,255,255,0.5)' }}>▶</span>
+          {activeGame.title}
         </div>
       </div>
 
@@ -255,26 +278,38 @@ export function ArenaView({ user, onPlayingChange }) {
         </div>
       ) : (
         <>
-          <div className="flex justify-center items-end gap-5 mb-8 px-4 mt-6">
+          <div className="flex justify-center items-end gap-5 mb-9 px-4 mt-7">
             {players[1] && (
-              <div className="flex flex-col items-center">
-                <div className="w-12 h-12 rounded-full bg-[#1b998b] border-2 border-[#f6f5ef] shadow-lg z-10 flex items-center justify-center text-white font-black text-sm">{initialsOf(players[1].name)}</div>
-                <span className="text-[10px] font-bold text-slate-500 mt-2 truncate max-w-[70px]">{players[1].name}</span>
+              <div className="flex flex-col items-center pop-in" style={{ animationDelay: '0.05s' }}>
+                <div className="relative w-14 h-14">
+                  <div className="absolute inset-0 rounded-full" style={{ background: 'linear-gradient(160deg,#f8fafc,#94a3b8 55%,#64748b)', boxShadow: '0 7px 15px rgba(100,116,139,0.5), inset 0 2px 3px rgba(255,255,255,0.9), inset 0 -4px 8px rgba(0,0,0,0.25)' }} />
+                  <div className="absolute inset-0 grid place-items-center text-white font-black text-base" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.45)' }}>{initialsOf(players[1].name)}</div>
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-5 h-5 grid place-items-center rounded-full text-[9px] font-black text-slate-700" style={{ background: 'linear-gradient(180deg,#fff,#cbd5e1)', boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>2</span>
+                </div>
+                <span className="text-[11px] font-black text-slate-600 mt-3 truncate max-w-[72px]">{players[1].name}</span>
                 <span className="text-[10px] font-bold text-slate-400">{players[1].score} pts</span>
               </div>
             )}
-            <div className="flex flex-col items-center relative">
-              <Crown size={28} className="text-amber-400 fill-amber-400 absolute -top-7 z-20 drop-shadow-md" />
-              <div className="w-16 h-16 rounded-full bg-[#e56b6f] border-4 border-[#f6f5ef] shadow-lg z-10 flex items-center justify-center text-white font-black text-lg">{initialsOf(players[0].name)}</div>
-              <div className="bg-white px-3 py-1 rounded-full shadow-md mt-2 z-20 border border-slate-100 text-center">
-                <span className="text-[11px] font-black text-black block truncate max-w-[90px]">{players[0].name}</span>
-                <span className="text-[10px] font-bold text-slate-500">{players[0].score} pts</span>
+            <div className="flex flex-col items-center relative pop-in">
+              <Crown size={30} className="text-amber-400 fill-amber-400 absolute -top-8 z-20 twinkle" style={{ filter: 'drop-shadow(0 2px 4px rgba(180,120,0,0.5))' }} />
+              <div className="relative w-[4.6rem] h-[4.6rem]">
+                <div className="absolute -inset-1.5 rounded-full" style={{ background: 'radial-gradient(circle, rgba(245,158,11,0.5), transparent 70%)' }} />
+                <div className="absolute inset-0 rounded-full" style={{ background: 'linear-gradient(160deg,#fef3c7,#f59e0b 52%,#b45309)', boxShadow: '0 11px 24px rgba(245,158,11,0.55), inset 0 2px 4px rgba(255,255,255,0.95), inset 0 -5px 10px rgba(120,53,15,0.4)' }} />
+                <div className="absolute inset-0 grid place-items-center text-white font-black text-xl" style={{ textShadow: '0 1px 3px rgba(120,53,15,0.6)' }}>{initialsOf(players[0].name)}</div>
+              </div>
+              <div className="px-3 py-1 rounded-full mt-3 z-20 text-center" style={{ background: 'linear-gradient(180deg,#fff,#f1ece0)', boxShadow: '0 4px 10px rgba(120,90,40,0.2), inset 0 1px 2px rgba(255,255,255,0.9)', border: '1px solid rgba(255,255,255,0.8)' }}>
+                <span className="text-[11px] font-black text-slate-900 block truncate max-w-[92px]">{players[0].name}</span>
+                <span className="text-[10px] font-bold text-amber-600">{players[0].score} pts</span>
               </div>
             </div>
             {players[2] && (
-              <div className="flex flex-col items-center">
-                <div className="w-12 h-12 rounded-full bg-[#9d8df1] border-2 border-[#f6f5ef] shadow-lg z-10 flex items-center justify-center text-white font-black text-sm">{initialsOf(players[2].name)}</div>
-                <span className="text-[10px] font-bold text-slate-500 mt-2 truncate max-w-[70px]">{players[2].name}</span>
+              <div className="flex flex-col items-center pop-in" style={{ animationDelay: '0.1s' }}>
+                <div className="relative w-14 h-14">
+                  <div className="absolute inset-0 rounded-full" style={{ background: 'linear-gradient(160deg,#fcd9b6,#d97706 55%,#9a3412)', boxShadow: '0 7px 15px rgba(217,119,6,0.5), inset 0 2px 3px rgba(255,255,255,0.7), inset 0 -4px 8px rgba(0,0,0,0.25)' }} />
+                  <div className="absolute inset-0 grid place-items-center text-white font-black text-base" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.45)' }}>{initialsOf(players[2].name)}</div>
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-5 h-5 grid place-items-center rounded-full text-[9px] font-black text-amber-900" style={{ background: 'linear-gradient(180deg,#fde9d2,#fbbf80)', boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>3</span>
+                </div>
+                <span className="text-[11px] font-black text-slate-600 mt-3 truncate max-w-[72px]">{players[2].name}</span>
                 <span className="text-[10px] font-bold text-slate-400">{players[2].score} pts</span>
               </div>
             )}
@@ -296,19 +331,17 @@ export function ArenaView({ user, onPlayingChange }) {
       )}
 
       {/* Tabs Clasificación / Puntuación */}
-      <div className="mx-6 bg-[#2a2a2a] rounded-full p-1 flex mb-6 shadow-inner">
-        <button 
-          onClick={() => setActiveTab('clasificacion')}
-          className={`flex-1 py-3 rounded-full text-[13px] font-bold transition-all ${activeTab === 'clasificacion' ? 'bg-[#1a1a1a] text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
-        >
-          Clasificación
-        </button>
-        <button 
-          onClick={() => setActiveTab('puntuacion')}
-          className={`flex-1 py-3 rounded-full text-[13px] font-bold transition-all ${activeTab === 'puntuacion' ? 'bg-[#1a1a1a] text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
-        >
-          Puntuación
-        </button>
+      <div className="mx-6 rounded-full p-1 flex mb-6" style={{ background: 'linear-gradient(180deg,#2c2c2c,#191919)', boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.65), 0 1px 0 rgba(255,255,255,0.06)' }}>
+        {[['clasificacion', 'Clasificación'], ['puntuacion', 'Puntuación']].map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setActiveTab(id)}
+            className={`btn3d flex-1 py-3 rounded-full text-[13px] font-black transition-all ${activeTab === id ? 'text-white' : 'text-slate-400'}`}
+            style={activeTab === id ? { background: 'linear-gradient(180deg,#5e5e5e,#2e2e2e)', boxShadow: '0 4px 8px rgba(0,0,0,0.5), inset 0 1.5px 1px rgba(255,255,255,0.28)' } : {}}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Lista de Ranking */}
@@ -317,12 +350,12 @@ export function ArenaView({ user, onPlayingChange }) {
           players.length === 0 ? (
             <p className="text-center text-slate-400 font-bold text-sm py-6">Nadie ha jugado todavía hoy.</p>
           ) : players.map((p, i) => (
-            <div key={p.uid} className={`${RANK_COLORS[i % RANK_COLORS.length]} rounded-[1.25rem] p-4 flex items-center text-white relative shadow-sm ${p.uid === user?.uid ? 'ring-2 ring-amber-400' : ''}`}>
-              <span className="text-xl font-black w-10 opacity-90">#{i + 1}</span>
-              <div className="w-11 h-11 rounded-full bg-white/20 border-2 border-white/20 mr-3 flex items-center justify-center font-bold shadow-sm">{initialsOf(p.name)}</div>
+            <div key={p.uid} className={`rounded-[1.4rem] p-3.5 flex items-center text-white relative rise-in ${p.uid === user?.uid ? 'ring-2 ring-amber-300' : ''}`} style={{ ...rankStyle(i), animationDelay: `${Math.min(i * 0.05, 0.4)}s` }}>
+              <span className="w-9 h-9 mr-3 grid place-items-center rounded-full text-[15px] font-black shrink-0" style={{ background: 'rgba(0,0,0,0.22)', boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.28), inset 0 -2px 3px rgba(0,0,0,0.28)', textShadow: '0 1px 2px rgba(0,0,0,0.4)' }}>{i + 1}</span>
+              <div className="w-11 h-11 rounded-full mr-3 grid place-items-center font-black shrink-0" style={{ background: 'rgba(255,255,255,0.2)', boxShadow: 'inset 0 2px 3px rgba(255,255,255,0.35), inset 0 -3px 5px rgba(0,0,0,0.22)', textShadow: '0 1px 2px rgba(0,0,0,0.35)' }}>{initialsOf(p.name)}</div>
               <div className="flex flex-col min-w-0">
-                <span className="font-black text-[15px]">{p.score} Puntos</span>
-                <span className="text-sm font-medium opacity-90 truncate">{p.name}{p.uid === user?.uid ? ' (tú)' : ''}</span>
+                <span className="font-black text-[16px] leading-tight" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>{p.score} <span className="text-[11px] font-bold opacity-80">PTS</span></span>
+                <span className="text-[13px] font-medium opacity-90 truncate">{p.name}{p.uid === user?.uid ? ' · tú' : ''}</span>
               </div>
             </div>
           ))
@@ -330,12 +363,12 @@ export function ArenaView({ user, onPlayingChange }) {
           stores.length === 0 ? (
             <p className="text-center text-slate-400 font-bold text-sm py-6">Todavía no hay tiendas en el ranking.</p>
           ) : stores.map((s, i) => (
-            <div key={s.id} className={`${RANK_COLORS[i % RANK_COLORS.length]} rounded-[1.25rem] p-4 flex items-center text-white relative shadow-sm`}>
-              <span className="text-xl font-black w-10 opacity-90">#{i + 1}</span>
-              <div className="w-11 h-11 rounded-full bg-white/20 border-2 border-white/20 mr-3 flex items-center justify-center font-bold shadow-sm text-lg">🏪</div>
+            <div key={s.id} className="rounded-[1.4rem] p-3.5 flex items-center text-white relative rise-in" style={{ ...rankStyle(i), animationDelay: `${Math.min(i * 0.05, 0.4)}s` }}>
+              <span className="w-9 h-9 mr-3 grid place-items-center rounded-full text-[15px] font-black shrink-0" style={{ background: 'rgba(0,0,0,0.22)', boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.28), inset 0 -2px 3px rgba(0,0,0,0.28)', textShadow: '0 1px 2px rgba(0,0,0,0.4)' }}>{i + 1}</span>
+              <div className="w-11 h-11 rounded-full mr-3 grid place-items-center text-lg shrink-0" style={{ background: 'rgba(255,255,255,0.2)', boxShadow: 'inset 0 2px 3px rgba(255,255,255,0.35), inset 0 -3px 5px rgba(0,0,0,0.22)' }}>🏪</div>
               <div className="flex flex-col min-w-0">
-                <span className="font-black text-[15px]">{s.total} Puntos</span>
-                <span className="text-sm font-medium opacity-90 truncate">{s.store}</span>
+                <span className="font-black text-[16px] leading-tight" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>{s.total} <span className="text-[11px] font-bold opacity-80">PTS</span></span>
+                <span className="text-[13px] font-medium opacity-90 truncate">{s.store}</span>
               </div>
             </div>
           ))
@@ -343,11 +376,11 @@ export function ArenaView({ user, onPlayingChange }) {
       </div>
 
       {/* Info de la competición */}
-      <div className="mx-6 bg-[#e6e4df] rounded-[2rem] p-6 text-center mb-8 relative border-b-4 border-slate-300/50">
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-violet-500 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase flex items-center gap-1 shadow-sm">
+      <div className="mx-6 rounded-[2rem] p-6 text-center mb-8 relative" style={{ background: 'linear-gradient(180deg,#fbfaf6,#e9e5da)', boxShadow: '0 12px 26px -12px rgba(120,90,40,0.28), inset 0 2px 3px rgba(255,255,255,0.9), inset 0 -3px 8px rgba(120,90,40,0.08)', border: '1px solid rgba(255,255,255,0.7)' }}>
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-white text-[10px] font-black px-3.5 py-1.5 rounded-full uppercase flex items-center gap-1.5" style={{ background: 'linear-gradient(180deg,#a78bfa,#7c3aed)', boxShadow: '0 4px 10px rgba(124,58,237,0.45), inset 0 1px 1px rgba(255,255,255,0.5)' }}>
           <Trophy size={10} className="fill-white" /> Juego de hoy
         </div>
-        <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-2 mt-2">{activeGame.emoji} {activeGame.title}</h4>
+        <h4 className="text-base font-black text-slate-800 uppercase tracking-wide mb-2 mt-2 flex items-center justify-center gap-2"><span className="text-xl">{activeGame.emoji}</span> {activeGame.title}</h4>
         <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide leading-relaxed">
           Cada día, un juego distinto. Tienes {ARENA_DAILY_PLAYS} partidas para tu mejor marca.<br/>¡Compite por el orgullo de tu tienda!
         </p>
@@ -392,11 +425,13 @@ export function ArenaView({ user, onPlayingChange }) {
                 <button
                   key={g.id}
                   onClick={() => launchGame(g)}
-                  className={`${g.bgClass} rounded-2xl p-3 flex flex-col items-center justify-center gap-1.5 aspect-square border active:scale-95 transition-transform text-white`}
+                  className={`btn3d ${g.bgClass} rounded-2xl p-3 flex flex-col items-center justify-center gap-1 aspect-square border text-white relative overflow-hidden`}
+                  style={{ boxShadow: '0 8px 16px -6px rgba(0,0,0,0.5), inset 0 1.5px 0 rgba(255,255,255,0.3), inset 0 -8px 16px rgba(0,0,0,0.3)' }}
                 >
-                  <span className="text-3xl">{g.emoji}</span>
-                  <span className="text-[8px] font-black uppercase tracking-tight leading-tight text-center">{g.title}</span>
-                  <span className="text-[7px] font-bold opacity-60">Día {g.day}</span>
+                  <div className="absolute inset-x-0 top-0 h-1/2 pointer-events-none" style={{ background: 'linear-gradient(180deg,rgba(255,255,255,0.22),transparent)' }} />
+                  <span className="text-3xl relative" style={{ filter: 'drop-shadow(0 3px 4px rgba(0,0,0,0.4))' }}>{g.emoji}</span>
+                  <span className="text-[8px] font-black uppercase tracking-tight leading-tight text-center relative">{g.title}</span>
+                  <span className="text-[7px] font-bold opacity-70 relative">Día {g.day}</span>
                 </button>
               ))}
             </div>
