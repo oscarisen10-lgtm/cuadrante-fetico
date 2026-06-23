@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameShell, shuffle, rand } from './GameShell';
+import { GameShell, shuffle, rand , ScoreBurst } from './GameShell';
 
 const POOL = ['🍎', '🍌', '🥕', '🧀', '🥛', '🍞', '🐟', '🍇'];
 const TOTAL_ROUNDS = 6;
@@ -66,6 +66,7 @@ function Play({ end }) {
       <div className="flex items-center justify-center gap-3 mb-3">
         <span className="hud-chip text-white font-black px-4 py-1.5 rounded-full text-sm">Ronda {round}/{TOTAL_ROUNDS}</span>
         <span className="hud-chip text-amber-300 font-black px-4 py-1.5 rounded-full text-sm">✓ {okRef.current}</span>
+        <ScoreBurst value={okRef.current} color="#fcd34d" />
       </div>
 
       {phase === 'show' ? (

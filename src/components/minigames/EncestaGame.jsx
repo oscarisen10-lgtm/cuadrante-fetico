@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameShell, clamp } from './GameShell';
+import { GameShell, clamp , ScoreBurst } from './GameShell';
 
 const DURATION = 60;
 const REST = { x: 50, y: 86 };
@@ -108,6 +108,7 @@ function Play({ end }) {
       <div className="flex items-center justify-center gap-3 mb-3">
         <span className={`hud-chip font-black px-4 py-1.5 rounded-full text-sm ${timeLeft <= 10 ? 'text-rose-400 animate-pulse' : 'text-white'}`}>⏱ {timeLeft}s</span>
         <span className="hud-chip text-sky-300 font-black px-4 py-1.5 rounded-full text-sm">🎯 {st.current.baskets}</span>
+        <ScoreBurst value={st.current.baskets} color="#38bdf8" />
       </div>
       <div
         ref={arenaRef}

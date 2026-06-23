@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameShell, clamp, rand } from './GameShell';
+import { GameShell, clamp, rand , ScoreBurst } from './GameShell';
 
 const PAIRS = [
   ['🍎', '🍅'], ['😀', '😄'], ['🐥', '🐤'], ['⭐', '🌟'], ['🍊', '🍑'],
@@ -56,6 +56,7 @@ function Play({ end }) {
       <div className="flex items-center gap-4 mb-5">
         <span className="hud-chip text-white font-black px-4 py-1.5 rounded-full text-sm">⏱ {timeLeft}s</span>
         <span className="hud-chip text-pink-400 font-black px-4 py-1.5 rounded-full text-sm">✓ {okRef.current}</span>
+        <ScoreBurst value={okRef.current} color="#f9a8d4" />
       </div>
       <p className="text-white/60 font-bold uppercase tracking-widest text-xs mb-4">¡Toca el que es diferente!</p>
       <div className="grid gap-2 w-full max-w-sm" style={{ gridTemplateColumns: `repeat(${data.size}, minmax(0, 1fr))` }}>

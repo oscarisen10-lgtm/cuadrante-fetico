@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameShell, clamp, rand } from './GameShell';
+import { GameShell, clamp, rand , ScoreBurst } from './GameShell';
 
 const SIZE = 270, R = 96, CX = SIZE / 2, CY = SIZE / 2;
 const THRESH = 13;            // grados mínimos entre cajas
@@ -59,6 +59,7 @@ function Play({ end }) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-6 pb-8 select-none" onPointerDown={shoot}>
       <span className="hud-chip text-orange-300 font-black px-5 py-1.5 rounded-full text-sm mb-6">📦 {scoreRef.current}</span>
+      <ScoreBurst value={scoreRef.current} color="#fb923c" />
       <p className="text-white/60 font-bold uppercase tracking-widest text-xs mb-6 text-center max-w-[260px] leading-relaxed">Toca para <strong className="text-orange-300">lanzar</strong> una caja a la rueda. ¡Que no choque con otra!</p>
 
       <div className="relative" style={{ width: SIZE, height: SIZE }}>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameShell, clamp, rand } from './GameShell';
+import { GameShell, clamp, rand , ScoreBurst } from './GameShell';
 
 const MAX_FAILS = 3;
 
@@ -81,6 +81,7 @@ function Play({ end }) {
       <div className="flex items-center gap-3 mb-8">
         <span className="hud-chip text-cyan-300 font-black px-4 py-1.5 rounded-full text-sm">Nivel {level}</span>
         <span className="hud-chip text-emerald-400 font-black px-4 py-1.5 rounded-full text-sm">✓ {hits}</span>
+        <ScoreBurst value={hits} color="#22d3ee" />
         <span className="hud-chip font-black px-3 py-1.5 rounded-full text-sm">{'❤️'.repeat(livesLeft)}{'🖤'.repeat(fails)}</span>
       </div>
       <p className="text-white/70 font-bold uppercase tracking-widest text-xs mb-6 text-center max-w-[280px] leading-relaxed">Pulsa cuando el láser cruce el <strong className="text-cyan-300">código de barras</strong></p>

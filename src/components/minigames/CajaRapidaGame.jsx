@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameShell, clamp, shuffle, rand, fx } from './GameShell';
+import { GameShell, clamp, shuffle, rand, fx , ScoreBurst } from './GameShell';
 
 const DURATION = 60;   // segundos de juego
 const MAX_FAILS = 3;   // 3 fallos = eliminado
@@ -95,6 +95,7 @@ function Play({ end }) {
       <div className="flex items-center gap-3 mb-6">
         <span className={`hud-chip font-black px-4 py-1.5 rounded-full text-sm ${timeLeft <= 10 ? 'text-rose-400 animate-pulse' : 'text-white'}`}>⏱ {timeLeft}s</span>
         <span className="hud-chip text-emerald-400 font-black px-4 py-1.5 rounded-full text-sm">✓ {okRef.current}</span>
+        <ScoreBurst value={okRef.current} color="#6ee7b7" />
         <span className="hud-chip font-black px-3 py-1.5 rounded-full text-sm">{'❤️'.repeat(livesLeft)}{'🖤'.repeat(fails)}</span>
       </div>
       <p className="text-white/60 font-bold uppercase tracking-widest text-xs mb-3">Nivel {level} · cobra al cliente</p>

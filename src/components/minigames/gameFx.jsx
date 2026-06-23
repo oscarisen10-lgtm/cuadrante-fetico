@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 
 // Paletas por juego — fondo en degradado profundo + 3 orbes de luz.
 const THEMES = {
@@ -94,4 +94,20 @@ export function useParticles() {
   );
 
   return [layer, fire];
+}
+
+/**
+ * ScoreBurst — feedback de "juice" autónomo: dispara una ráfaga de partículas
+ * cada vez que `value` SUBE. Se coloca una sola vez en el JSX del juego
+ * (<ScoreBurst value={score} />) sin tocar la lógica de puntuación.
+ * x/y en % del área de juego (por defecto, arriba-centro, cerca del HUD).
+ */
+export function ScoreBurst({ value, x = 50, y = 13, color = '#fde68a' }) {
+  const [layer, fire] = useParticles();
+  const prev = useRef(value);
+  useEffect(() => {
+    if (typeof value === 'number' && value > prev.current) fire(x, y, color);
+    prev.current = value;
+  }, [value, x, y, color, fire]);
+  return layer;
 }

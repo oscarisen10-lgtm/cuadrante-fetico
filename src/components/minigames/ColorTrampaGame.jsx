@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameShell, clamp, shuffle, rand, fx } from './GameShell';
+import { GameShell, clamp, shuffle, rand, fx , ScoreBurst } from './GameShell';
 
 const DURATION = 60; // segundos
 
@@ -71,6 +71,7 @@ function Play({ end }) {
         <span className={`hud-chip font-black px-4 py-1.5 rounded-full text-sm ${timeLeft <= 10 ? 'text-rose-400 animate-pulse' : 'text-white'}`}>⏱ {timeLeft}s</span>
         <span className="hud-chip text-cyan-400 font-black px-4 py-1.5 rounded-full text-sm">Nivel {level}</span>
         <span className="hud-chip text-emerald-400 font-black px-4 py-1.5 rounded-full text-sm">✓ {okRef.current}</span>
+        <ScoreBurst value={okRef.current} color="#6ee7b7" />
       </div>
       <p className="text-white/70 font-bold uppercase tracking-widest text-xs mb-4 text-center max-w-[280px] leading-relaxed">Pulsa el botón del <strong className="text-white">COLOR de la tinta</strong>, no el que dice la palabra</p>
       <div className="rounded-3xl px-10 py-10 mb-8" style={fx.panel}>

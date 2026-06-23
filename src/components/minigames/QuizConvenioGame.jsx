@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameShell, shuffle, fx } from './GameShell';
+import { GameShell, shuffle, fx , ScoreBurst } from './GameShell';
 
 // Banco de afirmaciones basadas en el convenio/acuerdos (V/F)
 const BANK = [
@@ -65,6 +65,7 @@ function Play({ end }) {
         <span className="hud-chip text-white font-black px-4 py-1.5 rounded-full text-sm">{idx + 1}/{TOTAL}</span>
         <span className={`hud-chip font-black px-4 py-1.5 rounded-full text-sm ${timeLeft <= 3 ? 'text-rose-400 animate-pulse' : 'text-white'}`}>⏱ {timeLeft}s</span>
         <span className="hud-chip text-emerald-400 font-black px-4 py-1.5 rounded-full text-sm">✓ {okRef.current}</span>
+        <ScoreBurst value={okRef.current} color="#6ee7b7" />
       </div>
       <div className="rounded-3xl px-6 py-8 mb-8 min-h-[140px] flex items-center max-w-sm w-full" style={fx.panel}>
         <p className="text-white text-lg font-bold text-center leading-relaxed w-full">

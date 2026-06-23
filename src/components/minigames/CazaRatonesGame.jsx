@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameShell, clamp, rand } from './GameShell';
+import { GameShell, clamp, rand , ScoreBurst } from './GameShell';
 
 const DURATION = 45;
 const MAX_LIVES = 3;
@@ -96,6 +96,7 @@ function Play({ end }) {
       <div className="flex items-center gap-2.5 mb-5 flex-wrap justify-center">
         <span className={`hud-chip font-black px-4 py-1.5 rounded-full text-sm ${timeLeft <= 10 ? 'text-rose-400 animate-pulse' : 'text-white'}`}>⏱ {timeLeft}s</span>
         <span className="hud-chip text-orange-400 font-black px-4 py-1.5 rounded-full text-sm">🐭 {hits}</span>
+        <ScoreBurst value={hits} color="#fb923c" />
         <span className="hud-chip font-black px-3 py-1.5 rounded-full text-sm">{'❤️'.repeat(lives)}{'🖤'.repeat(MAX_LIVES - lives)}</span>
       </div>
       <p className="text-white/60 font-bold uppercase tracking-widest text-xs mb-5 text-center">¡Caza ratones y <span className="text-rose-400">NO toques las 💣</span>!</p>
