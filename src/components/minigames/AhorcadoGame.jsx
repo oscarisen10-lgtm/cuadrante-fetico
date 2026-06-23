@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GameShell, clamp, shuffle } from './GameShell';
+import { GameShell, clamp, shuffle , ScoreBurst } from './GameShell';
 
 const WORDS = [
   'NOMINA', 'CONVENIO', 'DESCANSO', 'VACACIONES', 'TURNO', 'FESTIVO', 'PERMISO',
@@ -60,6 +60,7 @@ function Play({ end }) {
     <div className="flex-1 flex flex-col items-center justify-center px-5 pb-6">
       <div className="flex items-center gap-3 mb-4">
         <span className="hud-chip text-white font-black px-4 py-1.5 rounded-full text-sm">Palabra {wordIdx + 1}/2</span>
+        <ScoreBurst value={banked} color="#38bdf8" />
         <span className="hud-chip font-black px-4 py-1.5 rounded-full text-sm text-rose-400">{'❤️'.repeat(Math.max(0, lives))}</span>
       </div>
       <div className="text-6xl mb-4">{HANGMAN[MAX_LIVES - lives]}</div>

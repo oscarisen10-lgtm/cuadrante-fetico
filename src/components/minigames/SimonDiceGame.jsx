@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameShell, clamp, rand, fx } from './GameShell';
+import { GameShell, clamp, rand, fx , ScoreBurst } from './GameShell';
 
 const PADS = [
   { id: 0, on: ['#6ee7b7', '#10b981'], off: ['#065f46', '#052e23'], glow: 'rgba(16,185,129,0.75)', emoji: '🍏' },
@@ -52,6 +52,7 @@ function Play({ end }) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-6 pb-8">
       <p className="text-white/60 font-bold uppercase tracking-widest text-xs mb-2">Nivel {seq.length}</p>
+      <ScoreBurst value={seq.length} color="#c4b5fd" />
       <p className={`font-black text-xl mb-6 ${phase === 'show' ? 'text-amber-400' : 'text-emerald-400'}`}>
         {phase === 'show' ? '👀 MEMORIZA...' : '✋ ¡TU TURNO!'}
       </p>

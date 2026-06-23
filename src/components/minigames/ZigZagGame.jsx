@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Clock, Trophy, AlertTriangle, Play, Gamepad2, Info } from 'lucide-react';
-import { GameBackground } from './gameFx';
+import { GameBackground, ScoreBurst } from './gameFx';
 
 export function ZigZagGame({ onFinish, onCancel, practiceAttempts, playAttempts, onConsumeAttempt }) {
   const [gameState, setGameState] = useState('intro'); // 'intro', 'countdown', 'playing', 'gameover', 'finished'
@@ -305,6 +305,7 @@ export function ZigZagGame({ onFinish, onCancel, practiceAttempts, playAttempts,
       ref={gameAreaRef}
       onPointerDown={handlePointerDown}
     >
+      <ScoreBurst value={score} color="#67e8f9" />
       <GameBackground theme="slate" />
       <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-20 pointer-events-none">
         <div className="bg-black/50 backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-2 border border-white/10 shadow-lg">

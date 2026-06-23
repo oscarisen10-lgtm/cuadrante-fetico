@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Clock, Trophy, AlertTriangle, Play, Gamepad2, Info } from 'lucide-react';
-import { GameBackground } from './gameFx';
+import { GameBackground, ScoreBurst } from './gameFx';
 
 export function CatchTheShiftGame({ onFinish, onCancel, practiceAttempts, playAttempts, onConsumeAttempt }) {
   const [gameState, setGameState] = useState('intro'); // 'intro', 'countdown', 'playing', 'gameover', 'finished'
@@ -245,6 +245,7 @@ export function CatchTheShiftGame({ onFinish, onCancel, practiceAttempts, playAt
   // --- PLAYING / COUNTDOWN SCREEN ---
   return (
     <div className="fixed inset-0 z-[100] bg-[#0b0520] overflow-hidden font-sans touch-none" ref={gameAreaRef}>
+      <ScoreBurst value={score} color="#6ee7b7" />
       <GameBackground theme="violet" />
       <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-20">
         <div className="bg-black/50 backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-2 border border-white/10 shadow-lg">

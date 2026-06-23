@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { GameShell, clamp, rand } from './GameShell';
+import { GameShell, clamp, rand , ScoreBurst } from './GameShell';
 
 const START_DIGITS = 3;
 const genNumber = (digits) => {
@@ -44,6 +44,7 @@ function Play({ end }) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-6 pb-6">
       <p className="text-white/60 font-bold uppercase tracking-widest text-xs mb-4">Nivel: {digits - START_DIGITS + 1} · {digits} cifras</p>
+      <ScoreBurst value={digits} color="#c4b5fd" />
       <div className="bg-black/40 border border-violet-500/30 rounded-3xl px-8 py-8 mb-6 min-w-[260px] text-center">
         {phase === 'show' ? (
           <p className="text-white text-4xl font-black tabular-nums tracking-[0.3em]">{target}</p>

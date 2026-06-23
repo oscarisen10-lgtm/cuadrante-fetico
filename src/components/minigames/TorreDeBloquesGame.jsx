@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Gamepad2, Info, Trophy, RotateCcw, Award, X } from 'lucide-react';
-import { GameBackground } from './gameFx';
+import { GameBackground, ScoreBurst } from './gameFx';
 
 export function TorreDeBloquesGame({ onFinish, onCancel, practiceAttempts, playAttempts, onConsumeAttempt }) {
   const [gameState, setGameState] = useState('intro'); // 'intro', 'countdown', 'playing', 'finished'
@@ -664,6 +664,7 @@ export function TorreDeBloquesGame({ onFinish, onCancel, practiceAttempts, playA
         className="flex-1 w-full relative z-10 cursor-pointer active:brightness-110 transition-all"
         onClick={handleDrop}
       >
+        <ScoreBurst value={score} color="#e879f9" />
         <canvas
           ref={canvasRef}
           className="absolute inset-0 w-full h-full block"
