@@ -62,18 +62,6 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
       </div>
 
       <div style={{ zoom: fontScale }} className="flex flex-col animate-in fade-in duration-500 gap-6 pb-24 flex-1">
-        {/* Header Informativo */}
-        <div className="bg-emerald-50 border border-emerald-100 rounded-[2rem] p-5 flex items-start gap-4 shadow-sm">
-          <div className="bg-emerald-600 p-2.5 rounded-2xl text-white shadow-md shrink-0">
-            <Info size={20} />
-          </div>
-          <div>
-            <h2 className="text-[13px] font-black text-emerald-900 uppercase italic leading-tight tracking-tight">Catálogo Oficial de Licencias</h2>
-            <p className="text-[10px] text-emerald-700/80 mt-1 font-bold uppercase tracking-wider leading-relaxed">
-              Consulta tus derechos según convenio colectivo vigente. Estas licencias están en vigor hasta 31 diciembre 2026.
-            </p>
-          </div>
-        </div>
 
         {/* Tarjeta de Acceso al Asistente IA — solo visible para el admin (en pruebas) */}
         {isAdmin && (

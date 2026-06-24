@@ -202,15 +202,15 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
         </div>
       )}
       <div className={`flex flex-col animate-in fade-in duration-300 gap-4 pb-20 flex-1`}>
-        <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden flex flex-col pb-2" role="region" aria-label="Calendario">
-          
+        <div className="rounded-[2rem] overflow-hidden flex flex-col pb-2" role="region" aria-label="Calendario" style={{ background: 'linear-gradient(180deg,#ffffff,#f8f9fb)', boxShadow: '0 14px 34px -16px rgba(30,41,59,0.25), inset 0 1.5px 1px rgba(255,255,255,0.9)', border: '1px solid rgba(15,23,42,0.05)' }}>
+
           {/* View mode switcher */}
-          <div className="flex justify-center p-3 bg-slate-50 border-b border-slate-100 gap-2 shrink-0" role="tablist" aria-label="Modo de vista del calendario">
-             <button onClick={() => setViewMode('mensual')} className={`flex-1 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'mensual' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-200 bg-white border border-slate-100'}`} role="tab" aria-selected={viewMode === 'mensual'} aria-controls="calendar-grid">Mensual</button>
-             <button onClick={() => setViewMode('anual')} className={`flex-1 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'anual' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-200 bg-white border border-slate-100'}`} role="tab" aria-selected={viewMode === 'anual'} aria-controls="calendar-grid">Anual</button>
+          <div className="flex justify-center p-3 bg-slate-50/70 border-b border-slate-100 gap-2 shrink-0" role="tablist" aria-label="Modo de vista del calendario">
+             <button onClick={() => setViewMode('mensual')} className={`flex-1 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'mensual' ? 'bg-gradient-to-b from-emerald-500 to-emerald-700 text-white shadow-[0_4px_10px_rgba(5,150,105,0.4)]' : 'text-slate-400 hover:bg-slate-200 bg-white border border-slate-100'}`} role="tab" aria-selected={viewMode === 'mensual'} aria-controls="calendar-grid">Mensual</button>
+             <button onClick={() => setViewMode('anual')} className={`flex-1 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'anual' ? 'bg-gradient-to-b from-emerald-500 to-emerald-700 text-white shadow-[0_4px_10px_rgba(5,150,105,0.4)]' : 'text-slate-400 hover:bg-slate-200 bg-white border border-slate-100'}`} role="tab" aria-selected={viewMode === 'anual'} aria-controls="calendar-grid">Anual</button>
              {/* Ocultado temporalmente a petición del usuario:
              {isBoss && (
-               <button onClick={() => setViewMode('empleados')} className={`flex-1 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'empleados' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-200 bg-white border border-slate-100'}`} role="tab" aria-selected={viewMode === 'empleados'} aria-controls="calendar-grid">Empleados</button>
+               <button onClick={() => setViewMode('empleados')} className={`flex-1 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'empleados' ? 'bg-gradient-to-b from-emerald-500 to-emerald-700 text-white shadow-[0_4px_10px_rgba(5,150,105,0.4)]' : 'text-slate-400 hover:bg-slate-200 bg-white border border-slate-100'}`} role="tab" aria-selected={viewMode === 'empleados'} aria-controls="calendar-grid">Empleados</button>
              )}
              */}
           </div>

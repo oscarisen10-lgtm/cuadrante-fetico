@@ -5,11 +5,13 @@ import { COMPANY_RULES, ADMIN_EMAIL } from '../constants/config';
 import { STORES, S_ROMERO_STORES } from '../constants/stores';
 import { deleteUserAccount, checkRankAvailability } from '../services/firebaseService';
 import { toast } from './Toast';
+import { setHapticsEnabled, isHapticsEnabled, hapticLight } from '../utils/haptics';
 
 export const SettingsView = React.memo(function SettingsView({ user, settings, saveToCloud, stopAlarm, pushToken, pushTokenError, permissionState, requestTokenManually }) {
   const isAdmin = user?.email && ADMIN_EMAIL && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [haptics, setHaptics] = useState(isHapticsEnabled());
   const navigate = useNavigate();
 
   const handleDeleteAccount = async () => {
@@ -192,6 +194,21 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
 
           <div className="flex justify-between items-center bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
             <div className="flex flex-col">
+                <span className="text-xs font-bold text-white uppercase leading-none">Vibración</span>
+                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Vibración al pulsar y en los juegos</span>
+            </div>
+            <button onClick={() => {
+                const v = !haptics;
+                setHaptics(v);
+                setHapticsEnabled(v);
+                if (v) hapticLight();
+            }} className={`w-12 h-6 rounded-full relative transition-colors ${haptics ? 'bg-emerald-500' : 'bg-white/20'}`}>
+               <div className={`absolute top-1 size-4 bg-white rounded-full transition-all ${haptics ? 'left-7' : 'left-1'}`}></div>
+            </button>
+          </div>
+
+          <div className="flex justify-between items-center bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
+            <div className="flex flex-col">
                 <span className="text-xs font-bold text-white uppercase leading-none flex items-center gap-1.5"><Fingerprint size={14} className="text-emerald-500"/> Bloqueo Biométrico</span>
                 <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Exigir FaceID/Huella al abrir app</span>
             </div>
@@ -219,7 +236,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
           <div className="flex justify-between items-center bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20">
              <div className="flex flex-col">
                 <span className="text-xs font-bold text-emerald-400 uppercase leading-none">Versión App</span>
-                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Versión 3.1.0 (Estable)</span>
+                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Versión 3.1.3 (Estable)</span>
              </div>
           </div>
 

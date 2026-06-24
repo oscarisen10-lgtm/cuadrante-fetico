@@ -11,7 +11,7 @@ export const DayCell = memo(function DayCell({ d, targetYear, targetMonth, shift
   const s = shiftsMap[dStr];
   const dayOfWeek = new Date(targetYear, targetMonth, d).getDay();
   
-  let style = isSmall ? "bg-slate-50 text-slate-400" : "bg-slate-50 text-slate-400 hover:bg-slate-100";
+  let style = isSmall ? "bg-slate-50 text-slate-400" : "bg-gradient-to-b from-white to-slate-100 text-slate-400 hover:from-slate-50 hover:to-slate-200";
   let inlineStyle = {};
   let label = "";
   
@@ -93,6 +93,7 @@ export const DayCell = memo(function DayCell({ d, targetYear, targetMonth, shift
   }
 
   const isSelected = selectedDates?.includes(dStr);
+  const isToday = dStr === getFormattedDate(new Date());
   const dayNumber = dayOfWeek === 0 ? <span className="text-rose-600">{d}</span> : d;
 
   // --- SMALL (yearly view) ---
@@ -119,8 +120,8 @@ export const DayCell = memo(function DayCell({ d, targetYear, targetMonth, shift
   return (
     <button 
       onClick={() => onDayClick(dStr)} 
-      className={`flex flex-col items-center justify-center rounded-xl font-bold relative transition-all active:scale-95 ${isSelected ? 'ring-4 ring-emerald-400 bg-white scale-90 z-10 shadow-lg' : style} ${isDayHoliday && !isSelected ? 'ring-2 ring-slate-300 ring-inset' : ''} h-11 sm:h-12 w-full text-[11px]`}
-      style={isSelected ? {} : (isRest ? {} : inlineStyle)}
+      className={`flex flex-col items-center justify-center rounded-xl font-bold relative transition-all active:scale-95 ${isSelected ? 'ring-4 ring-emerald-400 bg-white scale-90 z-10 shadow-lg' : style} ${isDayHoliday && !isSelected ? 'ring-2 ring-slate-300 ring-inset' : ''} ${isToday && !isSelected ? 'ring-2 ring-emerald-500' : ''} h-11 sm:h-12 w-full text-[11px]`}
+      style={isSelected ? {} : { ...(isRest ? {} : inlineStyle), boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.55), 0 1px 3px rgba(15,23,42,0.09)' }}
       aria-label={`Día ${d}, ${label || 'sin registro'}. ${isSelected ? 'Seleccionado' : ''}`}
       aria-pressed={isSelected}
       role="gridcell"
