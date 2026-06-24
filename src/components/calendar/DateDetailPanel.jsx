@@ -132,18 +132,7 @@ export function DateDetailPanel({ selectedDates, shiftsMap, setSelectedDates, ma
             )}
             */}
             
-            <select 
-               onChange={(e) => { 
-                 if(e.target.value) { markMulti(e.target.value); e.target.value=""; } 
-               }}
-               className="btn3d text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-center appearance-none cursor-pointer outline-none" style={{ background: 'linear-gradient(180deg,#a855f7,#7c3aed)', boxShadow: '0 6px 14px rgba(124,58,237,0.4), inset 0 1.5px 1px rgba(255,255,255,0.4)' }}
-               defaultValue=""
-               aria-label="Seleccionar otro tipo de ausencia"
-            >
-               <option value="" disabled className="text-center hidden">OTRA AUSENCIA ▼</option>
-               <option value="vacation" className="text-slate-800 bg-white font-bold">Marcar Vacaciones</option>
-               <option value="sick" className="text-slate-800 bg-white font-bold">Marcar Baja Laboral</option>
-            </select>
+            <button onClick={() => markMulti('vacation')} className="btn3d text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest" style={{ background: 'linear-gradient(180deg,#a855f7,#7c3aed)', boxShadow: '0 6px 14px rgba(124,58,237,0.4), inset 0 1.5px 1px rgba(255,255,255,0.4)' }} aria-label="Marcar como vacaciones">Vacaciones</button>
             
             <button onClick={() => openEditHours(selectedDates[0])} className="btn3d col-span-2 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest" style={{ background: 'linear-gradient(180deg,#3b82f6,#2563eb)', boxShadow: '0 6px 14px rgba(37,99,235,0.4), inset 0 1.5px 1px rgba(255,255,255,0.4)' }} aria-label="Ajustar horas trabajadas">Ajustar Horas</button>
 
