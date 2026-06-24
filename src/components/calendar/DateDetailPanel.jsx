@@ -76,7 +76,7 @@ export function DateDetailPanel({ selectedDates, shiftsMap, setSelectedDates, ma
 
   return (
     <div className="animate-decay-bounce">
-      <div className="bg-white rounded-[2rem] p-6 shadow-2xl border-2 border-emerald-100 flex flex-col shrink-0 animate-in zoom-in-95 duration-300" role="region" aria-label="Detalle de fechas seleccionadas">
+      <div className="rounded-[2rem] p-6 flex flex-col shrink-0 animate-in zoom-in-95 duration-300" role="region" aria-label="Detalle de fechas seleccionadas" style={{ background: 'linear-gradient(180deg,#ffffff,#f6f8fa)', boxShadow: '0 20px 48px -18px rgba(5,80,60,0.35), inset 0 1.5px 1px rgba(255,255,255,0.9)', border: '1px solid rgba(16,185,129,0.18)' }}>
         <div className="flex justify-between items-start mb-6 pb-4 border-b border-slate-100">
           <div className="flex flex-col">
             {selectedDates.length === 1 && dObj ? (
@@ -94,7 +94,7 @@ export function DateDetailPanel({ selectedDates, shiftsMap, setSelectedDates, ma
           <button onClick={() => setSelectedDates([])} className="p-2.5 bg-slate-50 text-slate-300 rounded-full hover:bg-slate-200 transition-colors" aria-label="Deseleccionar fechas"><X size={24}/></button>
         </div>
         
-        <div className="flex items-center justify-between bg-slate-50 p-5 rounded-2xl mb-6 border border-slate-100">
+        <div className="flex items-center justify-between p-5 rounded-2xl mb-6" style={{ background: 'linear-gradient(180deg,#f8fafc,#eef1f5)', boxShadow: 'inset 0 2px 4px rgba(15,23,42,0.06), inset 0 -1px 0 rgba(255,255,255,0.8)', border: '1px solid rgba(15,23,42,0.05)' }}>
           <div className={`px-4 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest border ${statusColor}`}>{statusText}</div>
           <div className={`text-3xl font-black font-mono ${isHoursHighlighted ? 'text-slate-800' : 'text-slate-400'}`}>{hoursText}</div>
         </div>
@@ -125,7 +125,7 @@ export function DateDetailPanel({ selectedDates, shiftsMap, setSelectedDates, ma
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3 animate-in fade-in duration-300" role="toolbar" aria-label="Acciones para las fechas seleccionadas">
-            <button onClick={() => markMulti('rest')} className="bg-amber-500 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all" aria-label="Marcar como día libre">Marcar Libre</button>
+            <button onClick={() => markMulti('rest')} className="btn3d text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest" style={{ background: 'linear-gradient(180deg,#fbbf24,#d97706)', boxShadow: '0 6px 14px rgba(217,119,6,0.4), inset 0 1.5px 1px rgba(255,255,255,0.45)' }} aria-label="Marcar como día libre">Marcar Libre</button>
             {/* Ocultado temporalmente a petición del usuario:
             {canRequestOff && (
               <button onClick={() => setShowNoteInput(true)} className="bg-emerald-400 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all" aria-label="Solicitar día libre al jefe">Solicitar Libre</button>
@@ -136,7 +136,7 @@ export function DateDetailPanel({ selectedDates, shiftsMap, setSelectedDates, ma
                onChange={(e) => { 
                  if(e.target.value) { markMulti(e.target.value); e.target.value=""; } 
                }}
-               className="bg-purple-500 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md transition-all text-center appearance-none cursor-pointer outline-none"
+               className="btn3d text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-center appearance-none cursor-pointer outline-none" style={{ background: 'linear-gradient(180deg,#a855f7,#7c3aed)', boxShadow: '0 6px 14px rgba(124,58,237,0.4), inset 0 1.5px 1px rgba(255,255,255,0.4)' }}
                defaultValue=""
                aria-label="Seleccionar otro tipo de ausencia"
             >
@@ -145,9 +145,9 @@ export function DateDetailPanel({ selectedDates, shiftsMap, setSelectedDates, ma
                <option value="sick" className="text-slate-800 bg-white font-bold">Marcar Baja Laboral</option>
             </select>
             
-            <button onClick={() => openEditHours(selectedDates[0])} className="col-span-2 bg-blue-600 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all" aria-label="Ajustar horas trabajadas">Ajustar Horas</button>
-            
-            <button onClick={deleteSelectedDates} className="col-span-2 bg-rose-500 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all" aria-label="Borrar registro de las fechas seleccionadas">Borrar Registro</button>
+            <button onClick={() => openEditHours(selectedDates[0])} className="btn3d col-span-2 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest" style={{ background: 'linear-gradient(180deg,#3b82f6,#2563eb)', boxShadow: '0 6px 14px rgba(37,99,235,0.4), inset 0 1.5px 1px rgba(255,255,255,0.4)' }} aria-label="Ajustar horas trabajadas">Ajustar Horas</button>
+
+            <button onClick={deleteSelectedDates} className="btn3d col-span-2 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest" style={{ background: 'linear-gradient(180deg,#fb7185,#e11d48)', boxShadow: '0 6px 14px rgba(225,29,72,0.4), inset 0 1.5px 1px rgba(255,255,255,0.4)' }} aria-label="Borrar registro de las fechas seleccionadas">Borrar Registro</button>
           </div>
         )}
       </div>
