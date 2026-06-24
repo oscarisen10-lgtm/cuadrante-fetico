@@ -53,25 +53,22 @@ export const DayCell = memo(function DayCell({ d, targetYear, targetMonth, shift
     label = isSmall ? "" : "Sol";
   }
   else if (s?.type === 'rest') {
-    if (dayOfWeek === 6 || dayOfWeek === 0) {
-      const isSat = dayOfWeek === 6;
-      const partner = shiftsMap[getFormattedDate(new Date(targetYear, targetMonth, isSat ? d+1 : d-1))];
-      if (partner?.type === 'rest') { 
-        // QUALITY WEEKEND — solid fill with the old "rest" yellow color, NO stripes
-        isQuality = true;
-        colorBottom = colorTop = "#fef08a";
-        label = isSmall ? "" : "Cal"; 
-      }
-      else { 
-        // Regular rest on weekend — render as bar
-        isRest = true;
-        restBarColor = "#fbbf24"; // amber bar matching calidad style
-        label = isSmall ? "" : "Lib"; 
-      }
+    // ¿libra el día relativo? (Date hace rollover entre meses automáticamente)
+    const restOn = (offset) => shiftsMap[getFormattedDate(new Date(targetYear, targetMonth, d + offset))]?.type === 'rest';
+    // CALIDAD: finde libre sábado+domingo, o sábado+domingo+lunes (el lunes también cuenta).
+    let isQ = false;
+    if (dayOfWeek === 6) isQ = restOn(1);                       // sábado: domingo también libre
+    else if (dayOfWeek === 0) isQ = restOn(-1);                  // domingo: sábado también libre
+    else if (dayOfWeek === 1) isQ = restOn(-1) && restOn(-2);    // lunes: sábado y domingo previos libres
+    if (isQ) {
+      // QUALITY WEEKEND — relleno sólido amarillo, sin rayas
+      isQuality = true;
+      colorBottom = colorTop = "#fef08a";
+      label = isSmall ? "" : "Cal";
     } else {
-      // Rest on weekday — render as bar
+      // Descanso normal — barra ámbar
       isRest = true;
-      restBarColor = "#fbbf24"; // amber bar matching calidad style
+      restBarColor = "#fbbf24";
       label = isSmall ? "" : "Lib";
     }
     style = "text-slate-800";

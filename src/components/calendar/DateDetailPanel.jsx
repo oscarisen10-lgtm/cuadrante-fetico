@@ -27,12 +27,11 @@ export function DateDetailPanel({ selectedDates, shiftsMap, setSelectedDates, ma
     const dayOfWeek = dObj.getDay();
 
     let isQuality = false;
-    if (dayOfWeek === 6 || dayOfWeek === 0) {
-      const isSat = dayOfWeek === 6;
-      const partnerD = new Date(y, m - 1, isSat ? parseInt(d)+1 : parseInt(d)-1);
-      const partnerStr = getFormattedDate(partnerD);
-      const partnerS = shiftsMap[partnerStr];
-      if (s?.type === 'rest' && partnerS?.type === 'rest') isQuality = true;
+    if (s?.type === 'rest') {
+      const restOn = (offset) => shiftsMap[getFormattedDate(new Date(y, m - 1, parseInt(d) + offset))]?.type === 'rest';
+      if (dayOfWeek === 6) isQuality = restOn(1);                    // sábado: domingo libre
+      else if (dayOfWeek === 0) isQuality = restOn(-1);              // domingo: sábado libre
+      else if (dayOfWeek === 1) isQuality = restOn(-1) && restOn(-2); // lunes: sábado y domingo libres
     }
 
     statusText = "Sin registro";
