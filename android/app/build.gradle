@@ -1,5 +1,18 @@
 apply plugin: 'com.android.application'
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SEGURIDAD: las credenciales de firma se leen de android/keystore.properties,
+// que está en .gitignore (NUNCA se sube a GitHub). Antes estaban en texto plano
+// aquí mismo. Copia keystore.properties.example a keystore.properties y rellena
+// tus valores reales en local / en el secreto del CI.
+// ─────────────────────────────────────────────────────────────────────────────
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+def hasKeystore = keystorePropertiesFile.exists()
+if (hasKeystore) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace = "app.netlify.guileless_malabi_40bf81.twa"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +20,8 @@ android {
         applicationId "app.netlify.guileless_malabi_40bf81.twa"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 27
-        versionName "3.1.3"
+        versionCode 28
+        versionName "3.1.4"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -18,15 +31,19 @@ android {
     }
     signingConfigs {
         release {
-            storeFile file("C:/Users/oscar/.gemini/antigravity/app movil escritorio/signing.keystore")
-            storePassword "REMOVED_KEYSTORE_PASSWORD"
-            keyAlias "my-key-alias"
-            keyPassword "REMOVED_KEYSTORE_PASSWORD"
+            if (hasKeystore) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
         }
     }
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            // Solo firma automáticamente si existe keystore.properties; si no, deja
+            // que Gradle use la firma de depuración (evita romper builds locales sin keystore).
+            signingConfig hasKeystore ? signingConfigs.release : signingConfigs.debug
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             ndk {

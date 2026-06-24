@@ -1,12 +1,14 @@
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
 admin.initializeApp();
 
 /**
  * Cloud Function (Gen 2): sendPushNotification
  * Triggers when a new document is created in the 'noticias' collection.
+ * maxInstances acota el coste/concurrencia ante picos.
  */
-exports.sendPushNotification = onDocumentCreated("noticias/{docId}", async (event) => {
+exports.sendPushNotification = onDocumentCreated({ document: "noticias/{docId}", maxInstances: 5 }, async (event) => {
   const data = event.data.data();
 
   // Only react to explicit PUSH requests from admin
@@ -159,9 +161,39 @@ const geminiModel = defineString("GEMINI_MODEL", { default: "gemini-2.5-flash" }
 const MAX_QUESTIONS_PER_DAY = 10;
 const MAX_MESSAGE_LENGTH = 1000; // Tope de longitud para acotar el coste de tokens.
 
+// ── Caché de contexto de Gemini (optimización de coste F-1) ──────────────────
+// El convenio + acuerdo ocupan ~60.000 tokens. Reenviarlos en CADA pregunta no
+// cacheada es la mayor fuente de gasto. Con "context caching" ese bloque enorme
+// se sube UNA vez y las preguntas siguientes pagan una fracción por reutilizarlo.
+// Si la API de caché no estuviera disponible, se cae con elegancia al modo
+// clásico (systemInstruction en línea) para NO romper nunca el asistente.
+let convenioCache = null; // { name, expireAt }
+const CACHE_TTL_SECONDS = 3600;
+
+async function getOrCreateConvenioCache(ai, model, systemInstruction) {
+  const now = Date.now();
+  if (convenioCache && convenioCache.expireAt > now + 60000) {
+    return convenioCache.name;
+  }
+  try {
+    const cache = await ai.caches.create({
+      model,
+      config: { systemInstruction, ttl: `${CACHE_TTL_SECONDS}s` },
+    });
+    convenioCache = { name: cache.name, expireAt: now + CACHE_TTL_SECONDS * 1000 };
+    console.log("Context cache creada:", cache.name);
+    return convenioCache.name;
+  } catch (e) {
+    console.warn("Context caching no disponible, uso systemInstruction inline:", e.message);
+    convenioCache = null;
+    return null;
+  }
+}
+
 exports.askFeticoAssistant = onCall({
   secrets: [geminiApiKey],
-  enforceAppCheck: false 
+  enforceAppCheck: false,
+  maxInstances: 10,
 }, async (request) => {
   // 1. Validate Authentication
   if (!request.auth || !request.auth.uid) {
@@ -281,13 +313,14 @@ ${acuerdoText}
 --- TEXTO COMPLETO DEL CONVENIO COLECTIVO DE ANGED ---
 ${convenioText}`;
     
+    const modelId = geminiModel.value();
+    const cacheName = await getOrCreateConvenioCache(ai, modelId, systemInstruction);
     const response = await ai.models.generateContent({
-      model: geminiModel.value(),
+      model: modelId,
       contents: userMessage,
-      config: {
-        systemInstruction: systemInstruction,
-        temperature: 0.1, // Muy factual
-      }
+      config: cacheName
+        ? { cachedContent: cacheName, temperature: 0.1 }
+        : { systemInstruction: systemInstruction, temperature: 0.1 }, // fallback factual
     });
 
     const textResponse = response.text;
@@ -321,7 +354,7 @@ const ARENA_MAX_SCORE = 5000;     // tope de cordura por partida
 const ARENA_DAILY_PLAYS = 3;      // partidas puntuables por usuario y día
 const ADMIN_EMAIL_FN = "oscargarcia@fetico.es";
 
-exports.submitArenaScore = onCall({ enforceAppCheck: false }, async (request) => {
+exports.submitArenaScore = onCall({ enforceAppCheck: false, maxInstances: 10 }, async (request) => {
   if (!request.auth || !request.auth.uid) {
     throw new HttpsError("unauthenticated", "Debes iniciar sesión para competir.");
   }
@@ -390,3 +423,103 @@ exports.submitArenaScore = onCall({ enforceAppCheck: false }, async (request) =>
   }
   return { success: true, ...result };
 });
+
+/**
+ * teamStatus — Devuelve SOLO RECUENTOS del equipo (sin nombres ni emails).
+ * Sustituye a la lectura de perfiles ajenos desde el cliente (privacidad, S-3):
+ * ahora las reglas impiden que un compañero lea el perfil de otro, y estos
+ * agregados los calcula el servidor con el Admin SDK.
+ *  - canRequestOff: ¿hay alguien más y al menos un responsable en la sección?
+ *  - rank: bossCountExcludingMe permite limitar a 3 responsables por sección.
+ * Acepta company/store/section opcionales (al cambiarlos en Ajustes se valida el
+ * equipo de DESTINO); por defecto usa el perfil real del que llama.
+ */
+const BOSS_RE = /.*(jefe|segundo|gestor|coordinador).*/i;
+
+exports.teamStatus = onCall({ maxInstances: 10 }, async (request) => {
+  if (!request.auth || !request.auth.uid) {
+    throw new HttpsError("unauthenticated", "Debes iniciar sesión.");
+  }
+  const uid = request.auth.uid;
+  const db = admin.firestore();
+
+  const meSnap = await db.collection("users").doc(uid).get();
+  const myProfile = (meSnap.exists && meSnap.data().profile) || {};
+
+  const company = String(request.data?.company || myProfile.company || "").trim();
+  const store = String(request.data?.store || myProfile.store || "").trim();
+  const section = String(request.data?.section || myProfile.section || "").trim();
+
+  if (!company || !store || !section || section === "Sin especificar") {
+    return { memberCount: 0, bossCount: 0, bossCountExcludingMe: 0, canRequestOff: false };
+  }
+
+  // Igualdad por empresa+tienda (sin índice compuesto); la sección se filtra en memoria.
+  const snap = await db.collection("users")
+    .where("profile.company", "==", company)
+    .where("profile.store", "==", store)
+    .get();
+
+  let memberCount = 0;
+  let bossCount = 0;
+  let bossCountExcludingMe = 0;
+  snap.forEach((d) => {
+    const p = d.data().profile || {};
+    if (p.section !== section) return;
+    memberCount += 1;
+    if (p.rank && BOSS_RE.test(p.rank)) {
+      bossCount += 1;
+      if (d.id !== uid) bossCountExcludingMe += 1;
+    }
+  });
+
+  return {
+    memberCount,
+    bossCount,
+    bossCountExcludingMe,
+    canRequestOff: memberCount > 1 && bossCount >= 1,
+  };
+});
+
+/**
+ * dailyCleanup — Limpieza programada (optimización de almacenamiento F-4).
+ * Borra rankings y caché de IA con más de 30 días para que esas colecciones no
+ * crezcan indefinidamente. Se ejecuta de madrugada (hora de Madrid).
+ */
+exports.dailyCleanup = onSchedule(
+  { schedule: "every day 04:30", timeZone: "Europe/Madrid", maxInstances: 1 },
+  async () => {
+    const db = admin.firestore();
+    const cutoffMs = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const cutoffDate = new Date(cutoffMs);
+    const cutoffStr = cutoffDate.toISOString().split("T")[0]; // YYYY-MM-DD
+
+    // 1) leaderboards/{YYYY-MM-DD} (con subcolecciones) más antiguos que el corte.
+    let removedLb = 0;
+    const lbSnap = await db.collection("leaderboards").get();
+    for (const d of lbSnap.docs) {
+      if (d.id < cutoffStr) {
+        await db.recursiveDelete(d.ref);
+        removedLb += 1;
+      }
+    }
+
+    // 2) ai_cache con timestamp anterior al corte (en lotes de 400).
+    let removedCache = 0;
+    while (true) {
+      const old = await db.collection("ai_cache")
+        .where("timestamp", "<", cutoffDate)
+        .limit(400)
+        .get();
+      if (old.empty) break;
+      const batch = db.batch();
+      old.docs.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+      removedCache += old.size;
+      if (old.size < 400) break;
+    }
+
+    console.log(`Limpieza: ${removedLb} rankings y ${removedCache} cachés de IA eliminados.`);
+    return null;
+  }
+);

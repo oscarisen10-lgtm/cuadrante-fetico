@@ -11,6 +11,18 @@ import {
 } from '../services/firebaseService';
 import { toast } from '../components/Toast';
 
+// Compara dos objetos "user" a nivel superficial. Evita crear una referencia
+// nueva (y disparar re-renders en cascada en vistas memoizadas y en useShifts)
+// cuando el perfil llega igual en un nuevo snapshot del documento.
+const shallowEqualUser = (a, b) => {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  const ka = Object.keys(a);
+  const kb = Object.keys(b);
+  if (ka.length !== kb.length) return false;
+  return ka.every((k) => a[k] === b[k]);
+};
+
 export const useAuth = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -64,7 +76,10 @@ export const useAuth = () => {
           clearTimeout(docTimeout);
           if (docSnap.exists()) {
             const data = docSnap.data();
-            setUser({ ...data.profile, uid: firebaseUser.uid });
+            setUser((prev) => {
+              const next = { ...data.profile, uid: firebaseUser.uid };
+              return shallowEqualUser(prev, next) ? prev : next;
+            });
             setSettings(data.settings || { notifications: true, breakDuration: 15 });
             setActiveShift(data.activeShift || null);
             setWorkTimeAccumulated(data.workTimeAccumulated || 0);

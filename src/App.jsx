@@ -10,7 +10,7 @@ import { useShifts } from './hooks/useShifts';
 import { useNotifications } from './hooks/useNotifications';
 import { Clock, Calendar as CalendarIcon, PieChart, FileText, Settings, LogOut, WifiOff, Fingerprint, Trophy, X } from 'lucide-react';
 import { getFormattedDate } from './utils/dateUtils';
-import { ADMIN_EMAIL } from './constants/config';
+import { isAdminUser } from './constants/config';
 import { NavItem } from './components/UIComponents';
 import AuthView from './components/AuthView';
 import { ToastContainer, ConfirmDialog } from './components/Toast';
@@ -78,7 +78,7 @@ function AppContent({ user, authHook }) {
   const { shiftsMap, stats } = useShifts(shifts, user);
 
   // Mientras se prueba, solo el admin ve la pestaña "Competición" (minijuegos).
-  const isAdmin = !!(user?.email && ADMIN_EMAIL && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase());
+  const isAdmin = isAdminUser(user);
 
   const [showConfirmLogout, setShowConfirmLogout] = useState(false);
   const [isOffline, setIsOffline] = useState(false);

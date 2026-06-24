@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, Gamepad2 } from 'lucide-react';
-import { COMPANY_RULES, ADMIN_EMAIL } from '../constants/config';
+import { COMPANY_RULES, isAdminUser } from '../constants/config';
 import { STORES, S_ROMERO_STORES } from '../constants/stores';
 import { deleteUserAccount, checkRankAvailability } from '../services/firebaseService';
 import { toast } from './Toast';
 import { setHapticsEnabled, isHapticsEnabled, hapticLight } from '../utils/haptics';
 
 export const SettingsView = React.memo(function SettingsView({ user, settings, saveToCloud, stopAlarm, pushToken, pushTokenError, permissionState, requestTokenManually }) {
-  const isAdmin = user?.email && ADMIN_EMAIL && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  const isAdmin = isAdminUser(user);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [haptics, setHaptics] = useState(isHapticsEnabled());
@@ -228,7 +228,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
           <div className="flex justify-between items-center bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20">
              <div className="flex flex-col">
                 <span className="text-xs font-bold text-emerald-400 uppercase leading-none">Versión App</span>
-                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Versión 3.1.3 (Estable)</span>
+                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Versión 3.1.4 (Estable)</span>
              </div>
           </div>
 

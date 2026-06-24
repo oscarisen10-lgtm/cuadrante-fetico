@@ -23,6 +23,19 @@ const withTimeout = (promise, ms = 15000) =>
     ),
   ]);
 
+/**
+ * Ejecuta operaciones en lotes de como máximo `size` (Firestore limita los batch
+ * a 500 por commit). Evita que un usuario con muchos turnos (2 años ≈ cientos de
+ * documentos) rompa el borrado de cuenta o el guardado masivo.
+ */
+const commitInChunks = async (items, apply, size = 450) => {
+  for (let i = 0; i < items.length; i += size) {
+    const batch = writeBatch(db);
+    items.slice(i, i + size).forEach((item) => apply(batch, item));
+    await batch.commit();
+  }
+};
+
 // --- AUTH & USER ---
 
 export const subscribeToAuth = (callback) => {
@@ -62,13 +75,10 @@ export const saveShift = async (uid, shift) => {
  */
 export const saveShiftsBatch = async (uid, shiftsArray) => {
   if (!uid || !shiftsArray.length) return;
-  const batch = writeBatch(db);
-  shiftsArray.forEach(shift => {
-    if (shift.date) {
-      batch.set(doc(db, "users", uid, "shifts", shift.date), shift, { merge: true });
-    }
+  const valid = shiftsArray.filter((s) => s.date);
+  await commitInChunks(valid, (batch, shift) => {
+    batch.set(doc(db, "users", uid, "shifts", shift.date), shift, { merge: true });
   });
-  await batch.commit();
 };
 
 /**
@@ -84,11 +94,9 @@ export const deleteShift = async (uid, dateStr) => {
  */
 export const deleteShiftsBatch = async (uid, dateStrings) => {
   if (!uid || !dateStrings.length) return;
-  const batch = writeBatch(db);
-  dateStrings.forEach(dateStr => {
+  await commitInChunks(dateStrings, (batch, dateStr) => {
     batch.delete(doc(db, "users", uid, "shifts", dateStr));
   });
-  await batch.commit();
 };
 
 /**
@@ -97,25 +105,21 @@ export const deleteShiftsBatch = async (uid, dateStrings) => {
  */
 export const migrateShiftsToSubcollection = async (uid, shiftsArray) => {
   if (!uid || !shiftsArray || shiftsArray.length === 0) return;
-  
-  const batch = writeBatch(db);
-  shiftsArray.forEach(shift => {
-    if (shift.date) {
-      batch.set(doc(db, "users", uid, "shifts", shift.date), {
-        date: shift.date,
-        type: shift.type || 'work',
-        hours: shift.hours || 0,
-        isHA: shift.isHA || false,
-        turn: shift.turn || 'morning',
-      });
-    }
+
+  const valid = shiftsArray.filter((s) => s.date);
+  await commitInChunks(valid, (batch, shift) => {
+    batch.set(doc(db, "users", uid, "shifts", shift.date), {
+      date: shift.date,
+      type: shift.type || 'work',
+      hours: shift.hours || 0,
+      isHA: shift.isHA || false,
+      turn: shift.turn || 'morning',
+    });
   });
-  
-  // Remove the array from the user doc
-  batch.update(doc(db, "users", uid), { shifts: [] });
-  
-  await batch.commit();
-  console.log(`Migrated ${shiftsArray.length} shifts to subcollection for user ${uid}`);
+
+  // Vacía el array legacy del doc de usuario (operación aparte, ya sin riesgo de límite).
+  await setDoc(doc(db, "users", uid), { shifts: [] }, { merge: true });
+  console.log(`Migrated ${valid.length} shifts to subcollection for user ${uid}`);
 };
 
 export const loginUser = async (email, password) => {
@@ -199,12 +203,10 @@ export const deleteUserAccount = async () => {
   if (auth.currentUser) {
     const uid = auth.currentUser.uid;
     
-    // Delete all shifts in subcollection first
+    // Delete all shifts in subcollection first (en lotes, por si hay >500 docs)
     const shiftsSnap = await getDocs(collection(db, "users", uid, "shifts"));
     if (shiftsSnap.size > 0) {
-      const batch = writeBatch(db);
-      shiftsSnap.docs.forEach(d => batch.delete(d.ref));
-      await batch.commit();
+      await commitInChunks(shiftsSnap.docs, (batch, d) => batch.delete(d.ref));
     }
     
     // Delete user data from Firestore
@@ -226,7 +228,7 @@ export const subscribeToNews = (callback) => {
   // Ordenado y acotado en servidor: evita descargar toda la colección (que crece sin
   // límite) y re-ordenarla en el cliente en cada cambio. Requiere que cada noticia
   // tenga `createdAt` (el alta siempre lo añade).
-  const q = query(collection(db, "noticias"), orderBy("createdAt", "desc"), limit(50));
+  const q = query(collection(db, "noticias"), orderBy("createdAt", "desc"), limit(30));
   return onSnapshot(q, (snapshot) => {
     const arr = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     callback(arr);
@@ -265,6 +267,10 @@ export const deleteLicencia = async (id) => {
 
 // --- PETICIONES (REQUESTS) & EQUIPO ---
 
+// ⚠️ LEGACY: solo lo usa TeamView (vista "Empleados", hoy OCULTA). Tras endurecer
+// las reglas (privacidad S-3) un usuario normal ya NO puede leer perfiles ajenos:
+// si se reactiva esa vista, debe migrarse también a una Cloud Function. Para los
+// recuentos de equipo usa fetchTeamStatus()/teamStatus, no esto.
 export const getTeamMembers = async (company, store, section) => {
   if (!company || !store || !section) return [];
   try {
@@ -293,27 +299,36 @@ export const getTeamMembers = async (company, store, section) => {
   }
 };
 
+/**
+ * Estado del equipo SIN leer perfiles ajenos (privacidad). Pide al backend solo
+ * cifras agregadas. Devuelve { memberCount, bossCount, bossCountExcludingMe, canRequestOff }.
+ */
+export const fetchTeamStatus = async (overrides = {}) => {
+  const fn = httpsCallable(functions, 'teamStatus');
+  const { data } = await fn(overrides);
+  return data;
+};
+
 export const checkRankAvailability = async (company, store, section, newRank, userUid) => {
-  // Solo aplicamos el limite si el nuevo rango es de tipo Responsable
+  // Solo aplicamos el límite si el nuevo rango es de tipo Responsable
   const isBossRank = (rank) => rank && rank.match(/.*(jefe|segundo|gestor|coordinador).*/i);
-  
+
   if (!isBossRank(newRank)) return true; // Si es personal base, siempre permitido
 
-  const members = await getTeamMembers(company, store, section);
-  
-  // Contamos cuántos responsables hay (excluyendo al propio usuario si ya era responsable)
-  let bossCount = 0;
-  for (const m of members) {
-    if (m.uid !== userUid && isBossRank(m.rank)) {
-      bossCount++;
+  try {
+    // El recuento de responsables lo hace el SERVIDOR (el cliente ya no lee al equipo).
+    const data = await fetchTeamStatus({ company, store, section });
+    if ((data?.bossCountExcludingMe || 0) >= 3) {
+      throw new Error("Límite alcanzado: Ya hay 3 responsables asignados en esta tienda y sección.");
     }
+    return true;
+  } catch (e) {
+    // Si es nuestro límite de negocio, lo propagamos. Si es un fallo de red/infra,
+    // no bloqueamos al usuario (la restricción es una ayuda, no una barrera crítica).
+    if (e instanceof Error && e.message.startsWith("Límite alcanzado")) throw e;
+    console.warn("teamStatus no disponible, se permite el cambio:", e?.message);
+    return true;
   }
-
-  if (bossCount >= 3) {
-    throw new Error("Límite alcanzado: Ya hay 3 responsables asignados en esta tienda y sección.");
-  }
-  
-  return true;
 };
 
 export const addRequest = async (requestData) => {

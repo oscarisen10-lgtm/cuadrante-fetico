@@ -168,3 +168,18 @@ body {
 /* "Pop" del marcador al subir la puntuación */
 .hud-pop { animation: hud-pop .34s cubic-bezier(.2,.8,.2,1.5) both; }
 @keyframes hud-pop { 0% { transform: scale(1); } 40% { transform: scale(1.22); } 100% { transform: scale(1); } }
+
+/* ============================================================
+   AHORRO DE BATERÍA / ACCESIBILIDAD (M-1)
+   Si el usuario pide "menos movimiento" (ajuste del sistema), se detienen las
+   animaciones en bucle (sheen, breathe, float, orbes, etc.), que consumen GPU
+   y batería de forma continua incluso en reposo. Las transiciones puntuales de
+   interacción (botones) se mantienen casi instantáneas.
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .sheen::after, .breathe, .float-soft, .twinkle, .gfx-orb, .gfx-conic, .gfx-shine,
+  .animate-pulse, .animate-bounce, .animate-ping, .animate-spin {
+    animation: none !important;
+  }
+  * { scroll-behavior: auto !important; }
+}

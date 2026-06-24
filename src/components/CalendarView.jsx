@@ -61,6 +61,9 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
   const userStore = user?.store;
   const isBoss = user?.rank && (user.rank.toLowerCase().includes('jefe') || user.rank.toLowerCase().includes('coordinador'));
   const holidays = useMemo(() => getAllYearHolidays(userStore), [userStore]);
+  // Set "MM-DD" precalculado una vez para que las celdas comprueben festivo en O(1)
+  // (antes cada celda recorría STORES en su propia llamada a isHoliday()).
+  const holidaySet = useMemo(() => new Set(holidays.map(h => h.date)), [holidays]);
   const { canRequestOff } = useTeamStatus(user);
 
   React.useEffect(() => {
@@ -237,15 +240,14 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
                     <>
                       <div className={`p-3 grid grid-cols-7 gap-1.5 ${isLocked ? 'opacity-30 pointer-events-none' : ''}`} role="grid" aria-label="Calendario mensual">
                         <WeekdayHeader />
-                        <MonthGrid 
-                          targetYear={currentDate.getFullYear()} 
-                          targetMonth={currentDate.getMonth()} 
-                          shiftsMap={combinedShiftsMap} 
+                        <MonthGrid
+                          targetYear={currentDate.getFullYear()}
+                          targetMonth={currentDate.getMonth()}
+                          shiftsMap={combinedShiftsMap}
                           isSmall={false}
                           selectedDates={selectedDates}
+                          holidaySet={holidaySet}
                           onDayClick={handleDayClick}
-                          onDayDoubleClick={openEditHours}
-                          userStore={userStore}
                         />
                       </div>
                       {isLocked && (
@@ -270,15 +272,14 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
                      <h4 className="text-[8px] font-black uppercase text-slate-800 mb-1 text-center tracking-widest">{new Date(currentDate.getFullYear(), m, 1).toLocaleDateString('es-ES', { month: 'short' })}</h4>
                      <div className={`grid grid-cols-7 gap-[2px] ${isLocked ? 'opacity-30 pointer-events-none' : ''}`}>
                        <WeekdayHeader isSmall />
-                       <MonthGrid 
-                         targetYear={currentDate.getFullYear()} 
-                         targetMonth={m} 
-                         shiftsMap={combinedShiftsMap} 
+                       <MonthGrid
+                         targetYear={currentDate.getFullYear()}
+                         targetMonth={m}
+                         shiftsMap={combinedShiftsMap}
                          isSmall={true}
                          selectedDates={selectedDates}
+                         holidaySet={holidaySet}
                          onDayClick={handleDayClick}
-                         onDayDoubleClick={openEditHours}
-                         userStore={userStore}
                        />
                      </div>
                      {isLocked && (

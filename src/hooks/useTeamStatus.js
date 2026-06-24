@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getTeamMembers } from '../services/firebaseService';
+import { fetchTeamStatus } from '../services/firebaseService';
 
 export const useTeamStatus = (user) => {
   const [canRequestOff, setCanRequestOff] = useState(false);
@@ -37,15 +37,14 @@ export const useTeamStatus = (user) => {
       }
 
       try {
-        const members = await getTeamMembers(user.company, user.store, user.section);
-        
-        // Conditions:
-        // 1. More than 1 person in the section (someone else exists)
-        // 2. At least 1 person is a boss (Jefe, Segundo, Gestor, Coordinador)
-        const hasOtherPeople = members.length > 1;
-        const hasBoss = members.some(m => m.rank && m.rank.match(/.*(jefe|segundo|gestor|coordinador).*/i));
-
-        const isValid = hasOtherPeople && hasBoss;
+        // El servidor calcula las cifras (el cliente ya no lee perfiles ajenos).
+        // canRequestOff = hay alguien más en la sección Y al menos un responsable.
+        const data = await fetchTeamStatus({
+          company: user.company,
+          store: user.store,
+          section: user.section,
+        });
+        const isValid = !!data?.canRequestOff;
 
         localStorage.setItem(cacheKey, JSON.stringify({
           value: isValid,

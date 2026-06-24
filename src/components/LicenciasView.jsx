@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { FileText, ChevronDown, ChevronUp, Info, Users, Clock, ClipboardCheck, Bot, Sparkles } from 'lucide-react';
 import { LICENCIAS_CATEGORIES, GRADOS_CONSANGUINIDAD } from '../constants/licenciasData';
 import { ChatModal } from './ChatModal';
-import { ADMIN_EMAIL } from '../constants/config';
+import { isAdminUser } from '../constants/config';
 
 export const LicenciasView = React.memo(function LicenciasView({ user, permissionState, requestTokenManually }) {
   const [expandedLicencia, setExpandedLicencia] = useState(null);
@@ -14,7 +14,7 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
   });
 
   // Mientras la IA está en pruebas, el asistente solo lo ve el admin.
-  const isAdmin = !!(user?.email && ADMIN_EMAIL && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase());
+  const isAdmin = isAdminUser(user);
   const changeScale = (delta) => setFontScale((s) => {
     const n = Math.min(1.5, Math.max(0.8, Math.round((s + delta) * 100) / 100));
     try { localStorage.setItem('licFontScale', String(n)); } catch { /* almacenamiento no disponible */ }

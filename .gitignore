@@ -45,6 +45,9 @@ ui-debug.log
 signing_key.bin
 serviceAccount*.json
 scripts/serviceAccount.json
+# Credenciales de firma Android (NUNCA versionar). La plantilla .example SÍ se sube.
+android/keystore.properties
+keystore.properties
 
 # Build artifacts
 android/app/build

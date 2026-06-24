@@ -46,16 +46,24 @@ service cloud.firestore {
       return amIBoss() && myStoreKey() == reqData.storeKey;
     }
 
+    // Validación de un turno (evita que el cliente escriba basura/campos enormes).
+    function validShift(d) {
+      return d.type in ['work', 'rest', 'vacation', 'sick'] &&
+             d.date is string && d.date.size() <= 10 &&
+             (!('hours' in d) || d.hours is number);
+    }
+
     // ---------- Usuarios ----------
     match /users/{userId} {
-      // Lectura ACOTADA: el propio usuario, gente de su misma empresa+tienda,
-      // o el admin. Evita que cualquier usuario lea a toda la plantilla.
-      // (resource.data es el doc leído, así que no requiere get() extra.)
+      // Lectura PRIVADA: SOLO el propio usuario, su jefe directo de sección, o el admin.
+      // (Antes cualquier compañero de la misma tienda podía leer email + fcmToken de
+      // toda la plantilla = fuga de datos personales. Para los recuentos de equipo
+      // —¿puedo pedir día libre?, ¿hay hueco de responsable?— el cliente ya NO lee
+      // perfiles ajenos: usa la Cloud Function `teamStatus`, que devuelve solo cifras.)
       allow read: if request.auth != null && (
         request.auth.uid == userId ||
         isAdmin() ||
-        ( resource.data.profile.company == myProfile().company &&
-          resource.data.profile.store == myProfile().store )
+        isDirectBossOf(userId)
       );
 
       // Solo el propio usuario (o el admin) puede modificar su perfil.
@@ -69,12 +77,18 @@ service cloud.firestore {
           isDirectBossOf(userId) ||
           isAdmin()
         );
-        // Escritura: dueño, jefe directo (p.ej. al aprobar un día libre), o admin.
-        allow write: if request.auth != null && (
+        // Borrado: dueño, jefe directo, o admin.
+        allow delete: if request.auth != null && (
           request.auth.uid == userId ||
           isDirectBossOf(userId) ||
           isAdmin()
         );
+        // Alta/edición: además de los permisos, el turno debe tener forma válida.
+        allow create, update: if request.auth != null && (
+          request.auth.uid == userId ||
+          isDirectBossOf(userId) ||
+          isAdmin()
+        ) && validShift(request.resource.data);
       }
 
       // Cuota de uso de la IA: la escribe SOLO el backend (Admin SDK ignora reglas).
@@ -98,12 +112,15 @@ service cloud.firestore {
       allow create: if request.auth != null &&
         request.resource.data.uid == request.auth.uid &&
         request.resource.data.storeKey == myStoreKey();
-      // Actualización/Borrado: dueño, jefe de la sección, o admin.
+      // Actualización: dueño, jefe de la sección, o admin. Además, uid y storeKey
+      // son INMUTABLES (no se puede re-enrutar ni cambiar de dueño una petición).
       allow update: if request.auth != null && (
         resource.data.uid == request.auth.uid ||
         isDirectBossOfRequest(resource.data) ||
         isAdmin()
-      );
+      ) &&
+        request.resource.data.uid == resource.data.uid &&
+        request.resource.data.storeKey == resource.data.storeKey;
       allow delete: if request.auth != null && (
         resource.data.uid == request.auth.uid ||
         isDirectBossOfRequest(resource.data) ||
@@ -114,7 +131,12 @@ service cloud.firestore {
     // ---------- Noticias (requiere sesión) ----------
     match /noticias/{noticiaId} {
       allow read: if request.auth != null;
-      allow write: if isAdmin();
+      // Alta solo admin y con createdAt válido (lo usa la ordenación y la limpieza
+      // programada). isPushRequest, si viene, debe ser booleano.
+      allow create: if isAdmin() &&
+        request.resource.data.createdAt is number &&
+        (!('isPushRequest' in request.resource.data) || request.resource.data.isPushRequest is bool);
+      allow update, delete: if isAdmin();
     }
 
     // ---------- Licencias (requiere sesión) ----------

@@ -69,9 +69,13 @@ beforeEach(async () => {
 // Atajo: BD autenticada como cierto usuario (con claims opcionales).
 const as = (uid, claims = {}) => testEnv.authenticatedContext(uid, claims).firestore();
 
-describe('Perfiles de usuario (lectura acotada)', () => {
-  test('un empleado SÍ puede leer un perfil de su MISMA tienda', async () => {
-    await assertSucceeds(getDoc(doc(as(BASE), 'users', JEFE)));
+describe('Perfiles de usuario (lectura PRIVADA)', () => {
+  test('un compañero (no jefe) NO puede leer el perfil de otro de su tienda (privacidad: email/fcmToken)', async () => {
+    await assertFails(getDoc(doc(as(BASE), 'users', BASE2)));
+  });
+
+  test('el JEFE de la sección SÍ puede leer el perfil de su subordinado', async () => {
+    await assertSucceeds(getDoc(doc(as(JEFE), 'users', BASE)));
   });
 
   test('un empleado NO puede leer un perfil de OTRA tienda', async () => {
@@ -102,6 +106,18 @@ describe('Turnos', () => {
 
   test('cada uno SÍ puede leer sus propios turnos', async () => {
     await assertSucceeds(getDoc(doc(as(BASE), 'users', BASE, 'shifts', '2026-06-10')));
+  });
+
+  test('NO se puede guardar un turno con tipo inválido (validación de forma)', async () => {
+    await assertFails(
+      setDoc(doc(as(BASE), 'users', BASE, 'shifts', '2026-06-11'), { date: '2026-06-11', type: 'hackeo', hours: 0 })
+    );
+  });
+
+  test('SÍ se puede guardar un turno propio con forma válida', async () => {
+    await assertSucceeds(
+      setDoc(doc(as(BASE), 'users', BASE, 'shifts', '2026-06-12'), { date: '2026-06-12', type: 'work', hours: 8 })
+    );
   });
 });
 
@@ -137,6 +153,12 @@ describe('Peticiones (días libres)', () => {
   test('un usuario NO puede crear una petición a nombre de OTRO', async () => {
     await assertFails(
       setDoc(doc(as(BASE), 'requests', 'suplantada'), { uid: BASE2, storeKey: STOREKEY_CENTRO, status: 'pending', date: '2026-06-20' })
+    );
+  });
+
+  test('al actualizar una petición NO se puede cambiar el dueño (uid inmutable)', async () => {
+    await assertFails(
+      updateDoc(doc(as(BASE), 'requests', 'req1'), { uid: BASE2 })
     );
   });
 });

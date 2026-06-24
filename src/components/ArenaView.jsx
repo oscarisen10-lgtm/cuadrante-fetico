@@ -1,6 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Timer, Trophy, Crown, Gem, StopCircle, Gamepad2, X } from 'lucide-react';
-import { ADMIN_EMAIL } from '../constants/config';
+import { isAdminUser } from '../constants/config';
 import { submitArenaScore, subscribeToDailyScores, subscribeToStoreScores, getArenaUsage } from '../services/firebaseService';
 import { toast } from './Toast';
 
@@ -52,7 +52,7 @@ export function ArenaView({ user, onPlayingChange }) {
   const [playsUsed, setPlaysUsed] = useState(0);
 
   const ARENA_DAILY_PLAYS = 3; // debe coincidir con la Cloud Function
-  const isAdmin = !!(user?.email && ADMIN_EMAIL && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase());
+  const isAdmin = isAdminUser(user);
   const todayStr = new Date().toISOString().split('T')[0]; // misma base de fecha (UTC) que el backend
 
   useEffect(() => {

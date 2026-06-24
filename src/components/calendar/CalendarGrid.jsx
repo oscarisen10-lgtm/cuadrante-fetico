@@ -1,21 +1,25 @@
 import React, { memo } from 'react';
 import { getFormattedDate } from '../../utils/dateUtils';
-import { isHoliday } from '../../utils/holidayUtils';
 
 /**
  * DayCell — An individual day rendered in the calendar grid.
  * Memoized to prevent re-renders when other days change.
+ * RENDIMIENTO (P-1): recibe `isSelected`, `isHolidayDay` y `todayStr` ya calculados
+ * (booleanos/string primitivos) en vez del array `selectedDates` y de llamar a
+ * isHoliday() por celda. Así el memo solo re-renderiza las celdas que cambian
+ * (clave en la vista anual: 12 meses × ~35 celdas) y se elimina la búsqueda
+ * lineal en STORES que se repetía por cada celda.
  */
-export const DayCell = memo(function DayCell({ d, targetYear, targetMonth, shiftsMap, isSmall, selectedDates, onDayClick, onDayDoubleClick, userStore }) {
+export const DayCell = memo(function DayCell({ d, targetYear, targetMonth, shiftsMap, isSmall, isSelected, isHolidayDay, todayStr, onDayClick }) {
   const dStr = getFormattedDate(new Date(targetYear, targetMonth, d));
   const s = shiftsMap[dStr];
   const dayOfWeek = new Date(targetYear, targetMonth, d).getDay();
-  
+
   let style = isSmall ? "bg-slate-50 text-slate-400" : "bg-gradient-to-b from-white to-slate-100 text-slate-400 hover:from-slate-50 hover:to-slate-200";
   let inlineStyle = {};
   let label = "";
-  
-  const isDayHoliday = isHoliday(`${(targetMonth + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`, userStore);
+
+  const isDayHoliday = isHolidayDay;
   if (isDayHoliday) {
     style = isSmall ? "text-rose-600 opacity-100" : "text-rose-600 hover:opacity-80 ring-1 ring-slate-100 ring-inset";
     inlineStyle = { background: isSmall ? "repeating-linear-gradient(45deg, transparent, transparent 2px, #f1f5f9 2px, #f1f5f9 4px)" : "repeating-linear-gradient(45deg, transparent, transparent 4px, #f1f5f9 4px, #f1f5f9 8px)" };
@@ -89,8 +93,7 @@ export const DayCell = memo(function DayCell({ d, targetYear, targetMonth, shift
     inlineStyle = { background: `linear-gradient(to top, ${colorBottom} 0%, ${colorTop} 50%, transparent 100%)` };
   }
 
-  const isSelected = selectedDates?.includes(dStr);
-  const isToday = dStr === getFormattedDate(new Date());
+  const isToday = dStr === todayStr;
   const dayNumber = dayOfWeek === 0 ? <span className="text-rose-600">{d}</span> : d;
 
   // --- SMALL (yearly view) ---
@@ -140,32 +143,36 @@ export const DayCell = memo(function DayCell({ d, targetYear, targetMonth, shift
 /**
  * MonthGrid — Renders the full grid of days for a single month.
  */
-export const MonthGrid = memo(function MonthGrid({ targetYear, targetMonth, shiftsMap, isSmall, selectedDates, onDayClick, onDayDoubleClick, userStore }) {
+export const MonthGrid = memo(function MonthGrid({ targetYear, targetMonth, shiftsMap, isSmall, selectedDates, holidaySet, onDayClick }) {
   const days = [];
   const startOffset = (new Date(targetYear, targetMonth, 1).getDay() || 7) - 1;
   const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
-  
+  const todayStr = getFormattedDate(new Date()); // 1 vez por mes, no por celda
+
   for (let i = 0; i < startOffset; i++) {
     days.push(<div key={`e-${i}`} role="gridcell" aria-hidden="true"></div>);
   }
-  
+
+  const mm = (targetMonth + 1).toString().padStart(2, '0');
   for (let d = 1; d <= daysInMonth; d++) {
+    const dStr = getFormattedDate(new Date(targetYear, targetMonth, d));
+    const mmdd = `${mm}-${d.toString().padStart(2, '0')}`;
     days.push(
-      <DayCell 
-        key={d} 
-        d={d} 
-        targetYear={targetYear} 
-        targetMonth={targetMonth} 
-        shiftsMap={shiftsMap} 
+      <DayCell
+        key={d}
+        d={d}
+        targetYear={targetYear}
+        targetMonth={targetMonth}
+        shiftsMap={shiftsMap}
         isSmall={isSmall}
-        selectedDates={selectedDates}
+        isSelected={selectedDates?.includes(dStr) || false}
+        isHolidayDay={holidaySet?.has(mmdd) || false}
+        todayStr={todayStr}
         onDayClick={onDayClick}
-        onDayDoubleClick={onDayDoubleClick}
-        userStore={userStore}
       />
     );
   }
-  
+
   return <>{days}</>;
 });
 
