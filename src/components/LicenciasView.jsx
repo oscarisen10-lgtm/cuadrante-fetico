@@ -54,11 +54,13 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
       )}
       
       {/* Control de tamaño de letra de este apartado (se guarda en el dispositivo) */}
-      <div className="flex items-center justify-end gap-2 mb-3">
-        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mr-1">Letra</span>
-        <button onClick={() => changeScale(-0.1)} disabled={fontScale <= 0.8} aria-label="Reducir tamaño de letra" className="w-9 h-9 rounded-xl bg-white border border-slate-200 shadow-sm text-slate-600 font-black text-xs flex items-center justify-center active:scale-90 transition disabled:opacity-30">A-</button>
-        <span className="text-[10px] font-black text-slate-500 w-10 text-center tabular-nums">{Math.round(fontScale * 100)}%</span>
-        <button onClick={() => changeScale(0.1)} disabled={fontScale >= 1.5} aria-label="Agrandar tamaño de letra" className="w-9 h-9 rounded-xl bg-emerald-600 text-white shadow-sm font-black text-base flex items-center justify-center active:scale-90 transition disabled:opacity-30">A+</button>
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecciona el tamaño de letra</span>
+        <div className="flex items-center gap-2 shrink-0">
+          <button onClick={() => changeScale(-0.1)} disabled={fontScale <= 0.8} aria-label="Reducir tamaño de letra" className="w-9 h-9 rounded-xl bg-white border border-slate-200 shadow-sm text-slate-600 font-black text-xs flex items-center justify-center active:scale-90 transition disabled:opacity-30">A-</button>
+          <span className="text-[10px] font-black text-slate-500 w-10 text-center tabular-nums">{Math.round(fontScale * 100)}%</span>
+          <button onClick={() => changeScale(0.1)} disabled={fontScale >= 1.5} aria-label="Agrandar tamaño de letra" className="w-9 h-9 rounded-xl bg-emerald-600 text-white shadow-sm font-black text-base flex items-center justify-center active:scale-90 transition disabled:opacity-30">A+</button>
+        </div>
       </div>
 
       <div style={{ zoom: fontScale }} className="flex flex-col animate-in fade-in duration-500 gap-6 pb-24 flex-1">
