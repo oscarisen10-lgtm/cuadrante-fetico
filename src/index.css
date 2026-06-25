@@ -170,6 +170,53 @@ body {
 @keyframes hud-pop { 0% { transform: scale(1); } 40% { transform: scale(1.22); } 100% { transform: scale(1); } }
 
 /* ============================================================
+   TRILERO GAME — efectos premium
+   ============================================================ */
+
+/* Temblor de pantalla al fallar */
+@keyframes trilero-shake {
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  12%  { transform: translate(-11px, -2px) rotate(-1.8deg); }
+  24%  { transform: translate(10px,  2px) rotate( 1.8deg); }
+  36%  { transform: translate(-8px, -1px) rotate(-1.1deg); }
+  50%  { transform: translate(7px,   1px) rotate( 0.9deg); }
+  64%  { transform: translate(-4px,  0) rotate(-0.5deg); }
+  80%  { transform: translate(3px,   0) rotate( 0.3deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+.trilero-shake { animation: trilero-shake 0.52s cubic-bezier(.36,.07,.19,.97) both; }
+
+/* Flash rojo al fallar */
+@keyframes trilero-flash {
+  0%   { opacity: 0.42; }
+  100% { opacity: 0; }
+}
+.trilero-flash { animation: trilero-flash 0.55s ease-out forwards; }
+
+/* Anillo que se expande al acertar o fallar */
+@keyframes trilero-ring {
+  0%   { transform: translate(-50%, -50%) scale(0.08); opacity: 0.95; }
+  100% { transform: translate(-50%, -50%) scale(1);    opacity: 0; }
+}
+.trilero-ring {
+  position: absolute;
+  width: 110px; height: 110px;
+  border-radius: 50%;
+  border: 3px solid currentColor;
+  pointer-events: none;
+  animation: trilero-ring 0.55s ease-out forwards;
+}
+
+/* Vaso se asienta con rebote al aterrizar */
+@keyframes trilero-land {
+  0%   { transform: scaleY(1) translateY(0); }
+  28%  { transform: scaleY(0.89) translateY(3px); }
+  62%  { transform: scaleY(1.07) translateY(-4px); }
+  100% { transform: scaleY(1) translateY(0); }
+}
+.trilero-land { animation: trilero-land 0.28s cubic-bezier(.2,.6,.4,1.3) both; }
+
+/* ============================================================
    AHORRO DE BATERÍA / ACCESIBILIDAD (M-1)
    Si el usuario pide "menos movimiento" (ajuste del sistema), se detienen las
    animaciones en bucle (sheen, breathe, float, orbes, etc.), que consumen GPU

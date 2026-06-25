@@ -37,9 +37,9 @@ export const TrackerView = React.memo(function TrackerView({
   }, [activeShift, isBreakActive, workTimeAccumulated, breakStartTime, settings?.breakDuration]);
 
   return (
-    <div className="flex flex-col items-center justify-center space-y-10 py-6 animate-in fade-in duration-300 pb-24 h-full">
+    <div className="flex flex-col items-center justify-center space-y-8 py-6 animate-in fade-in duration-300 min-h-full">
       <div className="text-center">
-        <div className={`text-7xl font-black tracking-tighter font-mono tabular-nums ${isBreakActive ? 'text-slate-300' : 'text-slate-800'}`} style={!isBreakActive ? { textShadow: '0 2px 4px rgba(0,0,0,0.08)' } : {}}>{formatTime(elapsed || 0)}</div>
+        <div className={`text-7xl font-black tracking-tighter font-mono tabular-nums leading-tight ${isBreakActive ? 'text-slate-300' : 'text-slate-800'}`} style={!isBreakActive ? { textShadow: '0 2px 4px rgba(0,0,0,0.08)' } : {}}>{formatTime(elapsed || 0)}</div>
         <div className="inline-flex items-center gap-1.5 mt-3 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest" style={{ background: activeShift ? (isBreakActive ? 'rgba(100,116,139,0.12)' : 'rgba(5,150,105,0.12)') : 'rgba(148,163,184,0.12)', color: activeShift ? (isBreakActive ? '#475569' : '#059669') : '#94a3b8' }}>
           <span className="w-1.5 h-1.5 rounded-full" style={{ background: activeShift ? (isBreakActive ? '#64748b' : '#059669') : '#94a3b8', boxShadow: activeShift && !isBreakActive ? '0 0 6px #059669' : 'none' }} />
           {activeShift ? (isBreakActive ? 'Descanso activo' : 'Jornada en curso') : 'Reloj parado'}
