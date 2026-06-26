@@ -4,6 +4,7 @@ import { isAdminUser } from '../constants/config';
 import { submitArenaScore, subscribeToDailyScores, subscribeToStoreScores, getArenaUsage } from '../services/firebaseService';
 import { toast } from './Toast';
 import { TrileroCover } from './minigames/TrileroCover';
+import { TorreCover } from './minigames/TorreCover';
 
 // Registro de los 31 minijuegos (uno por día del mes).
 // Carga perezosa: el código de cada juego solo se descarga cuando se juega.
@@ -258,12 +259,7 @@ export function ArenaView({ user, onPlayingChange }) {
              </>
           )}
           {activeGame.id === 'torre' && (
-             <div className="flex flex-col items-center justify-center h-full pt-4">
-               <div className="w-20 h-5 bg-pink-500 rounded border-b-2 border-pink-700 shadow-md"></div>
-               <div className="w-16 h-5 bg-purple-500 rounded border-b-2 border-purple-700 shadow-md border-x border-white/10 mt-0.5 animate-pulse"></div>
-               <div className="w-16 h-5 bg-violet-500 rounded border-b-2 border-violet-700 shadow-md border-x border-white/10 mt-0.5" style={{ animation: 'bounce 2.5s infinite 0.2s' }}></div>
-               <div className="w-12 h-5 bg-indigo-500 rounded border-b-2 border-indigo-700 shadow-md border-x border-white/10 mt-0.5 animate-bounce"></div>
-             </div>
+            <TorreCover className="w-full h-full" style={{ filter: 'drop-shadow(0 14px 18px rgba(0,0,0,0.45))' }} />
           )}
           {activeGame.id === 'trilero' && (
             <TrileroCover className="w-full h-full" style={{ filter: 'drop-shadow(0 14px 18px rgba(0,0,0,0.45))' }} />
@@ -459,6 +455,8 @@ export function ArenaView({ user, onPlayingChange }) {
                   <div className="absolute inset-x-0 top-0 h-1/2 pointer-events-none" style={{ background: 'linear-gradient(180deg,rgba(255,255,255,0.22),transparent)' }} />
                   {g.id === 'trilero'
                     ? <TrileroCover className="w-full h-12 relative" />
+                    : g.id === 'torre'
+                    ? <TorreCover className="w-full h-12 relative" />
                     : <span className="text-3xl relative" style={{ filter: 'drop-shadow(0 3px 4px rgba(0,0,0,0.4))' }}>{g.emoji}</span>}
                   <span className="text-[8px] font-black uppercase tracking-tight leading-tight text-center relative">{g.title}</span>
                   <span className="text-[7px] font-bold opacity-70 relative">Día {g.day}</span>
