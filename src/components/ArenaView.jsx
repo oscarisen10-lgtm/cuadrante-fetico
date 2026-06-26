@@ -3,6 +3,7 @@ import { Timer, Trophy, Crown, Gem, StopCircle, Gamepad2, X } from 'lucide-react
 import { isAdminUser } from '../constants/config';
 import { submitArenaScore, subscribeToDailyScores, subscribeToStoreScores, getArenaUsage } from '../services/firebaseService';
 import { toast } from './Toast';
+import { TrileroCover } from './minigames/TrileroCover';
 
 // Registro de los 31 minijuegos (uno por día del mes).
 // Carga perezosa: el código de cada juego solo se descarga cuando se juega.
@@ -25,7 +26,7 @@ const GAMES = [
   { day: 16, id: 'corta',     title: 'CORTA',            emoji: '🔪', bgClass: 'bg-[#65a30d] border-[#4d7c0f]',  Component: lazy(() => import('./minigames/CortaGame').then(m => ({ default: m.CortaGame }))) },
   { day: 17, id: 'rastreo',   title: 'RASTREO',          emoji: '📡', bgClass: 'bg-[#059669] border-[#047857]',  Component: lazy(() => import('./minigames/SigueGame').then(m => ({ default: m.SigueGame }))) },
   { day: 18, id: 'equilibrio',title: 'EQUILIBRIO',       emoji: '⚖️', bgClass: 'bg-[#d97706] border-[#b45309]',  Component: lazy(() => import('./minigames/EquilibrioGame').then(m => ({ default: m.EquilibrioGame }))) },
-  { day: 19, id: 'trilero',   title: 'TRILERO',          emoji: '🥤', bgClass: 'bg-[#e11d48] border-[#be123c]',  Component: lazy(() => import('./minigames/TrileroGame').then(m => ({ default: m.TrileroGame }))) },
+  { day: 19, id: 'trilero',   title: 'TRILERO',          emoji: '🥤', bgClass: 'bg-gradient-to-br from-[#065f46] to-[#03190f] border-[#047857]',  Component: lazy(() => import('./minigames/TrileroGame').then(m => ({ default: m.TrileroGame }))) },
   { day: 20, id: 'encesta',   title: 'ENCESTA',          emoji: '🚚', bgClass: 'bg-[#0284c7] border-[#0369a1]',  Component: lazy(() => import('./minigames/EncestaGame').then(m => ({ default: m.EncestaGame }))) },
   { day: 21, id: 'salto',     title: 'SALTO DEL PALÉ',   emoji: '🤸', bgClass: 'bg-[#84cc16] border-[#65a30d]',  Component: lazy(() => import('./minigames/SaltoPaleGame').then(m => ({ default: m.SaltoPaleGame }))) },
   { day: 22, id: 'carrito',   title: 'CARRITO VOLADOR',  emoji: '🛒', bgClass: 'bg-[#0ea5e9] border-[#0284c7]',  Component: lazy(() => import('./minigames/CarritoVoladorGame').then(m => ({ default: m.CarritoVoladorGame }))) },
@@ -264,7 +265,10 @@ export function ArenaView({ user, onPlayingChange }) {
                <div className="w-12 h-5 bg-indigo-500 rounded border-b-2 border-indigo-700 shadow-md border-x border-white/10 mt-0.5 animate-bounce"></div>
              </div>
           )}
-          {!['zigzag', 'catch', 'freno', 'torre'].includes(activeGame.id) && (
+          {activeGame.id === 'trilero' && (
+            <TrileroCover className="w-full h-full" style={{ filter: 'drop-shadow(0 14px 18px rgba(0,0,0,0.45))' }} />
+          )}
+          {!['zigzag', 'catch', 'freno', 'torre', 'trilero'].includes(activeGame.id) && (
             <>
               <div className="absolute top-0 left-1/4 text-4xl opacity-60 float-soft" style={{ animationDelay: '0.6s' }}>{activeGame.emoji}</div>
               <div className="text-[5rem] float-soft z-10" style={{ filter: 'drop-shadow(0 12px 16px rgba(0,0,0,0.45))' }}>{activeGame.emoji}</div>
@@ -453,7 +457,9 @@ export function ArenaView({ user, onPlayingChange }) {
                   style={{ boxShadow: '0 8px 16px -6px rgba(0,0,0,0.5), inset 0 1.5px 0 rgba(255,255,255,0.3), inset 0 -8px 16px rgba(0,0,0,0.3)' }}
                 >
                   <div className="absolute inset-x-0 top-0 h-1/2 pointer-events-none" style={{ background: 'linear-gradient(180deg,rgba(255,255,255,0.22),transparent)' }} />
-                  <span className="text-3xl relative" style={{ filter: 'drop-shadow(0 3px 4px rgba(0,0,0,0.4))' }}>{g.emoji}</span>
+                  {g.id === 'trilero'
+                    ? <TrileroCover className="w-full h-12 relative" />
+                    : <span className="text-3xl relative" style={{ filter: 'drop-shadow(0 3px 4px rgba(0,0,0,0.4))' }}>{g.emoji}</span>}
                   <span className="text-[8px] font-black uppercase tracking-tight leading-tight text-center relative">{g.title}</span>
                   <span className="text-[7px] font-bold opacity-70 relative">Día {g.day}</span>
                 </button>
