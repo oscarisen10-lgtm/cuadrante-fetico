@@ -5,11 +5,13 @@ import { submitArenaScore, subscribeToDailyScores, subscribeToStoreScores, getAr
 import { toast } from './Toast';
 import { TrileroCover } from './minigames/TrileroCover';
 import { TorreCover } from './minigames/TorreCover';
+import { SimonCover } from './minigames/SimonCover';
+import { EscanerCover } from './minigames/EscanerCover';
 
 // Registro de los 31 minijuegos (uno por día del mes).
 // Carga perezosa: el código de cada juego solo se descarga cuando se juega.
 const GAMES = [
-  { day: 1,  id: 'catch',     title: 'ATRAPA EL TURNO',  emoji: '🧲', bgClass: 'bg-[#3a0ca3] border-[#2b087a]',  Component: lazy(() => import('./minigames/CatchTheShiftGame').then(m => ({ default: m.CatchTheShiftGame }))) },
+  { day: 1,  id: 'catch',     title: 'CAJA CERTERA',     emoji: '🎯', bgClass: 'bg-[#0e7490] border-[#155e75]',  Component: lazy(() => import('./minigames/CatchTheShiftGame').then(m => ({ default: m.CatchTheShiftGame }))) },
   { day: 2,  id: 'zigzag',    title: 'CINTA ZIG ZAG',    emoji: '🛒', bgClass: 'bg-[#94a3b8] border-[#64748b]',  Component: lazy(() => import('./minigames/ZigZagGame').then(m => ({ default: m.ZigZagGame }))) },
   { day: 3,  id: 'freno',     title: 'FRENO EN SECO',    emoji: '⏱️', bgClass: 'bg-[#ef4444] border-[#b91c1c]',  Component: lazy(() => import('./minigames/FrenoEnSecoGame').then(m => ({ default: m.FrenoEnSecoGame }))) },
   { day: 4,  id: 'torre',     title: 'TORRE DE BLOQUES', emoji: '🏗️', bgClass: 'bg-gradient-to-br from-[#701a75] to-[#4a044e] border-[#701a75]', Component: lazy(() => import('./minigames/TorreDeBloquesGame').then(m => ({ default: m.TorreDeBloquesGame }))) },
@@ -264,7 +266,13 @@ export function ArenaView({ user, onPlayingChange }) {
           {activeGame.id === 'trilero' && (
             <TrileroCover className="w-full h-full" style={{ filter: 'drop-shadow(0 14px 18px rgba(0,0,0,0.45))' }} />
           )}
-          {!['zigzag', 'catch', 'freno', 'torre', 'trilero'].includes(activeGame.id) && (
+          {activeGame.id === 'simon' && (
+            <SimonCover className="w-full h-full" style={{ filter: 'drop-shadow(0 14px 18px rgba(0,0,0,0.45))' }} />
+          )}
+          {activeGame.id === 'escaner' && (
+            <EscanerCover className="w-full h-full" style={{ filter: 'drop-shadow(0 14px 18px rgba(0,0,0,0.45))' }} />
+          )}
+          {!['zigzag', 'catch', 'freno', 'torre', 'trilero', 'simon', 'escaner'].includes(activeGame.id) && (
             <>
               <div className="absolute top-0 left-1/4 text-4xl opacity-60 float-soft" style={{ animationDelay: '0.6s' }}>{activeGame.emoji}</div>
               <div className="text-[5rem] float-soft z-10" style={{ filter: 'drop-shadow(0 12px 16px rgba(0,0,0,0.45))' }}>{activeGame.emoji}</div>
@@ -457,6 +465,10 @@ export function ArenaView({ user, onPlayingChange }) {
                     ? <TrileroCover className="w-full h-12 relative" />
                     : g.id === 'torre'
                     ? <TorreCover className="w-full h-12 relative" />
+                    : g.id === 'simon'
+                    ? <SimonCover className="w-full h-12 relative" />
+                    : g.id === 'escaner'
+                    ? <EscanerCover className="w-full h-12 relative" />
                     : <span className="text-3xl relative" style={{ filter: 'drop-shadow(0 3px 4px rgba(0,0,0,0.4))' }}>{g.emoji}</span>}
                   <span className="text-[8px] font-black uppercase tracking-tight leading-tight text-center relative">{g.title}</span>
                   <span className="text-[7px] font-bold opacity-70 relative">Día {g.day}</span>
