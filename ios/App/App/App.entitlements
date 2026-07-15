@@ -2,7 +2,16 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!--
+	  aps-environment DEBE ser "production" para builds distribuidos por TestFlight/App Store.
+	  Con "development" el dispositivo registra un token de APNs SANDBOX, pero FCM entrega las
+	  notificaciones por el gateway de PRODUCCIÓN (api.push.apple.com) → Apple responde
+	  BadDeviceToken y el push se descarta en silencio. Ese era el motivo de que en Android
+	  llegaran las notificaciones y en iOS no.
+	  Para depurar push en un build de desarrollo desde Xcode, cámbialo temporalmente a
+	  "development"; pero NUNCA subas a TestFlight/App Store con "development".
+	-->
 	<key>aps-environment</key>
-	<string>development</string>
+	<string>production</string>
 </dict>
 </plist>

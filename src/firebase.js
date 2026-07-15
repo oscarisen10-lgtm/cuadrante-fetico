@@ -90,7 +90,16 @@ try {
 export const messaging = _messaging;
 
 export const storage = getStorage(app);
-export const functions = getFunctions(app);
+
+// Las callable se invocan por nombre + REGIÓN. El backend corre en europe-west1
+// (junto a Firestore eur3 y a los usuarios); esta instancia es la que debe usarse
+// para todas las funciones nuevas.
+export const functions = getFunctions(app, "europe-west1");
+
+// TRANSICIÓN: solo para `teamStatus`, que sigue desplegada en us-central1 por
+// compatibilidad con las builds nativas antiguas (ver comentario en functions/index.js).
+// Cuando teamStatus migre a europe-west1, eliminar esta instancia y su único uso.
+export const functionsUsCentral = getFunctions(app, "us-central1");
 
 // Clave VAPID para Web Push. Se obtiene en Firebase Console > Configuración del proyecto
 // > Cloud Messaging > Certificados push web, y se define en .env como

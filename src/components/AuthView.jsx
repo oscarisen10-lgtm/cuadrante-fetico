@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { User, Lock, Mail, Store, ShieldCheck, KeyRound, X, ChevronDown } from 'lucide-react';
+import { User, Lock, Mail, Store, ShieldCheck, KeyRound, X, ChevronDown, Phone } from 'lucide-react';
 import { loginUser, registerUser, resetPassword, signInWithGoogle, signInWithApple } from '../services/firebaseService';
 import { InputGroup } from './UIComponents';
 import { COMPANY_RULES } from '../constants/config';
 import { STORES, S_ROMERO_STORES } from '../constants/stores';
+import appLogo from '../../icons/icon-192.webp';
 
 // ⚠️ MODO TESTERS: Cambiar a `true` para reactivar el registro público
 const ALLOW_REGISTRATION = true;
@@ -117,6 +118,7 @@ export default function AuthView() {
         const newUserProfile = {
           email: emailInput,
           fullName: formData.get('fullName') || 'Compañero/a',
+          phone: formData.get('phone')?.trim() || "",
           company: formData.get('company') || "Supercor",
           store: formData.get('store') || "Centro sin definir",
           rank: formData.get('rank') || "Personal base"
@@ -156,8 +158,8 @@ export default function AuthView() {
       <div className="relative w-full max-w-sm rounded-[2rem] flex flex-col max-h-[95vh] overflow-hidden" style={{ background: '#ffffff', boxShadow: '0 30px 70px -20px rgba(5,80,60,0.45), inset 0 1.5px 1px rgba(255,255,255,0.9)', border: '1px solid rgba(16,185,129,0.15)' }}>
         <div className="p-5 text-center text-white shrink-0 relative z-10 overflow-hidden" style={{ background: 'linear-gradient(160deg,#10b981,#059669 55%,#047857)' }}>
           <div className="pointer-events-none absolute -top-8 -right-4 w-32 h-32 rounded-full" style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.2), transparent 70%)' }} />
-          <div className="relative w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-2 shrink-0" style={{ background: 'linear-gradient(180deg,#fff,#e8efe9)', boxShadow: '0 6px 14px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.9)' }}>
-            <span className="text-emerald-600 font-black text-2xl italic leading-none">F</span>
+          <div className="relative w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-2 shrink-0 overflow-hidden" style={{ background: 'linear-gradient(180deg,#fff,#e8efe9)', boxShadow: '0 6px 14px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.9)' }}>
+            <img src={appLogo} alt="Mi Cuadrante" className="w-full h-full object-cover" />
           </div>
           <h1 className="relative text-lg font-black italic uppercase tracking-tight leading-none">Mi Cuadrante</h1>
           <p className="relative text-emerald-100 text-[8px] uppercase font-bold tracking-[0.25em] mt-1.5">Registro Horario</p>
@@ -169,6 +171,7 @@ export default function AuthView() {
               <>
                 <InputGroup label="Nombre Apellidos" name="fullName" small icon={<User size={14}/>} />
                 <InputGroup label="Email" name="email" type="email" small icon={<Mail size={14}/>} />
+                <InputGroup label="Teléfono (opcional)" name="phone" type="tel" small icon={<Phone size={14}/>} required={false} inputMode="tel" autoComplete="tel" />
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-0.5">
                     <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight">Empresa</label>

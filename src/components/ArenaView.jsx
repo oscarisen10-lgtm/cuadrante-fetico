@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { Timer, Trophy, Crown, Gem, StopCircle, Gamepad2, X } from 'lucide-react';
 import { isAdminUser } from '../constants/config';
 import { submitArenaScore, subscribeToDailyScores, subscribeToStoreScores, getArenaUsage } from '../services/firebaseService';
@@ -44,54 +44,66 @@ const GAMES = [
   { day: 31, id: 'ritmo',     title: 'RITMO DE CAJA',    emoji: '🎹', bgClass: 'bg-[#6d28d9] border-[#5b21b6]',  Component: lazy(() => import('./minigames/RitmoCajaGame').then(m => ({ default: m.RitmoCajaGame }))) },
 ];
 
+// Cuenta atrás hasta el reinicio diario, aislada en su propio componente hoja para que
+// el "tick" de cada segundo NO re-renderice toda la ArenaView (podio + 20 filas). El
+// reinicio real (partidas y ranking) ocurre a MEDIANOCHE UTC, que es la misma base de
+// fecha que usa el backend; antes el cartel prometía las 05:00 locales, que no era cuándo
+// realmente se reiniciaba (mentía ~3-4 h). Ahora cuenta al reinicio de verdad.
+const ArenaCountdown = React.memo(function ArenaCountdown() {
+  const [timeLeftStr, setTimeLeftStr] = useState('');
+  useEffect(() => {
+    const update = () => {
+      const d = new Date();
+      const nextReset = new Date(Date.UTC(
+        d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1, 0, 0, 0
+      ));
+      const diff = nextReset - d;
+      const h = Math.floor(diff / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diff % (1000 * 60)) / 1000);
+      setTimeLeftStr(`${h}h ${m}m ${s}s`);
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, []);
+  return <>{timeLeftStr}</>;
+});
+
 export function ArenaView({ user, onPlayingChange }) {
   const [activeTab, setActiveTab] = useState('puntuacion'); // 'clasificacion' or 'puntuacion'
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedGame, setSelectedGame] = useState(null); // juego a lanzar (null = el de hoy)
   const [showPicker, setShowPicker] = useState(false);     // selector de TODOS los juegos (admin)
-  const [timeLeftStr, setTimeLeftStr] = useState('');
-  const [gameNumberStr, setGameNumberStr] = useState('');
   const [players, setPlayers] = useState([]);
   const [stores, setStores] = useState([]);
-  const [playsUsed, setPlaysUsed] = useState(0);
 
   const ARENA_DAILY_PLAYS = 3; // debe coincidir con la Cloud Function
   const isAdmin = isAdminUser(user);
   const todayStr = new Date().toISOString().split('T')[0]; // misma base de fecha (UTC) que el backend
 
-  useEffect(() => {
-    // Calculate game number (day of month / total days in month)
-    const now = new Date();
-    const currentDay = now.getDate();
-    const totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    setGameNumberStr(`# ${currentDay.toString().padStart(2, '0')}/${totalDays}`);
+  // Partidas usadas hoy, cacheadas en el dispositivo para NO leer la cuota de Firestore
+  // en cada visita a la pestaña. El backend sigue siendo la autoridad del límite real
+  // (rechaza con resource-exhausted si se supera), así que una caché algo desfasada entre
+  // dispositivos es inofensiva. La clave lleva la fecha UTC → se renueva sola cada día.
+  const usageKey = `arena_plays_${todayStr}`;
+  const [playsUsed, setPlaysUsedState] = useState(() => {
+    try {
+      const c = localStorage.getItem(usageKey);
+      return c !== null ? (Number(c) || 0) : 0;
+    } catch { return 0; }
+  });
+  const setPlaysUsed = useCallback((n) => {
+    setPlaysUsedState(n);
+    try { localStorage.setItem(usageKey, String(n)); } catch { /* almacenamiento no disponible */ }
+  }, [usageKey]);
 
-    // Calculate time until next 05:00 AM
-    const updateCountdown = () => {
-      const d = new Date();
-      let nextReset = new Date(d);
-      nextReset.setHours(5, 0, 0, 0);
-      
-      // If we are past 05:00 AM today, next reset is tomorrow at 05:00 AM
-      if (d > nextReset) {
-        nextReset.setDate(nextReset.getDate() + 1);
-      }
-      
-      const diff = nextReset - d;
-      const h = Math.floor(diff / (1000 * 60 * 60));
-      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const s = Math.floor((diff % (1000 * 60)) / 1000);
-      
-      setTimeLeftStr(`${h}h ${m}m ${s}s`);
-    };
-
-    updateCountdown();
-    const interval = setInterval(updateCountdown, 1000); // Update every second
-    return () => clearInterval(interval);
-  }, []);
-
-  // Juego del día (1-31, uno distinto cada día del mes)
-  const currentDay = new Date().getDate();
+  // Número de juego (día/total del mes) en base UTC, coherente con el reinicio y con
+  // el juego del día (así no divergen cerca de la medianoche UTC).
+  const nowUtc = new Date();
+  const currentDay = nowUtc.getUTCDate();
+  const totalDaysInMonth = new Date(Date.UTC(nowUtc.getUTCFullYear(), nowUtc.getUTCMonth() + 1, 0)).getUTCDate();
+  const gameNumberStr = `# ${currentDay.toString().padStart(2, '0')}/${totalDaysInMonth}`;
   const getActiveGame = (day) => {
     // Permite forzar el juego activo con parámetros en la URL (ej. ?game=torre o ?game=12)
     const hash = window.location.hash || '';
@@ -112,9 +124,13 @@ export function ArenaView({ user, onPlayingChange }) {
   useEffect(() => {
     const unsubP = subscribeToDailyScores(todayStr, setPlayers);
     const unsubS = subscribeToStoreScores(todayStr, setStores);
-    if (user?.uid) getArenaUsage(user.uid, todayStr).then(setPlaysUsed);
+    // Solo leemos la cuota de Firestore si NO la tenemos ya cacheada hoy (ahorra 1
+    // lectura por cada entrada a la pestaña Competición).
+    let cached = null;
+    try { cached = localStorage.getItem(usageKey); } catch { /* almacenamiento no disponible */ }
+    if (user?.uid && cached === null) getArenaUsage(user.uid, todayStr).then(setPlaysUsed);
     return () => { unsubP(); unsubS(); };
-  }, [user?.uid, todayStr]);
+  }, [user?.uid, todayStr, usageKey, setPlaysUsed]);
 
   // Avisa al contenedor para ocultar cabecera/barra mientras se juega una partida.
   useEffect(() => { onPlayingChange?.(isPlaying); }, [isPlaying]);
@@ -213,7 +229,7 @@ export function ArenaView({ user, onPlayingChange }) {
         </div>
         <div className="absolute top-4 left-4 text-white text-[11px] font-black px-3 py-1.5 rounded-full z-10" style={{ background: 'rgba(0,0,0,0.34)', boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.28), 0 2px 6px rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.14)' }}>{gameNumberStr}</div>
         <div className="absolute top-4 right-4 text-white text-[11px] font-black px-3 py-1.5 rounded-full flex items-center gap-1.5 z-10" style={{ background: 'rgba(0,0,0,0.34)', boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.28), 0 2px 6px rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.14)' }}>
-          <Timer size={14} className="animate-pulse" /> {timeLeftStr}
+          <Timer size={14} className="animate-pulse" /> <ArenaCountdown />
         </div>
 
         {/* Gráfico decorativo: Botones cayendo o Productos según el juego */}

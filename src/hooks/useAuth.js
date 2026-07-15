@@ -1,13 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { 
-  subscribeToAuth, 
-  subscribeToUserDoc, 
+import { Capacitor } from '@capacitor/core';
+import {
+  subscribeToAuth,
+  subscribeToUserDoc,
   subscribeToShifts,
+  subscribeToDelegado,
   saveUserData,
   saveShiftsBatch,
   deleteShiftsBatch,
   logoutUser,
-  ensureUserDoc
+  ensureUserDoc,
+  recordDeviceMeta
 } from '../services/firebaseService';
 import { toast } from '../components/Toast';
 
@@ -26,7 +29,12 @@ const shallowEqualUser = (a, b) => {
 export const useAuth = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  
+
+  // Sistema de delegados: cuenta activada (membership AUSENTE = usuario anterior
+  // al sistema → activo) y doc de delegado (null si este usuario no lo es).
+  const [isActive, setIsActive] = useState(true);
+  const [delegado, setDelegado] = useState(null);
+
   // App State managed in the cloud
   const [settings, setSettings] = useState({ notifications: true, breakDuration: 15 });
   const [shifts, setShifts] = useState([]);
@@ -45,6 +53,7 @@ export const useAuth = () => {
   useEffect(() => {
     let unsubUserDoc = null;
     let unsubShifts = null;
+    let unsubDelegado = null;
 
     // Safety timeout: if loading doesn't resolve in 10s, force it.
     // This covers the edge case where onSnapshot never fires on first
@@ -76,10 +85,19 @@ export const useAuth = () => {
           clearTimeout(docTimeout);
           if (docSnap.exists()) {
             const data = docSnap.data();
+            // Analítica (admin): registrar plataforma + versión SOLO si cambió respecto a lo
+            // guardado. Al escribir, el propio onSnapshot vuelve a disparar ya con los valores
+            // nuevos → la condición se vuelve falsa y no hay bucle de escrituras.
+            const currentPlatform = Capacitor.getPlatform();
+            if (data.profile && (data.profile.platform !== currentPlatform || data.profile.appVersion !== __APP_VERSION__)) {
+              recordDeviceMeta(firebaseUser.uid, currentPlatform, __APP_VERSION__);
+            }
             setUser((prev) => {
               const next = { ...data.profile, uid: firebaseUser.uid };
               return shallowEqualUser(prev, next) ? prev : next;
             });
+            // membership ausente = cuenta anterior al sistema de delegados → activa.
+            setIsActive(!data.membership || data.membership.active === true);
             setSettings(data.settings || { notifications: true, breakDuration: 15 });
             setActiveShift(data.activeShift || null);
             setWorkTimeAccumulated(data.workTimeAccumulated || 0);
@@ -112,23 +130,36 @@ export const useAuth = () => {
           setLoading(false);
         });
 
-        // Ventana de turnos: solo desde el 1 de enero del año pasado en adelante.
-        // Acota las lecturas de Firestore y evita que crezcan sin límite con los años.
-        // (Cubre todo el historial de los usuarios actuales; los cuadrantes de hace
-        // 2+ años no se cargan en cada apertura.)
-        const shiftsSince = `${new Date().getFullYear() - 1}-01-01`;
+        // Ventana de turnos: últimos 12 MESES RODANTES. Siempre cubre el año en curso
+        // completo (que es lo único que usan las estadísticas del convenio) y el
+        // calendario puede navegar hasta un año atrás. Antes era "1 de enero del año
+        // pasado" (entre 13 y 23 meses según la época), casi el doble de documentos
+        // leídos en cada carga fría — especialmente caro en iOS (caché en memoria).
+        const sinceDate = new Date();
+        sinceDate.setFullYear(sinceDate.getFullYear() - 1);
+        const y = sinceDate.getFullYear();
+        const m = String(sinceDate.getMonth() + 1).padStart(2, '0');
+        const d = String(sinceDate.getDate()).padStart(2, '0');
+        const shiftsSince = `${y}-${m}-${d}`;
         unsubShifts = subscribeToShifts(firebaseUser.uid, (shiftsArr) => {
           setShifts(shiftsArr);
         }, (error) => {
           console.error("Error al cargar turnos:", error);
         }, shiftsSince);
 
+        // ¿Es delegado? Suscripción a su propio doc delegados/{uid} (si no existe,
+        // devuelve null y no se muestra la pestaña). El admin lo crea/borra en vivo.
+        unsubDelegado = subscribeToDelegado(firebaseUser.uid, setDelegado);
+
       } else {
         clearTimeout(safetyTimeout);
         if (unsubUserDoc) { unsubUserDoc(); unsubUserDoc = null; }
         if (unsubShifts) { unsubShifts(); unsubShifts = null; }
+        if (unsubDelegado) { unsubDelegado(); unsubDelegado = null; }
         setUser(null);
         setShifts([]);
+        setIsActive(true);
+        setDelegado(null);
         setLoading(false);
       }
     });
@@ -138,6 +169,7 @@ export const useAuth = () => {
       unsubAuth();
       if (unsubUserDoc) unsubUserDoc();
       if (unsubShifts) unsubShifts();
+      if (unsubDelegado) unsubDelegado();
     };
   }, []);
 
@@ -189,6 +221,7 @@ export const useAuth = () => {
 
   return {
     user, loading, logoutUser, saveToCloud,
+    isActive, delegado,
     settings, shifts, activeShift, workTimeAccumulated, isBreakActive, breakStartTime
   };
 };

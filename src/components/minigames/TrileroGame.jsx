@@ -1,9 +1,41 @@
-import React, { useState, useEffect, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { ContactShadows } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { GameShell, clamp, rand } from './GameShell';
+
+// Sombra de contacto "falsa" y baratísima: un plano con una textura radial (gradiente
+// negro→transparente). Sustituye a <ContactShadows> de @react-three/drei, lo que nos
+// permite eliminar esa dependencia entera del bundle (drei arrastra react-spring,
+// camera-controls, maath…). Se dibuja una bajo cada hueco del trilero.
+function GroundShadows() {
+  const tex = useMemo(() => {
+    const s = 128;
+    const c = document.createElement('canvas');
+    c.width = c.height = s;
+    const ctx = c.getContext('2d');
+    const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+    g.addColorStop(0, 'rgba(0,0,0,0.5)');
+    g.addColorStop(0.55, 'rgba(0,0,0,0.22)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, s, s);
+    const t = new THREE.CanvasTexture(c);
+    t.needsUpdate = true;
+    return t;
+  }, []);
+  useEffect(() => () => tex.dispose(), [tex]);
+  return (
+    <>
+      {SLOT_X.map((x, i) => (
+        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.02, 0]}>
+          <planeGeometry args={[2.6, 2.6]} />
+          <meshBasicMaterial map={tex} transparent depthWrite={false} />
+        </mesh>
+      ))}
+    </>
+  );
+}
 
 // Posiciones X de los 3 huecos en el mundo 3D
 const SLOT_X = [-2.15, 0, 2.15];
@@ -232,7 +264,7 @@ function Scene({ cups, ballId, showBall, shakeKey, swapMs, postFx, onSlow, onPic
           <Cup key={cup.id} id={cup.id} slot={cup.slot} arc={cup.arc} lifted={cup.lifted} wrong={cup.wrong} swapMs={swapMs} cupPos={cupPos} onPick={() => onPick(cup)} />
         ))}
         <Ball ballId={ballId} visible={showBall} cupPos={cupPos} />
-        <ContactShadows position={[0, 0.02, 0]} opacity={0.55} scale={12} blur={2.4} far={4} resolution={512} color="#000000" />
+        <GroundShadows />
       </group>
 
       <PerfGuard onSlow={onSlow} />

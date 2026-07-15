@@ -1,18 +1,29 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { User, Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, Gamepad2 } from 'lucide-react';
+import { User, Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, BarChart3, ShieldCheck, Users } from 'lucide-react';
 import { COMPANY_RULES, isAdminUser } from '../constants/config';
 import { STORES, S_ROMERO_STORES } from '../constants/stores';
-import { deleteUserAccount, checkRankAvailability } from '../services/firebaseService';
+import { deleteUserAccount, checkRankAvailability, fetchAdminStats } from '../services/firebaseService';
 import { toast } from './Toast';
 import { setHapticsEnabled, isHapticsEnabled, hapticLight } from '../utils/haptics';
 
-export const SettingsView = React.memo(function SettingsView({ user, settings, saveToCloud, stopAlarm, pushToken, pushTokenError, permissionState, requestTokenManually }) {
+export const SettingsView = React.memo(function SettingsView({ user, settings, saveToCloud, stopAlarm, pushToken, pushTokenError, permissionState, requestTokenManually, isDelegado = false }) {
   const isAdmin = isAdminUser(user);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [haptics, setHaptics] = useState(isHapticsEnabled());
-  const navigate = useNavigate();
+  const [stats, setStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+
+  const loadStats = async () => {
+    setStatsLoading(true);
+    try {
+      const data = await fetchAdminStats();
+      setStats(data);
+    } catch (e) {
+      toast('No se pudieron cargar las estadísticas: ' + (e?.message || e), 'error');
+    }
+    setStatsLoading(false);
+  };
 
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
@@ -228,13 +239,57 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
           <div className="flex justify-between items-center bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20">
              <div className="flex flex-col">
                 <span className="text-xs font-bold text-emerald-400 uppercase leading-none">Versión App</span>
-                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Versión 3.1.4 (Estable)</span>
+                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Versión {__APP_VERSION__} (Estable)</span>
              </div>
           </div>
+
+          {/* Interruptor Modo Delegado ↔ Modo Usuario. Con el modo delegado activo:
+              Resumen solo noticias y pestaña "Usuarios" en el hueco de Fichar.
+              Apagado, el delegado ve la app como un usuario normal. */}
+          {isDelegado && (
+            <div className="flex justify-between items-center bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/25 mt-2">
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-emerald-300 uppercase leading-none flex items-center gap-1.5">
+                  <Users size={14} className="text-emerald-400"/> Modo Delegado
+                </span>
+                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">
+                  {settings?.delegadoMode !== false ? 'Gestión de usuarios y noticias' : 'Viendo la app como usuario normal'}
+                </span>
+              </div>
+              <button
+                onClick={() => saveToCloud({ settings: { ...settings, delegadoMode: !(settings?.delegadoMode !== false) } })}
+                className={`w-12 h-6 rounded-full relative transition-colors ${settings?.delegadoMode !== false ? 'bg-emerald-500' : 'bg-white/20'}`}
+                aria-label={settings?.delegadoMode !== false ? 'Cambiar a modo usuario' : 'Cambiar a modo delegado'}
+              >
+                <div className={`absolute top-1 size-4 bg-white rounded-full transition-all ${settings?.delegadoMode !== false ? 'left-7' : 'left-1'}`}></div>
+              </button>
+            </div>
+          )}
 
           {/* Panel de diagnostico de Notificaciones Push y Minijuego - Solo Admin */}
           {isAdmin && (
             <>
+              {/* Interruptor Modo Admin ↔ Modo Usuario. Con el modo admin activo:
+                  Resumen solo noticias, hueco de Fichar → Competición y Agenda →
+                  panel Gestión. Apagado, el admin ve la app como un usuario normal. */}
+              <div className="flex justify-between items-center bg-indigo-500/10 p-4 rounded-2xl border border-indigo-500/25 mt-2">
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-indigo-300 uppercase leading-none flex items-center gap-1.5">
+                    <ShieldCheck size={14} className="text-indigo-400"/> Modo Admin
+                  </span>
+                  <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">
+                    {settings?.adminMode !== false ? 'Gestión, competición y noticias' : 'Viendo la app como usuario normal'}
+                  </span>
+                </div>
+                <button
+                  onClick={() => saveToCloud({ settings: { ...settings, adminMode: !(settings?.adminMode !== false) } })}
+                  className={`w-12 h-6 rounded-full relative transition-colors ${settings?.adminMode !== false ? 'bg-indigo-500' : 'bg-white/20'}`}
+                  aria-label={settings?.adminMode !== false ? 'Cambiar a modo usuario' : 'Cambiar a modo admin'}
+                >
+                  <div className={`absolute top-1 size-4 bg-white rounded-full transition-all ${settings?.adminMode !== false ? 'left-7' : 'left-1'}`}></div>
+                </button>
+              </div>
+
               <div className="bg-black/30 rounded-2xl p-4 border border-white/10 mt-2">
                  <div className="flex items-center gap-2 mb-3">
                     <Bell size={14} className="text-emerald-400" />
@@ -259,14 +314,56 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                     </button>
                  </div>
               </div>
-              <div className="bg-indigo-900/30 rounded-2xl p-4 border border-indigo-500/30 mt-2">
-                <button 
-                  onClick={() => navigate('/arena')} 
-                  className="w-full bg-indigo-600 text-white py-3 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2 hover:bg-indigo-500 active:scale-95 transition-all"
-                >
-                  <Gamepad2 size={16} /> PROBAR MINIJUEGO (ADMIN)
-                </button>
+              {/* Estadísticas de instalación y uso (solo admin) */}
+              <div className="bg-black/30 rounded-2xl p-4 border border-white/10 mt-2">
+                <div className="flex items-center gap-2 mb-3">
+                  <BarChart3 size={14} className="text-emerald-400" />
+                  <span className="text-[10px] font-black text-white uppercase italic">Estadísticas de uso</span>
+                </div>
+                {stats ? (
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center bg-white/5 p-2.5 rounded-xl">
+                      <span className="text-[9px] text-white/50 uppercase font-bold">Usuarios totales</span>
+                      <span className="text-[11px] text-white font-black">{stats.total}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-white/5 p-2.5 rounded-xl text-center">
+                        <div className="text-[8px] text-white/50 uppercase font-bold"> iOS</div>
+                        <div className="text-sm text-white font-black">{stats.ios}</div>
+                      </div>
+                      <div className="bg-white/5 p-2.5 rounded-xl text-center">
+                        <div className="text-[8px] text-white/50 uppercase font-bold">Android</div>
+                        <div className="text-sm text-white font-black">{stats.android}</div>
+                      </div>
+                      <div className="bg-white/5 p-2.5 rounded-xl text-center">
+                        <div className="text-[8px] text-white/50 uppercase font-bold">Web</div>
+                        <div className="text-sm text-white font-black">{stats.web}</div>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center bg-white/5 p-2.5 rounded-xl">
+                      <span className="text-[9px] text-white/50 uppercase font-bold">Usan «Fichar»</span>
+                      <span className="text-[11px] text-emerald-400 font-black">{stats.fichadores} <span className="text-white/30">/ {stats.total}</span></span>
+                    </div>
+                    <div className="flex justify-between items-center bg-white/5 p-2.5 rounded-xl">
+                      <span className="text-[9px] text-white/50 uppercase font-bold">Con push activo</span>
+                      <span className="text-[11px] text-white font-black">{stats.conPush}</span>
+                    </div>
+                    {stats.desconocido > 0 && (
+                      <p className="text-[8px] text-white/30 uppercase font-bold text-center pt-1">
+                        {stats.desconocido} sin plataforma aún (apps antiguas; se registrará al actualizar)
+                      </p>
+                    )}
+                    <button onClick={loadStats} disabled={statsLoading} className="w-full bg-white/10 text-white py-2 rounded-xl text-[9px] font-black uppercase flex items-center justify-center gap-2 mt-1">
+                      <RefreshCw size={10} /> {statsLoading ? 'Actualizando…' : 'Actualizar'}
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={loadStats} disabled={statsLoading} className="w-full bg-emerald-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2">
+                    <BarChart3 size={14} /> {statsLoading ? 'Cargando…' : 'Ver estadísticas'}
+                  </button>
+                )}
               </div>
+
             </>
           )}
 

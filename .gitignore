@@ -61,3 +61,8 @@ deploy_tmp
 scratch/
 artifacts/
 temp/
+*.tmp
+
+# JDK local (~327 MB) que usa el emulador de Firestore en los tests de reglas.
+# Es una herramienta de la máquina, no del proyecto: NUNCA versionarla.
+jdk21/

@@ -7,7 +7,9 @@ import { toast, confirm } from './Toast';
 import { storage } from '../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
-export const DashboardView = React.memo(function DashboardView({ user, stats, newsList, addNews, deleteNews, permissionState, requestTokenManually, onImageClick }) {
+// newsOnly: cuentas pendientes de activación (o admin en Modo Admin) → el Resumen
+// muestra SOLO la sección de Noticias, sin las estadísticas personales.
+export const DashboardView = React.memo(function DashboardView({ user, stats, newsList, addNews, deleteNews, permissionState, requestTokenManually, onImageClick, newsOnly = false }) {
   const isAdmin = isAdminUser(user);
   const [showAddNewsModal, setShowAddNewsModal] = useState(false);
 
@@ -141,6 +143,7 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
           )}
         </div>
       )}
+      {!newsOnly && (
       <div className="rounded-[2rem] p-6 flex flex-col min-h-[300px]" style={{ background: 'linear-gradient(180deg,#ffffff,#f8f9fb)', boxShadow: '0 14px 34px -16px rgba(30,41,59,0.25), inset 0 1.5px 1px rgba(255,255,255,0.9)', border: '1px solid rgba(15,23,42,0.05)' }}>
         <h2 className="text-sm font-black text-slate-800 uppercase italic tracking-widest border-b border-slate-100 pb-3 flex items-center gap-2.5 mb-6 shrink-0">
           <span className="grid place-items-center w-8 h-8 rounded-xl text-white shrink-0" style={{ background: 'linear-gradient(180deg,#34d399,#059669)', boxShadow: '0 4px 10px rgba(5,150,105,0.4), inset 0 1px 1px rgba(255,255,255,0.5)' }}><PieChart size={16} /></span> Resumen Calendario
@@ -167,12 +170,15 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
           <StatBar label="DOMINGOS/FESTIVOS" currentValue={stats.domingosCount} percentage={(stats.domingosCount/(stats.targets?.domingos || 22))*100} totalValue={stats.targets?.domingos || 22} color="bg-emerald-500" large={true} />
         </div>
       </div>
+      )}
 
-      {/* Sección de Noticias (Solo visible si hay noticias o si el usuario es Admin) */}
-      {(newsList.filter(n => !n.isPushRequest).length > 0 || (isAdmin)) && (
-        <div className="rounded-[2rem] p-6 flex flex-col min-h-[350px]" style={{ background: 'linear-gradient(180deg,#1e293b,#0f172a)', boxShadow: '0 16px 38px -14px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className="flex justify-between items-center mb-6 shrink-0 border-b border-white/5 pb-3">
-            <h3 className="text-xs font-black text-white/50 uppercase tracking-widest flex items-center gap-2">
+      {/* Sección de Noticias — SIN panel oscuro: las noticias van directas sobre el fondo
+          claro de la página (texto oscuro), solo con un separador fino entre ellas.
+          En modo newsOnly siempre se muestra (aunque esté vacía). */}
+      {(newsOnly || newsList.filter(n => !n.isPushRequest).length > 0 || (isAdmin)) && (
+        <div className="flex flex-col">
+          <div className="flex justify-between items-center mb-5 shrink-0 border-b border-slate-200 pb-3">
+            <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
                 <Newspaper size={14}/> Noticias
             </h3>
             {isAdmin && (
@@ -186,22 +192,24 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
               </div>
             )}
           </div>
-          <div className="space-y-4 overflow-y-auto pr-1 scrollbar-hide">
+          <div className="space-y-5">
               {newsList.filter(n => !n.isPushRequest).length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center py-10 opacity-30">
-                  <Newspaper size={40} className="text-white mb-3" />
-                  <p className="text-[10px] text-white text-center italic uppercase font-bold tracking-widest">No hay noticias publicadas</p>
+                <div className="flex-1 flex flex-col items-center justify-center py-10 opacity-40">
+                  <Newspaper size={40} className="text-slate-300 mb-3" />
+                  <p className="text-[10px] text-slate-400 text-center italic uppercase font-bold tracking-widest">No hay noticias publicadas</p>
                 </div>
               ) : (
                 newsList.filter(n => !n.isPushRequest).map(news => (
-                    <div key={news.id} className="p-4 rounded-2xl flex flex-col" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))', border: '1px solid rgba(255,255,255,0.08)', boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.06)' }}>
-                        <div className="flex justify-between items-center mb-3 border-b border-white/5 pb-2">
+                    // Noticia SIN recuadro: solo el contenido (imagen/título/texto), con un
+                    // separador sutil entre noticias en lugar de un marco por tarjeta.
+                    <div key={news.id} className="flex flex-col pb-5 border-b border-slate-200 last:border-b-0 last:pb-0">
+                        <div className="flex justify-between items-center mb-3">
                             <div className="flex items-center gap-2">
-                              <span className="text-[9px] font-black text-emerald-400 uppercase tracking-tighter bg-emerald-400/10 px-2 py-0.5 rounded-md">{news.tag}</span>
-                              <span className="text-[8px] text-white/40">{news.date}</span>
+                              <span className="text-[9px] font-black text-emerald-600 uppercase tracking-tighter bg-emerald-500/10 px-2 py-0.5 rounded-md">{news.tag}</span>
+                              <span className="text-[8px] text-slate-400 font-bold">{news.date}</span>
                             </div>
                             {isAdmin && (
-                              <button onClick={() => handleDeleteNews(news.id)} className="text-rose-400 p-2 bg-rose-400/10 hover:bg-rose-500/20 rounded-xl transition-colors">
+                              <button onClick={() => handleDeleteNews(news.id)} className="text-rose-500 p-2 bg-rose-500/10 hover:bg-rose-500/20 rounded-xl transition-colors">
                                 <Trash2 size={14} />
                               </button>
                             )}
@@ -211,14 +219,14 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
                             src={news.imageUrl}
                             alt="Noticia"
                             onClick={() => onImageClick?.(news.imageUrl, news.title)}
-                            className="w-full h-auto rounded-xl mb-4 border border-white/10 shadow-sm animate-in fade-in cursor-zoom-in active:scale-[0.99] transition-transform"
+                            className="w-full h-auto rounded-2xl mb-4 shadow-md animate-in fade-in cursor-zoom-in active:scale-[0.99] transition-transform"
                           />
                         )}
-                        
-                        <h4 className="text-sm font-black text-white uppercase leading-tight mb-2 tracking-tight">{news.title}</h4>
-                        <p className="text-xs text-white/60 leading-relaxed whitespace-pre-wrap">{news.desc}</p>
+
+                        <h4 className="text-sm font-black text-slate-800 uppercase leading-tight mb-2 tracking-tight">{news.title}</h4>
+                        <p className="text-xs text-slate-500 leading-relaxed whitespace-pre-wrap">{news.desc}</p>
                         {news.linkUrl && (
-                          <a href={news.linkUrl} target="_blank" rel="noopener noreferrer" className="mt-4 bg-white/10 hover:bg-white/20 transition-colors text-white py-3 px-3 rounded-xl text-[10px] font-bold uppercase text-center flex items-center justify-center gap-2">
+                          <a href={news.linkUrl} target="_blank" rel="noopener noreferrer" className="mt-4 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors text-emerald-700 py-3 px-3 rounded-xl text-[10px] font-bold uppercase text-center flex items-center justify-center gap-2">
                             <Link size={14}/> Ver más información
                           </a>
                         )}

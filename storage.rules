@@ -1,11 +1,19 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    // Admin por custom-claim (recomendado) con fallback al email histórico, IGUAL que en
+    // firestore.rules (antes aquí solo estaba el email hardcodeado: inconsistente).
+    function isAdmin() {
+      return request.auth != null && request.auth.token != null && (
+        request.auth.token.admin == true ||
+        request.auth.token.email == "oscargarcia@fetico.es"
+      );
+    }
+
     // Noticias: solo admin puede subir, todos los autenticados pueden leer
     match /noticias/{fileName} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null 
-                   && request.auth.token.email == "oscargarcia@fetico.es"
+      allow write: if isAdmin()
                    && request.resource.size < 5 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
     }

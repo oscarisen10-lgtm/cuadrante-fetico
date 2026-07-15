@@ -57,13 +57,14 @@ workflows:
       - name: Set marketing version and build number
         script: |
           # Cada entrega al App Store necesita una marketing version nueva.
-          # 3.1.4 ya se entregó; esta actualización (8 minijuegos en 3D) sube a 3.2.0.
-          NEW_VERSION=3.2.0
+          # 3.2.0 ya se entregó; esta actualización (espacio Delegados: activación de
+          # cuentas por afiliación, censo y modo admin) sube a 3.3.0.
+          NEW_VERSION=3.3.0
           sed -i '' "s/MARKETING_VERSION = [^;]*;/MARKETING_VERSION = $NEW_VERSION;/g" "$XCODE_PROJECT/project.pbxproj"
           echo "Marketing version -> $NEW_VERSION"
           grep -m2 "MARKETING_VERSION" "$XCODE_PROJECT/project.pbxproj"
           # Build number interno (incrementa en cada subida a App Store Connect)
-          NEW_BUILD=165
+          NEW_BUILD=166
           echo "Build number -> $NEW_BUILD"
           cd ios/App
           agvtool new-version -all "$NEW_BUILD"

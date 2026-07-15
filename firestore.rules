@@ -26,25 +26,17 @@ service cloud.firestore {
       );
     }
 
-    function amIBoss() {
-      let p = myProfile();
-      return 'rank' in p && p.rank.matches('(?i).*(jefe|coordinador|gestor|segundo).*');
-    }
-
-    // Jefe directo del usuario objetivo: mismo equipo (empresa+tienda+sección).
-    function isDirectBossOf(targetUid) {
-      let me = myProfile();
-      let them = get(/databases/$(database)/documents/users/$(targetUid)).data.profile;
-      return amIBoss() &&
-             me.company == them.company &&
-             me.store == them.store &&
-             me.section == them.section;
-    }
-
-    // Jefe de la sección de la que procede la petición.
-    function isDirectBossOfRequest(reqData) {
-      return amIBoss() && myStoreKey() == reqData.storeKey;
-    }
+    // ⚠️ SEGURIDAD (escalada de privilegios): el "rango" (jefe/coordinador…) lo
+    // ELIGE el propio usuario en Ajustes; NO está verificado. Por eso el rango NO
+    // puede otorgar acceso a los datos de otros compañeros: si lo hiciera, cualquiera
+    // podría autoproclamarse "jefe" (con una simple llamada REST) y leer/editar los
+    // turnos y el perfil —email, fcmToken— de toda su sección.
+    //
+    // Las vistas de equipo (TeamView / "Empleados") están OCULTAS en el cliente. Cuando
+    // se reactiven, los recuentos y datos de equipo deben servirse desde una Cloud
+    // Function con el Admin SDK (como ya hace `teamStatus`), NUNCA leyendo perfiles
+    // ajenos desde el cliente. Hasta entonces: cada usuario solo accede a lo suyo, y
+    // el admin conserva acceso de soporte.
 
     // Validación de un turno (evita que el cliente escriba basura/campos enormes).
     function validShift(d) {
@@ -53,46 +45,63 @@ service cloud.firestore {
              (!('hours' in d) || d.hours is number);
     }
 
+    // ---------- Activación de cuentas (sistema de delegados) ----------
+    // users/{uid}.membership.active gobierna si la cuenta está activada.
+    // membership AUSENTE = cuenta anterior al sistema de delegados → ACTIVA
+    // (los usuarios existentes quedan activados sin migración). Solo el backend
+    // (delegadoSetActive/adminSetDelegado, Admin SDK) escribe membership: el
+    // propio usuario NUNCA puede tocarlo, o se autoactivaría por REST.
+    function isActiveMember() {
+      let d = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return !('membership' in d) || d.membership.active == true;
+    }
+
     // ---------- Usuarios ----------
     match /users/{userId} {
-      // Lectura PRIVADA: SOLO el propio usuario, su jefe directo de sección, o el admin.
-      // (Antes cualquier compañero de la misma tienda podía leer email + fcmToken de
-      // toda la plantilla = fuga de datos personales. Para los recuentos de equipo
-      // —¿puedo pedir día libre?, ¿hay hueco de responsable?— el cliente ya NO lee
-      // perfiles ajenos: usa la Cloud Function `teamStatus`, que devuelve solo cifras.)
+      // Lectura PRIVADA: SOLO el propio usuario o el admin. Ningún compañero (ni
+      // "jefe" autodeclarado) puede leer el perfil de otro (email + fcmToken = PII).
       allow read: if request.auth != null && (
         request.auth.uid == userId ||
-        isAdmin() ||
-        isDirectBossOf(userId)
+        isAdmin()
       );
 
-      // Solo el propio usuario (o el admin) puede modificar su perfil.
-      allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      // Alta: los registros nuevos nacen SIEMPRE desactivados (membership.active
+      // == false). Una app antigua (que no envía membership) no puede crear
+      // cuentas nuevas: solo así se garantiza que nadie nazca activado.
+      allow create: if request.auth != null && (
+        isAdmin() ||
+        (request.auth.uid == userId &&
+         'membership' in request.resource.data &&
+         request.resource.data.membership.active == false)
+      );
 
-      // Turnos: subcolección por usuario.
+      // Edición: el propio usuario puede modificar su perfil pero NO membership
+      // (ni añadirlo, ni cambiarlo, ni borrarlo). El admin sí.
+      allow update: if request.auth != null && (
+        isAdmin() ||
+        (request.auth.uid == userId &&
+         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['membership']))
+      );
+
+      allow delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
+
+      // Turnos: subcolección por usuario. Solo el dueño (o el admin) accede.
       match /shifts/{shiftId} {
-        // Lectura: dueño, jefe directo de la sección, o admin.
-        allow read: if request.auth != null && (
+        allow read, delete: if request.auth != null && (
           request.auth.uid == userId ||
-          isDirectBossOf(userId) ||
           isAdmin()
         );
-        // Borrado: dueño, jefe directo, o admin.
-        allow delete: if request.auth != null && (
-          request.auth.uid == userId ||
-          isDirectBossOf(userId) ||
-          isAdmin()
-        );
-        // Alta/edición: además de los permisos, el turno debe tener forma válida.
+        // Alta/edición: dueño con cuenta ACTIVADA (o admin) y turno con forma
+        // válida. Así el bloqueo de cuentas pendientes es real también para
+        // builds antiguas, no solo cosmético en la interfaz.
         allow create, update: if request.auth != null && (
-          request.auth.uid == userId ||
-          isDirectBossOf(userId) ||
+          (request.auth.uid == userId && isActiveMember()) ||
           isAdmin()
         ) && validShift(request.resource.data);
       }
 
-      // Cuota de uso de la IA: la escribe SOLO el backend (Admin SDK ignora reglas).
-      // El cliente puede leer su propia cuota; nadie puede escribirla desde el cliente.
+      // Cuota de uso de la IA / Arena: la escribe SOLO el backend (Admin SDK ignora
+      // reglas). El cliente puede leer su propia cuota; nadie la escribe desde el cliente.
       match /usage/{usageId} {
         allow read: if request.auth != null && request.auth.uid == userId;
         allow write: if false;
@@ -101,29 +110,28 @@ service cloud.firestore {
 
     // ---------- Peticiones (requests) ----------
     match /requests/{requestId} {
-      // Lectura ACOTADA: solo el dueño o el jefe de la sección correspondiente.
+      // Lectura ACOTADA: solo el dueño (o el admin). El jefe de sección ya no lee
+      // peticiones ajenas desde el cliente (ver nota de seguridad arriba); cuando se
+      // reactive la aprobación por responsables, se hará vía Cloud Function.
       allow read: if request.auth != null && (
         resource.data.uid == request.auth.uid ||
-        isDirectBossOfRequest(resource.data) ||
         isAdmin()
       );
-      // Creación: solo para uno mismo y con el storeKey REAL de su perfil
-      // (impide falsear la sección a la que se enruta la petición).
+      // Creación: solo para uno mismo, con cuenta ACTIVADA y con el storeKey REAL
+      // de su perfil (impide falsear la sección a la que se enruta la petición).
       allow create: if request.auth != null &&
         request.resource.data.uid == request.auth.uid &&
+        isActiveMember() &&
         request.resource.data.storeKey == myStoreKey();
-      // Actualización: dueño, jefe de la sección, o admin. Además, uid y storeKey
-      // son INMUTABLES (no se puede re-enrutar ni cambiar de dueño una petición).
+      // Actualización: solo el dueño (o el admin). uid y storeKey son INMUTABLES.
       allow update: if request.auth != null && (
         resource.data.uid == request.auth.uid ||
-        isDirectBossOfRequest(resource.data) ||
         isAdmin()
       ) &&
         request.resource.data.uid == resource.data.uid &&
         request.resource.data.storeKey == resource.data.storeKey;
       allow delete: if request.auth != null && (
         resource.data.uid == request.auth.uid ||
-        isDirectBossOfRequest(resource.data) ||
         isAdmin()
       );
     }
@@ -143,6 +151,26 @@ service cloud.firestore {
     match /licencias/{licenciaId} {
       allow read: if request.auth != null;
       allow write: if isAdmin();
+    }
+
+    // ---------- Delegados ----------
+    // delegados/{uid} define qué tiendas gestiona cada delegado. El propio
+    // delegado lo lee (así su app sabe si mostrarle la pestaña "Delegados");
+    // solo el admin lo escribe (en la práctica, vía la función adminSetDelegado).
+    match /delegados/{delegadoId} {
+      allow read: if request.auth != null && (request.auth.uid == delegadoId || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // ---------- Censo de afiliación (delegados) ----------
+    // censos/{uid}: UN solo documento por delegado con sus "futuros usuarios"
+    // apuntados a mano, agrupados por tienda. Diseño de coste mínimo: cargar el
+    // censo entero = 1 lectura; cada alta/baja de futuro = 1 escritura. Solo el
+    // dueño (o el admin) lo lee y escribe, y solo con los campos previstos.
+    match /censos/{censoId} {
+      allow read: if request.auth != null && (request.auth.uid == censoId || isAdmin());
+      allow write: if request.auth != null && (request.auth.uid == censoId || isAdmin()) &&
+        request.resource.data.keys().hasOnly(['prospects', 'updatedAt']);
     }
 
     // ---------- Caché de IA: solo backend ----------

@@ -1,12 +1,12 @@
-import { auth, db, functions } from '../firebase';
+import { auth, db, functions, functionsUsCentral } from '../firebase';
 import { httpsCallable } from "firebase/functions";
 import {
   onAuthStateChanged, signOut, signInWithEmailAndPassword,
   createUserWithEmailAndPassword, sendPasswordResetEmail,
-  deleteUser, GoogleAuthProvider, OAuthProvider, signInWithPopup
+  GoogleAuthProvider, OAuthProvider, signInWithPopup
 } from "firebase/auth";
-import { 
-  doc, setDoc, getDoc, onSnapshot, collection, addDoc, deleteDoc,
+import {
+  doc, setDoc, getDoc, updateDoc, onSnapshot, collection, addDoc, deleteDoc,
   query, getDocs, writeBatch, orderBy, where, limit
 } from "firebase/firestore";
 
@@ -132,12 +132,16 @@ export const loginUser = async (email, password) => {
 
 export const registerUser = async (email, password, profileData) => {
   const res = await withTimeout(createUserWithEmailAndPassword(auth, email, password));
-  
+
   await withTimeout(setDoc(doc(db, "users", res.user.uid), {
     profile: {
       ...profileData,
       section: profileData.section || "Sin especificar"
     },
+    // Las cuentas nuevas nacen DESACTIVADAS (solo noticias) hasta que un delegado
+    // de FETICO las active. Las reglas de Firestore EXIGEN este campo en el alta;
+    // solo el backend (delegadoSetActive) puede cambiarlo después.
+    membership: { active: false, createdAt: Date.now() },
     settings: { notifications: true, breakDuration: 15 },
     shifts: [],
     activeShift: null,
@@ -145,7 +149,7 @@ export const registerUser = async (email, password, profileData) => {
     isBreakActive: false,
     breakStartTime: null
   }));
-  
+
   return res;
 };
 
@@ -181,6 +185,9 @@ export const ensureUserDoc = async (user) => {
         rank: "Personal base",
         section: "Sin especificar"
       },
+      // Igual que en el registro: toda cuenta creada desde cero nace desactivada
+      // (lo exigen las reglas); un delegado la activará al verificar la afiliación.
+      membership: { active: false, createdAt: Date.now() },
       settings: { notifications: true, breakDuration: 15 },
       shifts: [],
       activeShift: null,
@@ -200,26 +207,153 @@ export const logoutUser = async () => {
 };
 
 export const deleteUserAccount = async () => {
-  if (auth.currentUser) {
-    const uid = auth.currentUser.uid;
-    
-    // Delete all shifts in subcollection first (en lotes, por si hay >500 docs)
-    const shiftsSnap = await getDocs(collection(db, "users", uid, "shifts"));
-    if (shiftsSnap.size > 0) {
-      await commitInChunks(shiftsSnap.docs, (batch, d) => batch.delete(d.ref));
-    }
-    
-    // Delete user data from Firestore
-    await deleteDoc(doc(db, "users", uid));
-    // Then delete the Firebase Auth account
-    await deleteUser(auth.currentUser);
-  }
+  if (!auth.currentUser) return;
+  // El borrado lo hace el SERVIDOR (Admin SDK): elimina perfil, turnos, cuota, peticiones
+  // y la cuenta de Auth de forma consistente, sin el fallo "requires-recent-login" ni
+  // dejar datos huérfanos. Ver Cloud Function `deleteMyAccount`.
+  const fn = httpsCallable(functions, 'deleteMyAccount');
+  await fn();
+  // Cerramos sesión localmente para que la app vuelva al login de inmediato.
+  await signOut(auth).catch(() => {});
 };
 
 export const saveUserData = async (updates) => {
   if (auth.currentUser) {
     await setDoc(doc(db, "users", auth.currentUser.uid), updates, { merge: true });
   }
+};
+
+// --- ANALÍTICA (admin) ---
+
+/**
+ * Registra la plataforma (ios/android/web) y la versión de la app en el perfil, para que
+ * el admin sepa cuántos dispositivos hay de cada tipo. Se llama solo si cambió respecto a
+ * lo guardado (evita escrituras repetidas). Mejor esfuerzo: si falla, no molesta al usuario.
+ */
+export const recordDeviceMeta = async (uid, platform, appVersion) => {
+  try {
+    await updateDoc(doc(db, "users", uid), {
+      "profile.platform": platform,
+      "profile.appVersion": appVersion,
+    });
+  } catch (e) {
+    console.warn("recordDeviceMeta:", e?.message);
+  }
+};
+
+/**
+ * Marca que el usuario ha usado el apartado "Fichar" (para medir su uso real). Se llama al
+ * iniciar un turno. Mejor esfuerzo: no bloquea el fichaje si falla.
+ */
+export const markFichado = async (uid) => {
+  try {
+    await updateDoc(doc(db, "users", uid), {
+      "profile.hasFichado": true,
+      "profile.lastFichar": Date.now(),
+    });
+  } catch (e) {
+    console.warn("markFichado:", e?.message);
+  }
+};
+
+/** Estadísticas agregadas para el admin (recuentos, sin datos personales). */
+export const fetchAdminStats = async () => {
+  const fn = httpsCallable(functions, 'adminStats');
+  const { data } = await fn();
+  return data;
+};
+
+// --- DELEGADOS (activación de cuentas por tienda) ---
+
+/**
+ * Suscripción al doc delegados/{uid} del propio usuario: si existe (y está
+ * activo), la app le muestra la pestaña "Delegados" con sus tiendas autorizadas.
+ * Las reglas solo permiten leer el doc propio, así que esto no expone nada.
+ */
+export const subscribeToDelegado = (uid, callback) => {
+  return onSnapshot(
+    doc(db, "delegados", uid),
+    (snap) => {
+      const data = snap.exists() ? snap.data() : null;
+      callback(data && data.active !== false ? data : null);
+    },
+    () => callback(null)
+  );
+};
+
+/** Usuarios de una tienda (vía backend; valida que el delegado la tenga autorizada). */
+export const fetchStoreUsers = async (store) => {
+  const fn = httpsCallable(functions, 'delegadoListUsers');
+  const { data } = await fn({ store });
+  return data.users || [];
+};
+
+/** Activa/desactiva la cuenta de un usuario (delegado con tienda autorizada, o admin). */
+export const setUserActiveStatus = async (uid, active) => {
+  const fn = httpsCallable(functions, 'delegadoSetActive');
+  const { data } = await fn({ uid, active });
+  return data;
+};
+
+/**
+ * Expulsa a un usuario que se fue de la empresa (desaparece de las listas y
+ * del censo del delegado) o lo readmite. NO borra nada: su cuenta queda activa
+ * por si quiere seguir usando la app.
+ */
+export const setUserExpelled = async (uid, expelled) => {
+  const fn = httpsCallable(functions, 'delegadoExpelUser');
+  const { data } = await fn({ uid, expelled });
+  return data;
+};
+
+// --- CENSO (delegados) ---
+
+/**
+ * Recuentos de usuarios/activos por tienda para el Censo. El backend usa
+ * consultas de agregación count(): 2 lecturas por tienda, dé igual cuántos
+ * usuarios tenga. Devuelve { "PINEA": { users, activos }, ... }.
+ */
+export const fetchCensusCounts = async () => {
+  const fn = httpsCallable(functions, 'delegadoCensusCounts');
+  const { data } = await fn();
+  return data.counts || {};
+};
+
+/**
+ * Censo del delegado: UN doc (censos/{uid}) con los futuros usuarios apuntados
+ * a mano, por tienda. 1 lectura carga todo; 1 escritura guarda cualquier cambio.
+ */
+export const getCenso = async (uid) => {
+  const snap = await getDoc(doc(db, "censos", uid));
+  return snap.exists() ? (snap.data().prospects || {}) : {};
+};
+
+export const saveCenso = async (uid, prospects) => {
+  await setDoc(doc(db, "censos", uid), { prospects, updatedAt: Date.now() });
+};
+
+/** SOLO admin: nombra un delegado ({ email, stores }) o lo retira ({ email, remove: true }). */
+export const saveDelegado = async (payload) => {
+  const fn = httpsCallable(functions, 'adminSetDelegado');
+  const { data } = await fn(payload);
+  return data;
+};
+
+/** SOLO admin: totales (activos, pendientes, push) y delegados con sus recuentos. */
+export const fetchAdminOverview = async () => {
+  const fn = httpsCallable(functions, 'adminOverview');
+  const { data } = await fn();
+  return data;
+};
+
+/**
+ * Suscribe un token FCM WEB al topic de noticias, vía backend (el SDK web no puede
+ * suscribirse a topics por sí mismo). Los clientes nativos usan el plugin FCM directo.
+ * Idempotente: se llama en cada arranque con permiso concedido.
+ */
+export const subscribeTokenToNewsTopic = async (token) => {
+  const fn = httpsCallable(functions, 'subscribeToNewsTopic');
+  return fn({ token });
 };
 
 // --- NOTICIAS ---
@@ -244,67 +378,20 @@ export const deleteNews = async (id) => {
 };
 
 // --- LICENCIAS ---
-
-export const subscribeToLicencias = (callback) => {
-  return onSnapshot(collection(db, "licencias"), (snapshot) => {
-    const arr = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    arr.sort((a, b) => a.order - b.order);
-    callback(arr);
-  });
-};
-
-export const addLicencia = async (licenciaData) => {
-  return await addDoc(collection(db, "licencias"), licenciaData);
-};
-
-export const updateLicencia = async (id, data) => {
-  return await setDoc(doc(db, "licencias", id), data, { merge: true });
-};
-
-export const deleteLicencia = async (id) => {
-  return await deleteDoc(doc(db, "licencias", id));
-};
+// (La colección `licencias` de Firestore ya no se usa: el contenido de permisos se
+// sirve estático desde constants/licenciasData.js. Se eliminaron subscribeToLicencias,
+// addLicencia, updateLicencia y deleteLicencia por ser código muerto.)
 
 // --- PETICIONES (REQUESTS) & EQUIPO ---
-
-// ⚠️ LEGACY: solo lo usa TeamView (vista "Empleados", hoy OCULTA). Tras endurecer
-// las reglas (privacidad S-3) un usuario normal ya NO puede leer perfiles ajenos:
-// si se reactiva esa vista, debe migrarse también a una Cloud Function. Para los
-// recuentos de equipo usa fetchTeamStatus()/teamStatus, no esto.
-export const getTeamMembers = async (company, store, section) => {
-  if (!company || !store || !section) return [];
-  try {
-    // Note: We use getDocs without complex where clauses to avoid needing custom composite indexes if possible.
-    // However, basic equality queries on single fields don't need composite indexes unless combined.
-    // In Firebase, chained == queries on DIFFERENT fields DO require a composite index.
-    // To avoid creating indexes via CLI, we will fetch users by company and store, then filter section in JS.
-    // Assuming the number of users per store is small enough.
-    const q = query(
-      collection(db, "users"),
-      where("profile.company", "==", company),
-      where("profile.store", "==", store)
-    );
-    const snap = await getDocs(q);
-    const users = [];
-    snap.forEach(doc => {
-      const data = doc.data();
-      if (data.profile?.section === section) {
-        users.push({ uid: doc.id, ...data.profile });
-      }
-    });
-    return users.sort((a, b) => a.fullName.localeCompare(b.fullName));
-  } catch (error) {
-    console.error("Error fetching team members:", error);
-    return [];
-  }
-};
 
 /**
  * Estado del equipo SIN leer perfiles ajenos (privacidad). Pide al backend solo
  * cifras agregadas. Devuelve { memberCount, bossCount, bossCountExcludingMe, canRequestOff }.
  */
 export const fetchTeamStatus = async (overrides = {}) => {
-  const fn = httpsCallable(functions, 'teamStatus');
+  // TRANSICIÓN: teamStatus sigue en us-central1 (compatibilidad con builds nativas
+  // antiguas). Cuando migre a europe-west1, cambiar a `functions` (ver firebase.js).
+  const fn = httpsCallable(functionsUsCentral, 'teamStatus');
   const { data } = await fn(overrides);
   return data;
 };
@@ -338,25 +425,27 @@ export const addRequest = async (requestData) => {
   });
 };
 
-export const updateRequestStatus = async (id, newStatus) => {
-  return await setDoc(doc(db, "requests", id), { status: newStatus, updatedAt: Date.now() }, { merge: true });
-};
-
 export const subscribeToMyRequests = (uid, callback) => {
-  const q = query(collection(db, "requests"), where("uid", "==", uid));
-  return onSnapshot(q, (snapshot) => {
-    const arr = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    callback(arr);
-  });
-};
-
-export const subscribeToTeamRequests = (storeKey, callback) => {
-  // storeKey format: "Company_Store_Section" to avoid composite index limits
-  const q = query(collection(db, "requests"), where("storeKey", "==", storeKey), where("status", "==", "pending"));
-  return onSnapshot(q, (snapshot) => {
-    const arr = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    callback(arr);
-  });
+  // Acotado a las 90 peticiones más recientes: sin límite, esta suscripción cargaba
+  // TODO el histórico del usuario (crece sin fin con los años). Requiere el índice
+  // compuesto (uid ASC, createdAt DESC) definido en firestore.indexes.json.
+  const q = query(
+    collection(db, "requests"),
+    where("uid", "==", uid),
+    orderBy("createdAt", "desc"),
+    limit(90)
+  );
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const arr = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      callback(arr);
+    },
+    // Manejador de error explícito: si el índice aún se está construyendo (o hay un
+    // corte de red), no dejamos morir el listener en silencio — al menos queda
+    // registrado y el resto del calendario sigue operativo.
+    (error) => console.error("subscribeToMyRequests:", error?.message || error)
+  );
 };
 
 // --- ARENA / COMPETICIÓN ---

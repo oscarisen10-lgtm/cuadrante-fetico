@@ -5,7 +5,6 @@ import { STORES, MUNICIPAL_HOLIDAYS } from '../constants/stores';
 import { MonthGrid, WeekdayHeader } from './calendar/CalendarGrid';
 import { DateDetailPanel } from './calendar/DateDetailPanel';
 import { HoursEditor } from './calendar/HoursEditor';
-import { TeamView } from './calendar/TeamView';
 import { subscribeToMyRequests, addRequest } from '../services/firebaseService';
 import { useTeamStatus } from '../hooks/useTeamStatus';
 import { toast } from './Toast';
@@ -45,11 +44,11 @@ const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct'
 
 /**
  * CalendarView — Main calendar component (refactored).
- * Sub-components: MonthGrid, DayCell, WeekdayHeader, DateDetailPanel, HoursEditor, TeamView
+ * Sub-components: MonthGrid, DayCell, WeekdayHeader, DateDetailPanel, HoursEditor
  */
 export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap, saveToCloud, user, permissionState, requestTokenManually }) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState('mensual'); // 'mensual', 'anual', 'empleados'
+  const [viewMode, setViewMode] = useState('mensual'); // 'mensual' | 'anual'
   const [selectedDates, setSelectedDates] = useState([]); 
   const [editingDay, setEditingDay] = useState(null); 
   const [editHH, setEditHH] = useState("0");
@@ -59,7 +58,6 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
   const [myRequests, setMyRequests] = useState([]);
 
   const userStore = user?.store;
-  const isBoss = user?.rank && (user.rank.toLowerCase().includes('jefe') || user.rank.toLowerCase().includes('coordinador'));
   const holidays = useMemo(() => getAllYearHolidays(userStore), [userStore]);
   // Set "MM-DD" precalculado una vez para que las celdas comprueben festivo en O(1)
   // (antes cada celda recorría STORES en su propia llamada a isHoliday()).
@@ -168,12 +166,12 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
   }, []);
 
   const navigateBack = useCallback(() => {
-    if (viewMode === 'mensual' || viewMode === 'empleados') setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+    if (viewMode === 'mensual') setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
     else setCurrentDate(new Date(currentDate.getFullYear() - 1, currentDate.getMonth(), 1));
   }, [viewMode, currentDate]);
 
   const navigateForward = useCallback(() => {
-    if (viewMode === 'mensual' || viewMode === 'empleados') setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+    if (viewMode === 'mensual') setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
     else setCurrentDate(new Date(currentDate.getFullYear() + 1, currentDate.getMonth(), 1));
   }, [viewMode, currentDate]);
 
@@ -211,27 +209,20 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
           <div className="flex justify-center p-3 bg-slate-50/70 border-b border-slate-100 gap-2 shrink-0" role="tablist" aria-label="Modo de vista del calendario">
              <button onClick={() => setViewMode('mensual')} className={`flex-1 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'mensual' ? 'bg-gradient-to-b from-emerald-500 to-emerald-700 text-white shadow-[0_4px_10px_rgba(5,150,105,0.4)]' : 'text-slate-400 hover:bg-slate-200 bg-white border border-slate-100'}`} role="tab" aria-selected={viewMode === 'mensual'} aria-controls="calendar-grid">Mensual</button>
              <button onClick={() => setViewMode('anual')} className={`flex-1 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'anual' ? 'bg-gradient-to-b from-emerald-500 to-emerald-700 text-white shadow-[0_4px_10px_rgba(5,150,105,0.4)]' : 'text-slate-400 hover:bg-slate-200 bg-white border border-slate-100'}`} role="tab" aria-selected={viewMode === 'anual'} aria-controls="calendar-grid">Anual</button>
-             {/* Ocultado temporalmente a petición del usuario:
-             {isBoss && (
-               <button onClick={() => setViewMode('empleados')} className={`flex-1 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'empleados' ? 'bg-gradient-to-b from-emerald-500 to-emerald-700 text-white shadow-[0_4px_10px_rgba(5,150,105,0.4)]' : 'text-slate-400 hover:bg-slate-200 bg-white border border-slate-100'}`} role="tab" aria-selected={viewMode === 'empleados'} aria-controls="calendar-grid">Empleados</button>
-             )}
-             */}
           </div>
 
           {/* Navigation */}
           <div className="p-4 flex justify-between items-center bg-white border-b border-slate-100 shrink-0">
             <button onClick={navigateBack} className="p-1.5 hover:bg-slate-100 rounded-xl transition-colors text-emerald-600" aria-label="Mes anterior"><ChevronLeft size={22}/></button>
             <span className="text-base sm:text-lg font-black uppercase italic text-emerald-700 tracking-widest" aria-live="polite">
-               {viewMode === 'mensual' ? currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }) : viewMode === 'anual' ? currentDate.getFullYear() : currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
+               {viewMode === 'anual' ? currentDate.getFullYear() : currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
             </span>
             <button onClick={navigateForward} className="p-1.5 hover:bg-slate-100 rounded-xl transition-colors text-emerald-600" aria-label="Mes siguiente"><ChevronRight size={22}/></button>
           </div>
           
           {/* Calendar grid */}
           <div id="calendar-grid" role="tabpanel">
-            {viewMode === 'empleados' ? (
-               <TeamView user={user} userStore={userStore} currentDate={currentDate} navigateBack={navigateBack} navigateForward={navigateForward} />
-            ) : viewMode === 'mensual' ? (
+            {viewMode === 'mensual' ? (
               <div className="flex flex-col relative">
                 {(() => {
                   const m = currentDate.getMonth();
@@ -296,9 +287,7 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
           </div>
         </div>
 
-        {viewMode !== 'empleados' && (
-          <>
-            <DateDetailPanel 
+            <DateDetailPanel
               selectedDates={selectedDates}
               shiftsMap={combinedShiftsMap}
               setSelectedDates={setSelectedDates}
@@ -363,8 +352,6 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
             </div>
           </div>
         )}
-        </>
-      )}
 
       </div>
 

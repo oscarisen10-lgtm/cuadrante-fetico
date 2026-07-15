@@ -61,12 +61,65 @@ async function cancelBreakNotification() {
 
 export const useTimer = (activeShift, isBreakActive, workTimeAccumulated, breakStartTime, settings, alarmUrl = 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3') => {
   const [showBreakFinishedMsg, setShowBreakFinishedMsg] = useState(false);
-  
+
   const alarmRef = useRef(null);
   const intervalRef = useRef(null);
   const breakFinishedRef = useRef(false);
   const alarmTimeoutRef = useRef(null);
   const unlockAttemptedRef = useRef(false);
+  // Respaldo de audio SIN conexión: el mp3 viene de un CDN externo y no suena en un
+  // almacén/trastienda sin red (justo el caso de uso). Sintetizamos un pitido con la
+  // Web Audio API, que no depende de internet ni de ningún asset descargado.
+  const audioCtxRef = useRef(null);
+  const beepRef = useRef(null); // { stop } mientras el pitido de respaldo está sonando
+
+  const getAudioCtx = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    if (!audioCtxRef.current) {
+      try { audioCtxRef.current = new Ctx(); } catch { return null; }
+    }
+    if (audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume().catch(() => {});
+    }
+    return audioCtxRef.current;
+  }, []);
+
+  // Pitido en bucle (dos tonos alternos) hasta que se llame a stop().
+  const startFallbackBeep = useCallback(() => {
+    if (beepRef.current) return; // ya sonando
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const gain = ctx.createGain();
+    gain.gain.value = 0.0001;
+    gain.connect(ctx.destination);
+    const osc = ctx.createOscillator();
+    osc.type = 'square';
+    osc.connect(gain);
+    osc.start();
+    let on = false;
+    const pulse = () => {
+      on = !on;
+      const t = ctx.currentTime;
+      osc.frequency.setValueAtTime(on ? 880 : 660, t);
+      gain.gain.setTargetAtTime(on ? 0.22 : 0.0001, t, 0.01);
+    };
+    pulse();
+    const id = setInterval(pulse, 450);
+    beepRef.current = {
+      stop: () => {
+        clearInterval(id);
+        try { gain.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.01); } catch { /* noop */ }
+        try { osc.stop(ctx.currentTime + 0.05); } catch { /* noop */ }
+        beepRef.current = null;
+      },
+    };
+  }, [getAudioCtx]);
+
+  const stopFallbackBeep = useCallback(() => {
+    if (beepRef.current) beepRef.current.stop();
+  }, []);
 
   // Keep ref in sync with state to avoid stale closures
   breakFinishedRef.current = showBreakFinishedMsg;
@@ -83,8 +136,13 @@ export const useTimer = (activeShift, isBreakActive, workTimeAccumulated, breakS
         alarmRef.current.src = "";
         alarmRef.current = null;
       }
+      stopFallbackBeep();
+      if (audioCtxRef.current) {
+        audioCtxRef.current.close().catch(() => {});
+        audioCtxRef.current = null;
+      }
     };
-  }, [alarmUrl]);
+  }, [alarmUrl, stopFallbackBeep]);
 
   useEffect(() => {
     // Clear any existing interval first
@@ -103,6 +161,9 @@ export const useTimer = (activeShift, isBreakActive, workTimeAccumulated, breakS
         }).catch(() => {
           console.log("Audio esperando interacción");
         });
+        // Preparar también el contexto de Web Audio (respaldo offline). Al entrar en
+        // descanso hay un gesto del usuario, momento válido para reanudarlo.
+        getAudioCtx();
       }
 
       // Programar notificación local nativa para cuando acabe el descanso
@@ -121,16 +182,22 @@ export const useTimer = (activeShift, isBreakActive, workTimeAccumulated, breakS
           setShowBreakFinishedMsg(true);
           if (settings?.notifications) {
             if (alarmRef.current) {
-              alarmRef.current.loop = true; 
-              alarmRef.current.play().catch(e => console.log("Sonido bloqueado por el sistema", e));
-              
-              // Limitar alarma a 1 minuto máximo
+              alarmRef.current.loop = true;
+              // Si el mp3 (CDN externo) no puede sonar —típicamente por estar sin red—
+              // arrancamos el pitido sintetizado, que funciona offline.
+              alarmRef.current.play().catch((e) => {
+                console.log("mp3 no disponible, uso pitido de respaldo", e?.message);
+                startFallbackBeep();
+              });
+
+              // Limitar alarma a 1 minuto máximo (mp3 + pitido de respaldo)
               if (alarmTimeoutRef.current) clearTimeout(alarmTimeoutRef.current);
               alarmTimeoutRef.current = setTimeout(() => {
                 if (alarmRef.current) {
                   alarmRef.current.pause();
                   alarmRef.current.currentTime = 0;
                 }
+                stopFallbackBeep();
               }, 60000);
             }
             if (typeof navigator !== 'undefined' && "vibrate" in navigator) {
@@ -152,7 +219,7 @@ export const useTimer = (activeShift, isBreakActive, workTimeAccumulated, breakS
         intervalRef.current = null;
       }
     };
-  }, [activeShift, isBreakActive, breakStartTime, settings?.breakDuration, settings?.notifications]);
+  }, [activeShift, isBreakActive, breakStartTime, settings?.breakDuration, settings?.notifications, startFallbackBeep, stopFallbackBeep, getAudioCtx]);
 
   const stopAlarm = useCallback(() => {
     if (alarmTimeoutRef.current) {
@@ -163,11 +230,12 @@ export const useTimer = (activeShift, isBreakActive, workTimeAccumulated, breakS
       alarmRef.current.pause();
       alarmRef.current.currentTime = 0;
     }
+    stopFallbackBeep();
     if (typeof navigator !== 'undefined' && "vibrate" in navigator) {
       navigator.vibrate(0);
     }
     cancelBreakNotification();
-  }, []);
+  }, [stopFallbackBeep]);
 
   return { showBreakFinishedMsg, setShowBreakFinishedMsg, stopAlarm };
 };

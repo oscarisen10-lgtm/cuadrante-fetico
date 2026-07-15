@@ -1,7 +1,7 @@
 {
   "name": "mi-cuadrante-anged",
   "private": true,
-  "version": "3.2.0",
+  "version": "3.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -21,7 +21,6 @@
     "@capacitor/push-notifications": "^8.0.3",
     "@capacitor/splash-screen": "^8.0.1",
     "@capgo/capacitor-native-biometric": "^8.4.2",
-    "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.18.0",
     "@react-three/postprocessing": "^2.19.1",
     "firebase": "^12.10.0",
@@ -44,7 +43,7 @@
     "postcss": "^8.4.24",
     "sharp": "^0.34.5",
     "tailwindcss": "^3.3.2",
-    "vite": "^4.3.9",
+    "vite": "^6.4.3",
     "vitest": "^4.1.8"
   }
 }

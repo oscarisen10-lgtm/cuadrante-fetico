@@ -22,6 +22,8 @@ const JEFE = 'jefe1';   // Jefe de sección en Supercor / Centro / Frescos
 const BASE = 'base1';   // Personal base en la MISMA sección
 const BASE2 = 'base2';  // Otro personal base de la misma sección (no es jefe)
 const BARNA = 'barna1'; // Personal base en OTRA tienda (Barcelona)
+const PENDIENTE = 'pendiente1'; // Cuenta nueva SIN activar (membership.active == false)
+const DELEGADO = 'delegado1';   // Delegado con doc en delegados/{uid}
 
 const STOREKEY_CENTRO = 'Supercor_Centro_Frescos';
 const STOREKEY_BARNA = 'Supercor_Barcelona_Frescos';
@@ -58,6 +60,13 @@ beforeEach(async () => {
     await setDoc(doc(db, 'users', BARNA), {
       profile: { company: 'Supercor', store: 'Barcelona', section: 'Frescos', rank: 'Personal base', fullName: 'Barna' },
     });
+    // Cuenta nueva PENDIENTE de activar por un delegado (sistema de delegados).
+    await setDoc(doc(db, 'users', PENDIENTE), {
+      profile: { company: 'Supercor', store: 'Centro', section: 'Frescos', rank: 'Personal base', fullName: 'Nuevo Sin Activar' },
+      membership: { active: false, createdAt: 1 },
+    });
+    // Un delegado con su doc de tiendas autorizadas.
+    await setDoc(doc(db, 'delegados', DELEGADO), { stores: ['Centro'], active: true });
     // Un turno propio de base1 y una petición pendiente suya.
     await setDoc(doc(db, 'users', BASE, 'shifts', '2026-06-10'), { date: '2026-06-10', type: 'work', hours: 8 });
     await setDoc(doc(db, 'requests', 'req1'), { uid: BASE, storeKey: STOREKEY_CENTRO, status: 'pending', date: '2026-06-15' });
@@ -74,8 +83,11 @@ describe('Perfiles de usuario (lectura PRIVADA)', () => {
     await assertFails(getDoc(doc(as(BASE), 'users', BASE2)));
   });
 
-  test('el JEFE de la sección SÍ puede leer el perfil de su subordinado', async () => {
-    await assertSucceeds(getDoc(doc(as(JEFE), 'users', BASE)));
+  // SEGURIDAD (escalada de privilegios): el rango lo autoelige el usuario y NO está
+  // verificado, así que ni siquiera un "Jefe de sección" puede leer perfiles ajenos
+  // desde el cliente. Si esto pasara, cualquiera se autoproclamaría jefe y filtraría PII.
+  test('un "jefe" (rango autodeclarado) NO puede leer el perfil de su supuesto subordinado', async () => {
+    await assertFails(getDoc(doc(as(JEFE), 'users', BASE)));
   });
 
   test('un empleado NO puede leer un perfil de OTRA tienda', async () => {
@@ -88,8 +100,9 @@ describe('Perfiles de usuario (lectura PRIVADA)', () => {
 });
 
 describe('Turnos', () => {
-  test('el jefe SÍ puede escribir el turno de descanso de su subordinado (aprobar día libre)', async () => {
-    await assertSucceeds(
+  // El rango autodeclarado tampoco permite tocar los turnos de otro (anti-escalada).
+  test('un "jefe" (rango autodeclarado) NO puede escribir el turno de su supuesto subordinado', async () => {
+    await assertFails(
       setDoc(doc(as(JEFE), 'users', BASE, 'shifts', '2026-06-15'), { date: '2026-06-15', type: 'rest', hours: 0 })
     );
   });
@@ -122,8 +135,10 @@ describe('Turnos', () => {
 });
 
 describe('Peticiones (días libres)', () => {
-  test('el jefe SÍ puede aprobar la petición de su subordinado', async () => {
-    await assertSucceeds(updateDoc(doc(as(JEFE), 'requests', 'req1'), { status: 'approved' }));
+  // La aprobación por responsables se hará por Cloud Function cuando se reactive; desde
+  // el cliente, un rango autodeclarado NO puede tocar la petición de otro (anti-escalada).
+  test('un "jefe" (rango autodeclarado) NO puede aprobar la petición de otro desde el cliente', async () => {
+    await assertFails(updateDoc(doc(as(JEFE), 'requests', 'req1'), { status: 'approved' }));
   });
 
   test('un compañero (no jefe, no dueño) NO puede aprobar la petición de otro', async () => {
@@ -175,6 +190,145 @@ describe('Noticias', () => {
 
   test('un usuario normal NO puede publicar noticias', async () => {
     await assertFails(setDoc(doc(as(BASE), 'noticias', 'hack'), { title: 'spam', createdAt: 2 }));
+  });
+});
+
+describe('Sistema de delegados (activación de cuentas)', () => {
+  test('un registro nuevo SÍ se puede crear si nace desactivado (membership.active == false)', async () => {
+    await assertSucceeds(
+      setDoc(doc(as('nuevo1'), 'users', 'nuevo1'), {
+        profile: { company: 'Supercor', store: 'Centro', fullName: 'Recién Llegado' },
+        membership: { active: false, createdAt: 2 },
+      })
+    );
+  });
+
+  test('un registro nuevo SIN membership NO se puede crear (nadie nace activado por omisión)', async () => {
+    await assertFails(
+      setDoc(doc(as('nuevo2'), 'users', 'nuevo2'), {
+        profile: { company: 'Supercor', store: 'Centro', fullName: 'Tramposo' },
+      })
+    );
+  });
+
+  test('un registro nuevo NO puede nacer ya activado (membership.active == true)', async () => {
+    await assertFails(
+      setDoc(doc(as('nuevo3'), 'users', 'nuevo3'), {
+        profile: { company: 'Supercor', store: 'Centro', fullName: 'Autoactivado' },
+        membership: { active: true },
+      })
+    );
+  });
+
+  test('una cuenta pendiente NO puede autoactivarse tocando su membership', async () => {
+    await assertFails(
+      updateDoc(doc(as(PENDIENTE), 'users', PENDIENTE), { membership: { active: true } })
+    );
+  });
+
+  test('una cuenta pendiente NO puede BORRAR su membership (quedaría "antigua" = activa)', async () => {
+    await assertFails(
+      setDoc(doc(as(PENDIENTE), 'users', PENDIENTE), {
+        profile: { company: 'Supercor', store: 'Centro', fullName: 'Nuevo Sin Activar' },
+      })
+    );
+  });
+
+  test('una cuenta pendiente SÍ puede editar su perfil y ajustes (sin tocar membership)', async () => {
+    await assertSucceeds(
+      updateDoc(doc(as(PENDIENTE), 'users', PENDIENTE), { settings: { notifications: true } })
+    );
+  });
+
+  test('una cuenta pendiente NO puede crear turnos (bloqueo real, también en apps antiguas)', async () => {
+    await assertFails(
+      setDoc(doc(as(PENDIENTE), 'users', PENDIENTE, 'shifts', '2026-06-20'), { date: '2026-06-20', type: 'work', hours: 8 })
+    );
+  });
+
+  test('una cuenta pendiente NO puede crear peticiones de días libres', async () => {
+    await assertFails(
+      setDoc(doc(as(PENDIENTE), 'requests', 'bloqueada'), { uid: PENDIENTE, storeKey: STOREKEY_CENTRO, status: 'pending', date: '2026-06-21' })
+    );
+  });
+
+  test('una cuenta SIN membership (usuario de antes del sistema) SÍ sigue creando turnos', async () => {
+    await assertSucceeds(
+      setDoc(doc(as(BASE), 'users', BASE, 'shifts', '2026-06-22'), { date: '2026-06-22', type: 'work', hours: 8 })
+    );
+  });
+
+  test('un usuario normal (aunque sea de la misma tienda) NO puede tocar el membership de otro', async () => {
+    await assertFails(
+      updateDoc(doc(as(BASE), 'users', PENDIENTE), { membership: { active: true } })
+    );
+  });
+
+  test('el admin SÍ puede activar la cuenta de cualquiera', async () => {
+    await assertSucceeds(
+      updateDoc(doc(as('admin1', { admin: true }), 'users', PENDIENTE), { membership: { active: true } })
+    );
+  });
+});
+
+describe('Colección delegados', () => {
+  test('el delegado SÍ puede leer su propio doc (para ver su pestaña y tiendas)', async () => {
+    await assertSucceeds(getDoc(doc(as(DELEGADO), 'delegados', DELEGADO)));
+  });
+
+  test('un usuario normal NO puede leer el doc de un delegado', async () => {
+    await assertFails(getDoc(doc(as(BASE), 'delegados', DELEGADO)));
+  });
+
+  test('nadie puede autonombrarse delegado desde el cliente', async () => {
+    await assertFails(
+      setDoc(doc(as(BASE), 'delegados', BASE), { stores: ['Centro'], active: true })
+    );
+  });
+
+  test('el admin SÍ puede nombrar delegados', async () => {
+    await assertSucceeds(
+      setDoc(doc(as('admin1', { admin: true }), 'delegados', BASE2), { stores: ['Centro'], active: true })
+    );
+  });
+});
+
+describe('Censo de afiliación (censos/{uid})', () => {
+  test('el delegado SÍ puede escribir su propio censo (con los campos previstos)', async () => {
+    await assertSucceeds(
+      setDoc(doc(as(DELEGADO), 'censos', DELEGADO), {
+        prospects: { Centro: [{ name: 'Futuro Uno', phone: '600000000' }] },
+        updatedAt: 1,
+      })
+    );
+  });
+
+  test('el delegado SÍ puede leer su propio censo', async () => {
+    await assertSucceeds(getDoc(doc(as(DELEGADO), 'censos', DELEGADO)));
+  });
+
+  test('NO se puede escribir el censo con campos extra (forma controlada)', async () => {
+    await assertFails(
+      setDoc(doc(as(DELEGADO), 'censos', DELEGADO), {
+        prospects: {},
+        updatedAt: 1,
+        hacked: true,
+      })
+    );
+  });
+
+  test('un usuario NO puede leer el censo de otro', async () => {
+    await assertFails(getDoc(doc(as(BASE), 'censos', DELEGADO)));
+  });
+
+  test('un usuario NO puede escribir el censo de otro', async () => {
+    await assertFails(
+      setDoc(doc(as(BASE), 'censos', DELEGADO), { prospects: {}, updatedAt: 2 })
+    );
+  });
+
+  test('el admin SÍ puede leer cualquier censo (soporte)', async () => {
+    await assertSucceeds(getDoc(doc(as('admin1', { admin: true }), 'censos', DELEGADO)));
   });
 });
 

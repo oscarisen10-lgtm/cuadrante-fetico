@@ -8,11 +8,13 @@ import { useNews } from './hooks/useNews';
 import { useTimer } from './hooks/useTimer';
 import { useShifts } from './hooks/useShifts';
 import { useNotifications } from './hooks/useNotifications';
-import { Clock, Calendar as CalendarIcon, PieChart, FileText, Settings, LogOut, WifiOff, Fingerprint, Trophy, X } from 'lucide-react';
+import { Clock, Calendar as CalendarIcon, PieChart, FileText, Settings, LogOut, WifiOff, Fingerprint, Trophy, X, Lock, Users, ShieldCheck, ClipboardList } from 'lucide-react';
 import { getFormattedDate } from './utils/dateUtils';
 import { isAdminUser } from './constants/config';
+import { markFichado } from './services/firebaseService';
 import { NavItem } from './components/UIComponents';
 import AuthView from './components/AuthView';
+import { LockedView } from './components/LockedView';
 import { ToastContainer, ConfirmDialog } from './components/Toast';
 
 const DashboardView = lazy(() => import('./components/DashboardView').then(m => ({ default: m.DashboardView })));
@@ -21,25 +23,37 @@ const CalendarView = lazy(() => import('./components/CalendarView').then(m => ({
 const LicenciasView = lazy(() => import('./components/LicenciasView').then(m => ({ default: m.LicenciasView })));
 const SettingsView = lazy(() => import('./components/SettingsView').then(m => ({ default: m.SettingsView })));
 const ArenaView = lazy(() => import('./components/ArenaView').then(m => ({ default: m.ArenaView })));
+const DelegadosView = lazy(() => import('./components/DelegadosView').then(m => ({ default: m.DelegadosView })));
+const AdminView = lazy(() => import('./components/AdminView').then(m => ({ default: m.AdminView })));
+const CensoView = lazy(() => import('./components/CensoView').then(m => ({ default: m.CensoView })));
 
 /**
  * NavigationBar — Bottom tab bar with React Router integration.
  * Each tab navigates to a route, and the browser back button works correctly.
+ *
+ * El hueco de "Fichar" es por rol: admin (en Modo Admin) → Competición;
+ * delegado (en Modo Delegado) → Usuarios; resto → Fichar. En Modo Admin,
+ * "Agenda" pasa a ser el panel "Gestión". Las cuentas PENDIENTES ven candados
+ * en las pestañas bloqueadas (solo Noticias y Ajustes operativos).
  */
-function NavigationBar({ isAdmin }) {
+function NavigationBar({ adminMode, delegadoMode, isActive }) {
   const navigate = useNavigate();
   const location = useLocation();
   const currentPath = location.pathname;
 
   const tabs = [
     { path: '/dashboard', icon: <PieChart />, label: 'Resumen' },
-    // FEATURE FLAG (en pruebas): solo el admin ve "Competición" (minijuegos) en lugar
-    // de "Fichar". El resto de usuarios sigue viendo "Fichar" hasta que se publique.
-    isAdmin
+    adminMode
       ? { path: '/arena', icon: <Trophy />, label: 'Competición' }
-      : { path: '/track', icon: <Clock />, label: 'Fichar' },
-    { path: '/calendar',  icon: <CalendarIcon />, label: 'Agenda' },
-    { path: '/licencias', icon: <FileText />,  label: 'Permisos' },
+      : delegadoMode
+        ? { path: '/delegados', icon: <Users />, label: 'Usuarios' }
+        : { path: '/track', icon: isActive ? <Clock /> : <Lock />, label: 'Fichar' },
+    adminMode
+      ? { path: '/gestion', icon: <ShieldCheck />, label: 'Gestión' }
+      : delegadoMode
+        ? { path: '/censo', icon: <ClipboardList />, label: 'Censo' }
+        : { path: '/calendar', icon: isActive ? <CalendarIcon /> : <Lock />, label: 'Agenda' },
+    { path: '/licencias', icon: isActive ? <FileText /> : <Lock />,  label: 'Permisos' },
     { path: '/settings',  icon: <Settings />,  label: 'Ajustes' },
   ];
 
@@ -67,9 +81,9 @@ function NavigationBar({ isAdmin }) {
  * AppContent — Main authenticated app shell with routing.
  */
 function AppContent({ user, authHook }) {
-  const { 
-    logoutUser, saveToCloud,
-    settings, shifts, activeShift, workTimeAccumulated, isBreakActive, breakStartTime 
+  const {
+    logoutUser, saveToCloud, isActive: memberActive, delegado,
+    settings, shifts, activeShift, workTimeAccumulated, isBreakActive, breakStartTime
   } = authHook;
 
   const { token: pushToken, tokenError: pushTokenError, permissionState, requestTokenManually } = useNotifications(user);
@@ -77,8 +91,16 @@ function AppContent({ user, authHook }) {
   const { showBreakFinishedMsg, setShowBreakFinishedMsg, stopAlarm } = useTimer(activeShift, isBreakActive, workTimeAccumulated, breakStartTime, settings);
   const { shiftsMap, stats } = useShifts(shifts, user);
 
-  // Mientras se prueba, solo el admin ve la pestaña "Competición" (minijuegos).
   const isAdmin = isAdminUser(user);
+  // Modo Admin (interruptor en Ajustes): con él activo, el admin ve Competición,
+  // el panel Gestión y el Resumen solo con noticias. Apagado = app de usuario normal.
+  const adminMode = isAdmin && settings?.adminMode !== false;
+  const isDelegado = !!delegado;
+  // Modo Delegado (interruptor en Ajustes): con él activo, el delegado ve la
+  // pestaña "Usuarios" y el Resumen solo con noticias. Apagado = usuario normal.
+  const delegadoMode = isDelegado && !adminMode && settings?.delegadoMode !== false;
+  // El admin y los delegados nunca quedan bloqueados por membership.
+  const isActive = memberActive || isAdmin || isDelegado;
 
   const [showConfirmLogout, setShowConfirmLogout] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
@@ -89,7 +111,6 @@ function AppContent({ user, authHook }) {
   // completa (flotando) una vez por cada cartel nuevo; al cerrarlo se marca como visto
   // en el dispositivo y se vuelve a Resumen, donde el cartel sigue en "Noticias".
   const navigate = useNavigate();
-  const location = useLocation();
   const activeCartel = useMemo(() => newsList.find(n => n.imageUrl && !n.isPushRequest) || null, [newsList]);
   const [seenCartelId, setSeenCartelId] = useState(() => { try { return localStorage.getItem('cartelSeenId'); } catch { return null; } });
   const [manualImg, setManualImg] = useState(null); // imagen ampliada manualmente desde Resumen { url, title }
@@ -136,7 +157,9 @@ function AppContent({ user, authHook }) {
 
   const iniciarTurno = useCallback(() => {
     saveToCloud({ activeShift: { startTime: Date.now() } });
-  }, [saveToCloud]);
+    // Analítica (admin): marca que este usuario usa "Fichar" (mejor esfuerzo).
+    if (user?.uid) markFichado(user.uid);
+  }, [saveToCloud, user?.uid]);
 
   const cerrarTurno = useCallback((esHA, totalElapsedSeconds) => {
     const hoyStr = getFormattedDate(new Date());
@@ -177,30 +200,46 @@ function AppContent({ user, authHook }) {
         )}
 
         <main className="flex-1 p-4 overflow-y-auto scrollbar-hide flex flex-col min-h-0 relative z-0" role="main">
-          <div key={location.pathname} className="flex-1 flex flex-col min-h-0 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          {/* Sin key={location.pathname}: antes forzaba desmontar/re-montar Suspense+Routes
+              en CADA navegación (reseteaba el boundary y volvía a mostrar "Cargando..."
+              de chunks ya en caché). React Router ya intercambia solo la ruta activa, y
+              cada vista trae su propia animación de entrada. */}
+          <div className="flex-1 flex flex-col min-h-0">
           <Suspense fallback={<div className="flex-1 flex items-center justify-center text-emerald-500 font-bold text-xs italic" role="status" aria-label="Cargando contenido">Cargando...</div>}>
             <Routes>
               <Route path="/dashboard" element={
-                <DashboardView user={user} stats={stats} newsList={newsList} addNews={addNews} deleteNews={deleteNews} permissionState={permissionState} requestTokenManually={requestTokenManually} onImageClick={(url, title) => setManualImg({ url, title })} />
+                <DashboardView user={user} stats={stats} newsOnly={!isActive || adminMode || delegadoMode} newsList={newsList} addNews={addNews} deleteNews={deleteNews} permissionState={permissionState} requestTokenManually={requestTokenManually} onImageClick={(url, title) => setManualImg({ url, title })} />
               } />
               <Route path="/track" element={
-                <TrackerView 
+                !isActive ? <LockedView /> :
+                <TrackerView
                   activeShift={activeShift} isBreakActive={isBreakActive} workTimeAccumulated={workTimeAccumulated} breakStartTime={breakStartTime}
                   showBreakFinishedMsg={showBreakFinishedMsg} settings={settings}
                   cerrarTurno={cerrarTurno} toggleDescanso={toggleDescanso} iniciarTurno={iniciarTurno}
                 />
               } />
               <Route path="/calendar" element={
+                !isActive ? <LockedView /> :
                 <CalendarView shifts={shifts} shiftsMap={shiftsMap} saveToCloud={saveToCloud} user={user} permissionState={permissionState} requestTokenManually={requestTokenManually} />
               } />
               <Route path="/licencias" element={
+                !isActive ? <LockedView /> :
                 <LicenciasView user={user} permissionState={permissionState} requestTokenManually={requestTokenManually} />
               } />
               <Route path="/settings" element={
-                <SettingsView user={user} settings={settings} saveToCloud={saveToCloud} stopAlarm={stopAlarm} pushToken={pushToken} pushTokenError={pushTokenError} permissionState={permissionState} requestTokenManually={requestTokenManually} />
+                <SettingsView user={user} settings={settings} saveToCloud={saveToCloud} stopAlarm={stopAlarm} pushToken={pushToken} pushTokenError={pushTokenError} permissionState={permissionState} requestTokenManually={requestTokenManually} isDelegado={isDelegado} />
               } />
               <Route path="/arena" element={
                 <ArenaView user={user} onPlayingChange={setGameActive} />
+              } />
+              <Route path="/delegados" element={
+                (isDelegado || isAdmin) ? <DelegadosView delegado={delegado} /> : <Navigate to="/dashboard" replace />
+              } />
+              <Route path="/gestion" element={
+                isAdmin ? <AdminView /> : <Navigate to="/dashboard" replace />
+              } />
+              <Route path="/censo" element={
+                isDelegado ? <CensoView user={user} delegado={delegado} /> : <Navigate to="/dashboard" replace />
               } />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
@@ -208,7 +247,7 @@ function AppContent({ user, authHook }) {
           </div>
         </main>
 
-        {!gameActive && <NavigationBar isAdmin={isAdmin} />}
+        {!gameActive && <NavigationBar adminMode={adminMode} delegadoMode={delegadoMode} isActive={isActive} />}
 
         {showConfirmLogout && (
           <div className="fixed inset-0 z-[110] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in" role="dialog" aria-modal="true" aria-label="Confirmar cierre de sesión">
