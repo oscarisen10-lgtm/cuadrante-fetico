@@ -88,12 +88,15 @@ exports.sendPushNotification = onDocumentCreated({ document: "noticias/{docId}",
     webpush: {
       // Iconos LIGEROS generados a medida (19 KB y 7 KB): antes ambos apuntaban a
       // app.PNG (568 KB), que cada dispositivo descargaba con CADA notificación.
+      // ⚠️ DOMINIO: mi-calendario-fe.web.app es el hosting REAL de esta app.
+      // calendario-fetico.web.app (lo que había antes aquí) es el proyecto ANTIGUO
+      // "Mi Calendario": sus iconos no existen allí y el link abría la app vieja.
       notification: {
-        icon: "https://calendario-fetico.web.app/img/push-icon-192.png",
-        badge: "https://calendario-fetico.web.app/img/push-badge-96.png",
+        icon: "https://mi-calendario-fe.web.app/img/push-icon-192.png",
+        badge: "https://mi-calendario-fe.web.app/img/push-badge-96.png",
       },
       fcmOptions: {
-        link: "https://calendario-fetico.web.app",
+        link: "https://mi-calendario-fe.web.app",
       },
     },
     android: {
