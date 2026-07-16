@@ -210,11 +210,21 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
                     // separador sutil entre noticias en lugar de un marco por tarjeta.
                     <div key={news.id} className="flex flex-col pb-5 border-b border-slate-200 last:border-b-0 last:pb-0">
                         <div className="flex justify-between items-center mb-3">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[9px] font-black text-emerald-600 uppercase tracking-tighter bg-emerald-500/10 px-2 py-0.5 rounded-md">{news.tag}</span>
-                              <span className="text-[8px] text-slate-400 font-bold">{news.date}</span>
+                            <div className="flex items-center gap-2 flex-wrap min-w-0">
+                              {news.isStoreNews ? (
+                                // Noticia del DELEGADO de la tienda del usuario (colección
+                                // noticiasTienda): etiqueta propia + nombre del delegado.
+                                <span className="text-[9px] font-black text-indigo-600 uppercase tracking-tighter bg-indigo-500/10 px-2 py-0.5 rounded-md">Tu Delegado</span>
+                              ) : (
+                                <span className="text-[9px] font-black text-emerald-600 uppercase tracking-tighter bg-emerald-500/10 px-2 py-0.5 rounded-md">{news.tag}</span>
+                              )}
+                              <span className="text-[8px] text-slate-400 font-bold">
+                                {news.date}{news.isStoreNews && news.authorName ? ` · ${news.authorName}` : ''}
+                              </span>
                             </div>
-                            {isAdmin && (
+                            {/* El borrado desde aquí es SOLO para las noticias globales del
+                                admin; las de delegado se borran desde su pestaña Noticias. */}
+                            {isAdmin && !news.isStoreNews && (
                               <button onClick={() => handleDeleteNews(news.id)} className="text-rose-500 p-2 bg-rose-500/10 hover:bg-rose-500/20 rounded-xl transition-colors">
                                 <Trash2 size={14} />
                               </button>

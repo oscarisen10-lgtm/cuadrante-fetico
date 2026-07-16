@@ -5,7 +5,7 @@ import { STORES, S_ROMERO_STORES } from '../constants/stores';
 import { COMPANY_RULES } from '../constants/config';
 import { toast, confirm } from './Toast';
 import { LoadingLogo } from './UIComponents';
-import { StoreUserManager } from './DelegadosView';
+import { StoreUserManager } from './StoreUserManager';
 
 // Todas las tiendas seleccionables + los valores especiales que puede tener un
 // perfil (ECI y cuentas auto-reparadas), para que el admin no pierda a nadie.

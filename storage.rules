@@ -10,14 +10,29 @@ service firebase.storage {
       );
     }
 
-    // Noticias: solo admin puede subir, todos los autenticados pueden leer
+    // Noticias GLOBALES: solo admin puede subir, todos los autenticados pueden leer
     match /noticias/{fileName} {
       allow read: if request.auth != null;
       allow write: if isAdmin()
                    && request.resource.size < 5 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
     }
-    
+
+    // Fotos de las noticias de DELEGADO: sube solo un delegado ACTIVO (se
+    // comprueba su doc delegados/{uid} en Firestore — reglas cross-service).
+    // La imagen llega ya comprimida del cliente (~150-400 KB); el tope de 5MB
+    // es el mismo cinturón que en las noticias globales.
+    match /noticias-delegado/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if (isAdmin() || (
+                     request.auth != null &&
+                     firestore.exists(/databases/(default)/documents/delegados/$(request.auth.uid)) &&
+                     firestore.get(/databases/(default)/documents/delegados/$(request.auth.uid)).data.active != false
+                   ))
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
     // Denegar todo lo demás
     match /{allPaths=**} {
       allow read, write: if false;

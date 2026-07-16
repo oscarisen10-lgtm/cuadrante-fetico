@@ -11,13 +11,13 @@ import { UserCard } from './UserCard';
 const TOTAL = '__ALL__';
 
 /**
- * StoreUserManager — Gestor de usuarios por tienda. Lo usan la vista de
- * Usuarios del delegado (con sus tiendas autorizadas y la opción "Total") y el
- * panel de Gestión del admin (con todas las tiendas, prop admin). Lista a los
- * usuarios con sus datos de contacto, permite activar/desactivar su cuenta y
- * EXPULSAR a quien se fue de la empresa (desaparece de las vistas del delegado
- * sin borrar ni bloquear su cuenta; el admin ve a los expulsados y puede
- * readmitirlos).
+ * StoreUserManager — Gestor de usuarios por tienda. Hoy lo usa el panel de
+ * Gestión del ADMIN (con todas las tiendas, prop admin); el delegado gestiona a
+ * sus usuarios desde el CENSO (su antigua pestaña "Usuarios" ahora es
+ * "Noticias", ver DelegadoNoticiasView). Lista a los usuarios con sus datos de
+ * contacto, permite activar/desactivar su cuenta y EXPULSAR a quien se fue de
+ * la empresa (desaparece de las vistas del delegado sin borrar ni bloquear su
+ * cuenta; el admin ve a los expulsados y puede readmitirlos).
  */
 export function StoreUserManager({ stores, showTotal = false, admin = false }) {
   const sortedStores = useMemo(
@@ -198,40 +198,3 @@ export function StoreUserManager({ stores, showTotal = false, admin = false }) {
   );
 }
 
-/**
- * DelegadosView — Espacio "Usuarios" (ocupa el hueco de Fichar solo para los
- * delegados). Cada delegado controla los usuarios de las tiendas que el admin
- * le haya autorizado: verlos con sus datos de contacto y activar/desactivar
- * sus cuentas según estén o no afiliados a FETICO. Incluye la opción "Total"
- * para ver juntos todos los usuarios que lleva.
- */
-export const DelegadosView = React.memo(function DelegadosView({ delegado }) {
-  const stores = Array.isArray(delegado?.stores) ? delegado.stores : [];
-
-  return (
-    <div className="flex flex-col gap-5 animate-in fade-in duration-300 pb-20">
-      <div className="rounded-[2rem] p-5 text-white relative overflow-hidden" style={{ background: 'linear-gradient(160deg,#10b981,#059669 55%,#047857)', boxShadow: '0 14px 30px -12px rgba(5,120,87,0.5), inset 0 1.5px 1px rgba(255,255,255,0.3)' }}>
-        <div className="pointer-events-none absolute -top-8 -right-4 w-32 h-32 rounded-full" style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.2), transparent 70%)' }} />
-        <h2 className="relative text-sm font-black uppercase italic tracking-widest flex items-center gap-2.5">
-          <span className="grid place-items-center w-8 h-8 rounded-xl bg-white/20 shrink-0"><Users size={16} /></span>
-          Usuarios
-        </h2>
-        <p className="relative text-[10px] text-emerald-50/90 font-bold uppercase tracking-tight mt-2 leading-relaxed">
-          Activa las cuentas de tus afiliados y desactiva las bajas.
-          {stores.length > 0 && <> Tiendas autorizadas: {stores.length}.</>}
-        </p>
-      </div>
-
-      {stores.length === 0 ? (
-        <div className="py-14 flex flex-col items-center opacity-50 text-center px-6">
-          <Users size={40} className="text-slate-300 mb-3" />
-          <p className="text-[10px] text-slate-400 italic uppercase font-bold tracking-widest leading-relaxed">
-            Aún no tienes tiendas autorizadas.<br />El administrador debe asignártelas.
-          </p>
-        </div>
-      ) : (
-        <StoreUserManager stores={stores} showTotal />
-      )}
-    </div>
-  );
-});

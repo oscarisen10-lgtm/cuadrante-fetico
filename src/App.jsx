@@ -8,7 +8,7 @@ import { useNews } from './hooks/useNews';
 import { useTimer } from './hooks/useTimer';
 import { useShifts } from './hooks/useShifts';
 import { useNotifications } from './hooks/useNotifications';
-import { Clock, Calendar as CalendarIcon, PieChart, FileText, Settings, LogOut, WifiOff, Fingerprint, Trophy, X, Users, ShieldCheck, ClipboardList } from 'lucide-react';
+import { Clock, Calendar as CalendarIcon, PieChart, FileText, Settings, LogOut, WifiOff, Fingerprint, Trophy, X, Newspaper, ShieldCheck, ClipboardList } from 'lucide-react';
 import { getFormattedDate } from './utils/dateUtils';
 import { isAdminUser } from './constants/config';
 import { markFichado } from './services/firebaseService';
@@ -22,7 +22,7 @@ const CalendarView = lazy(() => import('./components/CalendarView').then(m => ({
 const LicenciasView = lazy(() => import('./components/LicenciasView').then(m => ({ default: m.LicenciasView })));
 const SettingsView = lazy(() => import('./components/SettingsView').then(m => ({ default: m.SettingsView })));
 const ArenaView = lazy(() => import('./components/ArenaView').then(m => ({ default: m.ArenaView })));
-const DelegadosView = lazy(() => import('./components/DelegadosView').then(m => ({ default: m.DelegadosView })));
+const DelegadoNoticiasView = lazy(() => import('./components/DelegadoNoticiasView').then(m => ({ default: m.DelegadoNoticiasView })));
 const AdminView = lazy(() => import('./components/AdminView').then(m => ({ default: m.AdminView })));
 const CensoView = lazy(() => import('./components/CensoView').then(m => ({ default: m.CensoView })));
 
@@ -46,7 +46,7 @@ function NavigationBar({ adminMode, delegadoMode }) {
     adminMode
       ? { path: '/arena', icon: <Trophy />, label: 'Competición' }
       : delegadoMode
-        ? { path: '/delegados', icon: <Users />, label: 'Usuarios' }
+        ? { path: '/delegados', icon: <Newspaper />, label: 'Noticias' }
         : { path: '/track', icon: <Clock />, label: 'Fichar' },
     adminMode
       ? { path: '/gestion', icon: <ShieldCheck />, label: 'Gestión' }
@@ -87,7 +87,9 @@ function AppContent({ user, authHook }) {
   } = authHook;
 
   const { token: pushToken, tokenError: pushTokenError, permissionState, requestTokenManually } = useNotifications(user);
-  const { newsList, addNews, deleteNews } = useNews();
+  // Feed fusionado: noticias globales (admin) + las de la tienda del usuario
+  // (su delegado). Las de delegado llegan con isStoreNews:true.
+  const { newsList, addNews, deleteNews } = useNews(user);
   const { showBreakFinishedMsg, setShowBreakFinishedMsg, stopAlarm } = useTimer(activeShift, isBreakActive, workTimeAccumulated, breakStartTime, settings);
   const { shiftsMap, stats } = useShifts(shifts, user);
 
@@ -233,7 +235,7 @@ function AppContent({ user, authHook }) {
                 <ArenaView user={user} onPlayingChange={setGameActive} />
               } />
               <Route path="/delegados" element={
-                (isDelegado || isAdmin) ? <DelegadosView delegado={delegado} /> : <Navigate to="/dashboard" replace />
+                isDelegado ? <DelegadoNoticiasView user={user} delegado={delegado} /> : <Navigate to="/dashboard" replace />
               } />
               <Route path="/gestion" element={
                 isAdmin ? <AdminView /> : <Navigate to="/dashboard" replace />

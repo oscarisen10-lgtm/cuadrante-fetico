@@ -136,6 +136,84 @@ exports.sendPushNotification = onDocumentCreated({ document: "noticias/{docId}",
   return null;
 });
 
+/**
+ * sendStoreNews — Push DIRIGIDO de las noticias de delegado (noticiasTienda).
+ * Se dispara al crear una noticia de tienda con sendPush == true y la envía SOLO
+ * a los usuarios de las tiendas destino, por TOKEN directo (multicast):
+ *   - Funciona con las builds antiguas instaladas (no dependen de suscribirse a
+ *     ningún topic nuevo): reciben el aviso aunque su app no muestre aún el feed.
+ *   - El servidor RE-VALIDA que el autor es un delegado activo con esas tiendas
+ *     autorizadas (las reglas ya lo exigen al crear el doc; doble cinturón).
+ * Coste: una lectura por usuario de las tiendas destino (decenas) + el envío.
+ */
+exports.sendStoreNews = onDocumentCreated({ document: "noticiasTienda/{docId}", maxInstances: 5 }, async (event) => {
+  const data = event.data.data();
+  if (data.sendPush !== true) return null;
+
+  const db = admin.firestore();
+  const stores = Array.isArray(data.stores) ? data.stores.filter((s) => typeof s === "string" && s) : [];
+  if (stores.length === 0) return null;
+
+  // Re-validación de autoría en servidor (defensa en profundidad).
+  const delegadoSnap = await db.collection("delegados").doc(String(data.authorUid || "")).get();
+  const delegado = delegadoSnap.exists ? delegadoSnap.data() : null;
+  const authorized = delegado && delegado.active !== false &&
+    Array.isArray(delegado.stores) && stores.every((s) => delegado.stores.includes(s));
+  if (!authorized) {
+    console.error(`sendStoreNews: autor ${data.authorUid} sin autorización para [${stores.join(", ")}]. No se envía.`);
+    return null;
+  }
+
+  // Tokens de los usuarios de las tiendas destino ("in" admite 30 valores).
+  const tokens = new Set();
+  for (let i = 0; i < stores.length; i += 30) {
+    const snap = await db.collection("users")
+      .where("profile.store", "in", stores.slice(i, i + 30))
+      .select("profile.fcmToken")
+      .get();
+    snap.forEach((d) => {
+      const t = d.data().profile && d.data().profile.fcmToken;
+      if (t) tokens.add(t);
+    });
+  }
+  if (tokens.size === 0) {
+    console.log(`sendStoreNews: sin dispositivos con push en [${stores.join(", ")}].`);
+    return null;
+  }
+
+  const title = data.title || "Aviso de tu delegado";
+  const body = data.desc || "";
+  const base = {
+    notification: { title, body },
+    webpush: {
+      notification: {
+        icon: "https://mi-calendario-fe.web.app/img/push-icon-192.png",
+        badge: "https://mi-calendario-fe.web.app/img/push-badge-96.png",
+      },
+      fcmOptions: { link: "https://mi-calendario-fe.web.app" },
+    },
+    android: {
+      priority: "high",
+      notification: { channelId: "default", icon: "ic_launcher", color: "#059669", sound: "default" },
+    },
+    apns: {
+      headers: { "apns-priority": "10", "apns-push-type": "alert" },
+      payload: { aps: { alert: { title, body }, sound: "default", badge: 1 } },
+    },
+  };
+
+  // sendEachForMulticast admite 500 tokens por llamada.
+  const all = [...tokens];
+  let ok = 0, ko = 0;
+  for (let i = 0; i < all.length; i += 500) {
+    const res = await admin.messaging().sendEachForMulticast({ ...base, tokens: all.slice(i, i + 500) });
+    ok += res.successCount;
+    ko += res.failureCount;
+  }
+  console.log(`sendStoreNews → [${stores.join(", ")}]: ${ok} entregados, ${ko} fallos (tokens muertos, ignorables).`);
+  return null;
+});
+
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret, defineString } = require("firebase-functions/params");
 const { GoogleGenAI } = require("@google/genai");

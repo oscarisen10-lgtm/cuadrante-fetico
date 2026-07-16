@@ -10,7 +10,7 @@ import {
   assertSucceeds,
   assertFails,
 } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { beforeAll, afterAll, beforeEach, describe, test } from 'vitest';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -67,6 +67,11 @@ beforeEach(async () => {
     });
     // Un delegado con su doc de tiendas autorizadas.
     await setDoc(doc(db, 'delegados', DELEGADO), { stores: ['Centro'], active: true });
+    // Una noticia de delegado dirigida a la tienda Centro.
+    await setDoc(doc(db, 'noticiasTienda', 'nt1'), {
+      title: 'Asamblea', desc: 'Reunión el viernes', stores: ['Centro'],
+      authorUid: DELEGADO, createdAt: 1,
+    });
     // Un turno propio de base1 y una petición pendiente suya.
     await setDoc(doc(db, 'users', BASE, 'shifts', '2026-06-10'), { date: '2026-06-10', type: 'work', hours: 8 });
     await setDoc(doc(db, 'requests', 'req1'), { uid: BASE, storeKey: STOREKEY_CENTRO, status: 'pending', date: '2026-06-15' });
@@ -327,6 +332,76 @@ describe('Sistema de delegados (activación de cuentas)', () => {
     await assertSucceeds(
       updateDoc(doc(as('admin1', { admin: true }), 'users', PENDIENTE), { membership: { active: true } })
     );
+  });
+});
+
+describe('Noticias de delegado (noticiasTienda)', () => {
+  const nueva = (extra = {}) => ({
+    title: 'Aviso', desc: 'Texto', stores: ['Centro'],
+    authorUid: DELEGADO, createdAt: 2, ...extra,
+  });
+
+  test('un usuario de la tienda destino SÍ puede leer la noticia', async () => {
+    await assertSucceeds(getDoc(doc(as(BASE), 'noticiasTienda', 'nt1')));
+  });
+
+  test('un usuario de OTRA tienda NO puede leer la noticia', async () => {
+    await assertFails(getDoc(doc(as(BARNA), 'noticiasTienda', 'nt1')));
+  });
+
+  test('el feed por tienda (array-contains la tienda PROPIA) es una consulta válida', async () => {
+    const q = query(collection(as(BASE), 'noticiasTienda'), where('stores', 'array-contains', 'Centro'));
+    await assertSucceeds(getDocs(q));
+  });
+
+  test('consultar el feed de OTRA tienda es rechazado', async () => {
+    const q = query(collection(as(BASE), 'noticiasTienda'), where('stores', 'array-contains', 'Barcelona'));
+    await assertFails(getDocs(q));
+  });
+
+  test('el delegado SÍ puede publicar para su tienda autorizada', async () => {
+    await assertSucceeds(setDoc(doc(as(DELEGADO), 'noticiasTienda', 'ok1'), nueva()));
+  });
+
+  test('el delegado NO puede publicar para una tienda NO autorizada', async () => {
+    await assertFails(
+      setDoc(doc(as(DELEGADO), 'noticiasTienda', 'mal1'), nueva({ stores: ['Barcelona'] }))
+    );
+  });
+
+  test('el delegado NO puede colar una tienda ajena entre las suyas', async () => {
+    await assertFails(
+      setDoc(doc(as(DELEGADO), 'noticiasTienda', 'mal2'), nueva({ stores: ['Centro', 'Barcelona'] }))
+    );
+  });
+
+  test('el delegado NO puede publicar sin tiendas destino (no hay noticias "a todos")', async () => {
+    await assertFails(
+      setDoc(doc(as(DELEGADO), 'noticiasTienda', 'mal3'), nueva({ stores: [] }))
+    );
+  });
+
+  test('el delegado NO puede firmar la noticia como OTRO autor', async () => {
+    await assertFails(
+      setDoc(doc(as(DELEGADO), 'noticiasTienda', 'mal4'), nueva({ authorUid: BASE }))
+    );
+  });
+
+  test('un usuario normal NO puede publicar noticias de tienda', async () => {
+    await assertFails(setDoc(doc(as(BASE), 'noticiasTienda', 'mal5'), nueva({ authorUid: BASE })));
+  });
+
+  test('el autor SÍ puede leer y borrar su propia noticia (aunque su perfil sea de otra tienda)', async () => {
+    await assertSucceeds(getDoc(doc(as(DELEGADO), 'noticiasTienda', 'nt1')));
+    await assertSucceeds(deleteDoc(doc(as(DELEGADO), 'noticiasTienda', 'nt1')));
+  });
+
+  test('otro usuario NO puede borrar la noticia del delegado', async () => {
+    await assertFails(deleteDoc(doc(as(BASE), 'noticiasTienda', 'nt1')));
+  });
+
+  test('el admin SÍ puede borrar cualquier noticia de tienda', async () => {
+    await assertSucceeds(deleteDoc(doc(as('admin1', { admin: true }), 'noticiasTienda', 'nt1')));
   });
 });
 

@@ -442,6 +442,54 @@ export const deleteNews = async (id) => {
   return await deleteDoc(doc(db, "noticias", id));
 };
 
+// --- NOTICIAS DE DELEGADO (noticiasTienda) ---
+// Colección SEPARADA de las noticias globales: cada doc lleva stores[] con las
+// tiendas destino y las reglas solo dejan leer a los usuarios de esas tiendas
+// (y al autor/admin). Las builds antiguas no leen esta colección: no les
+// aparece el feed, pero el push dirigido sí les llega (va por token directo).
+
+/** Feed del usuario: noticias de delegado dirigidas a SU tienda. */
+export const subscribeToStoreNews = (store, callback) => {
+  if (!store) { callback([]); return () => {}; }
+  const q = query(
+    collection(db, "noticiasTienda"),
+    where("stores", "array-contains", store),
+    orderBy("createdAt", "desc"),
+    limit(20)
+  );
+  return onSnapshot(
+    q,
+    (snap) => callback(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    // Índice aún construyéndose o sin permisos: el feed global sigue funcionando.
+    (error) => { console.warn("subscribeToStoreNews:", error?.message); callback([]); }
+  );
+};
+
+/** Noticias publicadas por el propio delegado (para su pestaña Noticias). */
+export const subscribeToMyStoreNews = (uid, callback) => {
+  const q = query(
+    collection(db, "noticiasTienda"),
+    where("authorUid", "==", uid),
+    orderBy("createdAt", "desc"),
+    limit(30)
+  );
+  return onSnapshot(
+    q,
+    (snap) => callback(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    (error) => { console.warn("subscribeToMyStoreNews:", error?.message); callback([]); }
+  );
+};
+
+/** Publica una noticia de delegado. Con sendPush:true, el backend la envía por
+ *  push SOLO a los usuarios de las tiendas destino (ver sendStoreNews). */
+export const addStoreNews = async (newsData) => {
+  return await addDoc(collection(db, "noticiasTienda"), newsData);
+};
+
+export const deleteStoreNews = async (id) => {
+  return await deleteDoc(doc(db, "noticiasTienda", id));
+};
+
 // --- LICENCIAS ---
 // (La colección `licencias` de Firestore ya no se usa: el contenido de permisos se
 // sirve estático desde constants/licenciasData.js. Se eliminaron subscribeToLicencias,

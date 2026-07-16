@@ -164,7 +164,9 @@ service cloud.firestore {
       );
     }
 
-    // ---------- Noticias (requiere sesión) ----------
+    // ---------- Noticias GLOBALES (requiere sesión) ----------
+    // SOLO el admin publica aquí: es el canal "a toda la app". Las noticias de
+    // los delegados van en noticiasTienda (abajo), NUNCA en esta colección.
     match /noticias/{noticiaId} {
       allow read: if request.auth != null;
       // Alta solo admin y con createdAt válido (lo usa la ordenación y la limpieza
@@ -173,6 +175,47 @@ service cloud.firestore {
         request.resource.data.createdAt is number &&
         (!('isPushRequest' in request.resource.data) || request.resource.data.isPushRequest is bool);
       allow update, delete: if isAdmin();
+    }
+
+    // ---------- Noticias de DELEGADO (por tienda) ----------
+    // noticiasTienda/{id}: cada doc lleva stores[] con las tiendas DESTINO.
+    // Privacidad en servidor: un usuario solo puede leer las noticias cuyo
+    // stores[] contenga SU tienda (el feed consulta con array-contains su
+    // tienda real, así la regla es demostrable). El autor ve las suyas y el
+    // admin todo. Publicar exige ser delegado ACTIVO y que stores[] sea un
+    // subconjunto de sus tiendas autorizadas: ni con la API a mano se puede
+    // publicar a tiendas ajenas ni a toda la app.
+    function myDelegado() {
+      return get(/databases/$(database)/documents/delegados/$(request.auth.uid)).data;
+    }
+    function isActiveDelegado() {
+      return exists(/databases/$(database)/documents/delegados/$(request.auth.uid)) &&
+        myDelegado().active != false;
+    }
+
+    match /noticiasTienda/{noticiaId} {
+      allow read: if request.auth != null && (
+        isAdmin() ||
+        resource.data.authorUid == request.auth.uid ||
+        myProfile().store in resource.data.stores
+      );
+      allow create: if request.auth != null && (
+        isAdmin() ||
+        (isActiveDelegado() &&
+         request.resource.data.authorUid == request.auth.uid &&
+         request.resource.data.stores is list &&
+         request.resource.data.stores.size() > 0 &&
+         myDelegado().stores.hasAll(request.resource.data.stores) &&
+         request.resource.data.createdAt is number &&
+         request.resource.data.title is string && request.resource.data.title.size() <= 200 &&
+         request.resource.data.desc is string && request.resource.data.desc.size() <= 5000)
+      );
+      // Sin ediciones (se borra y se vuelve a publicar); borra el autor o el admin.
+      allow update: if isAdmin();
+      allow delete: if request.auth != null && (
+        isAdmin() ||
+        resource.data.authorUid == request.auth.uid
+      );
     }
 
     // ---------- Licencias (requiere sesión) ----------
