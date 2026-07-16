@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ClipboardList, Plus, Trash2, RefreshCw, Store as StoreIcon, ChevronDown, ChevronUp, Users, UserPlus, Phone, Target, UserX } from 'lucide-react';
-import { fetchCensusCounts, getCenso, saveCenso, fetchStoreUsers, setUserExpelled } from '../services/firebaseService';
+import { ClipboardList, Plus, Trash2, RefreshCw, Store as StoreIcon, ChevronDown, ChevronUp, Users, UserPlus, Phone, Target } from 'lucide-react';
+import { fetchCensusCounts, getCenso, saveCenso, fetchStoreUsers, setUserActiveStatus, setUserExpelled } from '../services/firebaseService';
 import { toast, confirm } from './Toast';
 import { LoadingLogo } from './UIComponents';
+import { UserCard } from './UserCard';
 
 // Objetivo de afiliación: con este % o más, el indicador se pone en verde.
 const OBJETIVO_PCT = 30;
@@ -49,16 +50,21 @@ export const CensoView = React.memo(function CensoView({ user, delegado }) {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
   const [saving, setSaving] = useState(false);
+  // El formulario "Apuntar futuro usuario" va plegado: al abrir una tienda lo
+  // primero que se ve son sus USUARIOS creados (petición de producto).
+  const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [newSection, setNewSection] = useState(SECCIONES[0]);
   const [newSindicato, setNewSindicato] = useState(SINDICATOS[0]);
-  const [expellingUid, setExpellingUid] = useState(null);
-  // Usuarios con app de una tienda, cargados SOLO bajo demanda (al pulsar).
+  const [busyUid, setBusyUid] = useState(null); // usuario con activación/expulsión en curso
+  // Usuarios con app por tienda, cargados al ABRIR la tienda y cacheados en la
+  // sesión (volver a abrirla no repite la llamada; "Actualizar" limpia la caché).
   const [storeUsers, setStoreUsers] = useState({}); // { tienda: [users] | 'loading' }
 
   const load = useCallback(async () => {
     if (!user?.uid) return;
     setLoading(true);
+    setStoreUsers({}); // invalidar la caché de usuarios por tienda
     try {
       const [c, p] = await Promise.all([fetchCensusCounts(), getCenso(user.uid)]);
       setCounts(c);
@@ -70,6 +76,19 @@ export const CensoView = React.memo(function CensoView({ user, delegado }) {
   }, [user?.uid]);
 
   useEffect(() => { load(); }, [load]);
+
+  /** Carga (o recarga con force) los usuarios con app de una tienda. */
+  const loadStoreUsers = async (store, force = false) => {
+    if (!force && storeUsers[store]) return; // ya cargados o cargando
+    setStoreUsers((prev) => ({ ...prev, [store]: 'loading' }));
+    try {
+      const list = await fetchStoreUsers(store);
+      setStoreUsers((prev) => ({ ...prev, [store]: list }));
+    } catch (e) {
+      setStoreUsers((prev) => { const n = { ...prev }; delete n[store]; return n; });
+      toast("No se pudieron cargar los usuarios: " + (e?.message || e), "error");
+    }
+  };
 
   const persist = async (next, prev) => {
     setSaving(true);
@@ -105,7 +124,7 @@ export const CensoView = React.memo(function CensoView({ user, delegado }) {
       `¿Expulsar a ${u.fullName}? Desaparecerá de tus listas y del censo (se fue de la empresa), pero su cuenta seguirá activa por si quiere seguir usando la app. No se borra nada.`
     );
     if (!ok) return;
-    setExpellingUid(u.uid);
+    setBusyUid(u.uid);
     try {
       await setUserExpelled(u.uid, true);
       setStoreUsers((prev) => ({
@@ -124,7 +143,34 @@ export const CensoView = React.memo(function CensoView({ user, delegado }) {
     } catch (e) {
       toast("Error: " + (e?.message || e), "error");
     }
-    setExpellingUid(null);
+    setBusyUid(null);
+  };
+
+  // Activar/desactivar la cuenta desde la ficha del usuario (igual que en la
+  // pestaña "Usuarios"); actualiza la lista y el recuento de activos en local.
+  const toggleUserActive = async (store, u) => {
+    const ok = await confirm(
+      u.active
+        ? `¿Desactivar la cuenta de ${u.fullName}? Solo podrá ver las noticias. No se borra ningún dato.`
+        : `¿Activar la cuenta de ${u.fullName}? Podrá usar toda la app.`
+    );
+    if (!ok) return;
+    setBusyUid(u.uid);
+    try {
+      await setUserActiveStatus(u.uid, !u.active);
+      setStoreUsers((prev) => ({
+        ...prev,
+        [store]: (Array.isArray(prev[store]) ? prev[store] : []).map((x) => (x.uid === u.uid ? { ...x, active: !u.active } : x)),
+      }));
+      setCounts((prev) => prev && prev[store] ? {
+        ...prev,
+        [store]: { ...prev[store], activos: Math.max(0, prev[store].activos + (u.active ? -1 : 1)) },
+      } : prev);
+      toast(u.active ? "Cuenta desactivada." : "¡Cuenta activada!", "success");
+    } catch (e) {
+      toast("Error: " + (e?.message || e), "error");
+    }
+    setBusyUid(null);
   };
 
   const removeProspect = async (store, name) => {
@@ -132,21 +178,6 @@ export const CensoView = React.memo(function CensoView({ user, delegado }) {
     if (!ok) return;
     const next = { ...prospects, [store]: (prospects[store] || []).filter((x) => x.name !== name) };
     await persist(next, prospects);
-  };
-
-  const toggleStoreUsers = async (store) => {
-    if (storeUsers[store]) { // ya cargados (o cargando): ocultar
-      setStoreUsers((prev) => { const n = { ...prev }; delete n[store]; return n; });
-      return;
-    }
-    setStoreUsers((prev) => ({ ...prev, [store]: 'loading' }));
-    try {
-      const list = await fetchStoreUsers(store);
-      setStoreUsers((prev) => ({ ...prev, [store]: list }));
-    } catch (e) {
-      setStoreUsers((prev) => { const n = { ...prev }; delete n[store]; return n; });
-      toast("No se pudieron cargar los usuarios: " + (e?.message || e), "error");
-    }
   };
 
   // Totales
@@ -220,7 +251,15 @@ export const CensoView = React.memo(function CensoView({ user, delegado }) {
             return (
               <div key={store} className="rounded-3xl overflow-hidden" style={{ background: 'linear-gradient(180deg,#ffffff,#f8f9fb)', boxShadow: '0 8px 20px -10px rgba(30,41,59,0.2), inset 0 1.5px 1px rgba(255,255,255,0.9)', border: '1px solid rgba(15,23,42,0.07)' }}>
                 <button
-                  onClick={() => { setExpanded(isOpen ? null : store); setNewName(""); setNewSection(SECCIONES[0]); setNewSindicato(SINDICATOS[0]); }}
+                  onClick={() => {
+                    const next = isOpen ? null : store;
+                    setExpanded(next);
+                    setShowAddForm(false);
+                    setNewName(""); setNewSection(SECCIONES[0]); setNewSindicato(SINDICATOS[0]);
+                    // Al abrir la tienda se cargan directamente sus usuarios (petición
+                    // de producto: los usuarios se ven primero, sin botón intermedio).
+                    if (next) loadStoreUsers(store);
+                  }}
                   className="w-full text-left p-4 active:bg-slate-50 transition-colors"
                 >
                   <div className="flex justify-between items-center gap-3">
@@ -239,113 +278,118 @@ export const CensoView = React.memo(function CensoView({ user, delegado }) {
 
                 {isOpen && (
                   <div className="px-4 pb-4 animate-in fade-in slide-in-from-top-1 space-y-3">
-                    {/* Añadir futuro usuario */}
-                    <div className="bg-slate-50 rounded-2xl p-3 ring-1 ring-slate-200 space-y-2">
-                      <span className="text-[9px] font-black text-emerald-700 uppercase tracking-widest flex items-center gap-1.5">
-                        <UserPlus size={11} /> Apuntar futuro usuario
-                      </span>
-                      <input
-                        value={newName}
-                        onChange={(e) => setNewName(e.target.value)}
-                        placeholder="Nombre y apellidos"
-                        className="w-full bg-white border-none p-2.5 rounded-xl text-xs outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 text-slate-700"
-                      />
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="relative">
-                          <select
-                            value={newSection}
-                            onChange={(e) => setNewSection(e.target.value)}
-                            aria-label="Sección"
-                            className="w-full bg-white border-none p-2.5 pr-7 rounded-xl text-xs outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 text-slate-700 appearance-none font-medium"
-                          >
-                            {SECCIONES.map((s) => <option key={s} value={s}>{s}</option>)}
-                          </select>
-                          <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"><ChevronDown size={12} /></div>
-                        </div>
-                        <div className="relative">
-                          <select
-                            value={newSindicato}
-                            onChange={(e) => setNewSindicato(e.target.value)}
-                            aria-label="Sindicato"
-                            className="w-full bg-white border-none p-2.5 pr-7 rounded-xl text-xs outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 text-slate-700 appearance-none font-medium"
-                          >
-                            {SINDICATOS.map((s) => <option key={s} value={s}>{s}</option>)}
-                          </select>
-                          <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"><ChevronDown size={12} /></div>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => addProspect(store)}
-                        disabled={saving || !newName.trim()}
-                        className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-1 active:scale-95 transition-all ${newName.trim() ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-200 text-slate-400'}`}
-                      >
-                        <Plus size={13} /> Añadir
-                      </button>
-                    </div>
-
-                    {/* Lista de futuros */}
-                    {list.length > 0 && (
-                      <div className="space-y-1.5">
-                        {list.map((p) => (
-                          <div key={p.name} className="flex items-center justify-between bg-white ring-1 ring-slate-100 rounded-xl px-3 py-2">
-                            <div className="min-w-0 flex-1">
-                              <p className="text-[11px] font-bold text-slate-700 truncate">{p.name}</p>
-                              <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                                {p.section && p.section !== 'Sin especificar' && (
-                                  <span className="text-[8px] font-black uppercase text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded tracking-tight">{p.section}</span>
-                                )}
-                                {p.sindicato && p.sindicato !== 'Sin sindicato' && (
-                                  <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded tracking-tight ${p.sindicato === 'Fetico' ? 'text-emerald-700 bg-emerald-500/10' : 'text-indigo-600 bg-indigo-500/10'}`}>{p.sindicato}</span>
-                                )}
-                                {p.phone && (
-                                  <a href={`tel:${p.phone}`} className="text-[9px] font-bold text-emerald-700 flex items-center gap-1"><Phone size={9} /> {p.phone}</a>
-                                )}
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => removeProspect(store, p.name)}
-                              disabled={saving}
-                              className="text-rose-500 p-1.5 bg-rose-500/10 rounded-lg active:scale-90 transition-all shrink-0 ml-2"
-                              aria-label={`Quitar a ${p.name}`}
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
+                    {/* 1) USUARIOS con la app — lo primero que se ve al abrir la
+                        tienda. Cada uno con su ficha completa desplegable (misma
+                        tarjeta que la pestaña "Usuarios": contacto, activación,
+                        push y expulsar). */}
+                    <span className="text-[9px] font-black text-emerald-700 uppercase tracking-widest flex items-center gap-1.5">
+                      <Users size={11} /> Usuarios creados ({counts?.[store]?.users ?? 0})
+                    </span>
+                    {!Array.isArray(usersLoaded) ? (
+                      <div className="py-3"><LoadingLogo size={36} label="Cargando usuarios…" /></div>
+                    ) : usersLoaded.length === 0 ? (
+                      <p className="text-[9px] text-slate-400 font-bold uppercase text-center py-2">No hay usuarios en esta tienda</p>
+                    ) : (
+                      <div className="space-y-2 animate-in fade-in">
+                        {usersLoaded.map((u) => (
+                          <UserCard
+                            key={u.uid}
+                            u={u}
+                            collapsible
+                            busy={busyUid === u.uid}
+                            onToggleActive={(x) => toggleUserActive(store, x)}
+                            onExpel={(x) => expelUser(store, x)}
+                          />
                         ))}
                       </div>
                     )}
 
-                    {/* Usuarios con la app (carga bajo demanda, para no gastar lecturas) */}
-                    <button
-                      onClick={() => toggleStoreUsers(store)}
-                      className="w-full bg-emerald-50 border border-emerald-100 text-emerald-700 py-2.5 rounded-xl text-[9px] font-black uppercase flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                    >
-                      <Users size={11} />
-                      {usersLoaded === 'loading' ? 'Cargando…' : usersLoaded ? 'Ocultar usuarios creados' : `Ver usuarios creados (${counts?.[store]?.users ?? 0})`}
-                    </button>
-                    {Array.isArray(usersLoaded) && (
-                      <div className="space-y-1 animate-in fade-in">
-                        {usersLoaded.length === 0 ? (
-                          <p className="text-[9px] text-slate-400 font-bold uppercase text-center py-2">No hay usuarios en esta tienda</p>
-                        ) : (
-                          usersLoaded.map((u) => (
-                            <div key={u.uid} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2">
-                              <p className="text-[11px] font-bold text-slate-600 truncate flex-1">{u.fullName}</p>
-                              <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-md ml-2 shrink-0 ${u.active ? 'bg-emerald-500/10 text-emerald-700' : 'bg-slate-200 text-slate-500'}`}>
-                                {u.active ? 'Activo' : 'Pendiente'}
-                              </span>
+                    {/* 2) Futuros ya apuntados */}
+                    {list.length > 0 && (
+                      <>
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 pt-1">
+                          <UserPlus size={11} /> Futuros apuntados ({list.length})
+                        </span>
+                        <div className="space-y-1.5">
+                          {list.map((p) => (
+                            <div key={p.name} className="flex items-center justify-between bg-white ring-1 ring-slate-100 rounded-xl px-3 py-2">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[11px] font-bold text-slate-700 truncate">{p.name}</p>
+                                <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                                  {p.section && p.section !== 'Sin especificar' && (
+                                    <span className="text-[8px] font-black uppercase text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded tracking-tight">{p.section}</span>
+                                  )}
+                                  {p.sindicato && p.sindicato !== 'Sin sindicato' && (
+                                    <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded tracking-tight ${p.sindicato === 'Fetico' ? 'text-emerald-700 bg-emerald-500/10' : 'text-indigo-600 bg-indigo-500/10'}`}>{p.sindicato}</span>
+                                  )}
+                                  {p.phone && (
+                                    <a href={`tel:${p.phone}`} className="text-[9px] font-bold text-emerald-700 flex items-center gap-1"><Phone size={9} /> {p.phone}</a>
+                                  )}
+                                </div>
+                              </div>
                               <button
-                                onClick={() => expelUser(store, u)}
-                                disabled={expellingUid === u.uid}
-                                title="Expulsar (se fue de la empresa)"
-                                aria-label={`Expulsar a ${u.fullName}`}
-                                className={`text-rose-500 p-1.5 bg-rose-500/10 rounded-lg active:scale-90 transition-all shrink-0 ml-1.5 ${expellingUid === u.uid ? 'opacity-50' : ''}`}
+                                onClick={() => removeProspect(store, p.name)}
+                                disabled={saving}
+                                className="text-rose-500 p-1.5 bg-rose-500/10 rounded-lg active:scale-90 transition-all shrink-0 ml-2"
+                                aria-label={`Quitar a ${p.name}`}
                               >
-                                <UserX size={12} />
+                                <Trash2 size={12} />
                               </button>
                             </div>
-                          ))
-                        )}
+                          ))}
+                        </div>
+                      </>
+                    )}
+
+                    {/* 3) Apuntar futuro usuario — plegado en un desplegable
+                        (antes era lo primero; ahora los usuarios van primero). */}
+                    <button
+                      onClick={() => setShowAddForm((v) => !v)}
+                      className={`w-full py-2.5 rounded-xl text-[9px] font-black uppercase flex items-center justify-center gap-1.5 active:scale-95 transition-all ${showAddForm ? 'bg-emerald-600 text-white shadow-md' : 'bg-emerald-50 border border-emerald-100 text-emerald-700'}`}
+                      aria-expanded={showAddForm}
+                    >
+                      <UserPlus size={11} /> Apuntar futuro usuario
+                      {showAddForm ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+                    </button>
+                    {showAddForm && (
+                      <div className="bg-slate-50 rounded-2xl p-3 ring-1 ring-slate-200 space-y-2 animate-in fade-in slide-in-from-top-1">
+                        <input
+                          value={newName}
+                          onChange={(e) => setNewName(e.target.value)}
+                          placeholder="Nombre y apellidos"
+                          className="w-full bg-white border-none p-2.5 rounded-xl text-xs outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 text-slate-700"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="relative">
+                            <select
+                              value={newSection}
+                              onChange={(e) => setNewSection(e.target.value)}
+                              aria-label="Sección"
+                              className="w-full bg-white border-none p-2.5 pr-7 rounded-xl text-xs outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 text-slate-700 appearance-none font-medium"
+                            >
+                              {SECCIONES.map((s) => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"><ChevronDown size={12} /></div>
+                          </div>
+                          <div className="relative">
+                            <select
+                              value={newSindicato}
+                              onChange={(e) => setNewSindicato(e.target.value)}
+                              aria-label="Sindicato"
+                              className="w-full bg-white border-none p-2.5 pr-7 rounded-xl text-xs outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 text-slate-700 appearance-none font-medium"
+                            >
+                              {SINDICATOS.map((s) => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"><ChevronDown size={12} /></div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => addProspect(store)}
+                          disabled={saving || !newName.trim()}
+                          className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-1 active:scale-95 transition-all ${newName.trim() ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-200 text-slate-400'}`}
+                        >
+                          <Plus size={13} /> Añadir
+                        </button>
                       </div>
                     )}
                   </div>

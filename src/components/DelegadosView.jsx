@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Users, Search, Phone, Mail, Bell, BellOff, RefreshCw, Store as StoreIcon, ChevronDown, UserCheck, UserX } from 'lucide-react';
+import { Users, Search, RefreshCw, Store as StoreIcon, ChevronDown, UserCheck } from 'lucide-react';
 import { fetchStoreUsers, setUserActiveStatus, setUserExpelled } from '../services/firebaseService';
 import { toast, confirm } from './Toast';
 import { LoadingLogo } from './UIComponents';
+import { UserCard } from './UserCard';
 
 // Opción especial del selector: ver juntos TODOS los usuarios (los de todas las
 // tiendas del delegado, o todos los de la app si es el admin). El backend la
@@ -183,67 +184,13 @@ export function StoreUserManager({ stores, showTotal = false, admin = false }) {
       ) : (
         <div className="space-y-3">
           {filtered.map((u) => (
-            <div
+            <UserCard
               key={u.uid}
-              className="rounded-3xl p-4"
-              style={{ background: 'linear-gradient(180deg,#ffffff,#f8f9fb)', boxShadow: '0 8px 20px -10px rgba(30,41,59,0.2), inset 0 1.5px 1px rgba(255,255,255,0.9)', border: `1px solid ${u.active ? 'rgba(16,185,129,0.25)' : 'rgba(15,23,42,0.07)'}` }}
-            >
-              <div className="flex justify-between items-start gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="text-sm font-black text-slate-800 leading-tight truncate">{u.fullName}</h4>
-                    <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-md tracking-tight ${u.expelled ? 'bg-rose-500/10 text-rose-600' : u.active ? 'bg-emerald-500/10 text-emerald-700' : 'bg-slate-200 text-slate-500'}`}>
-                      {u.expelled ? 'Expulsado' : u.active ? 'Activo' : 'Pendiente'}
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-1">
-                    {u.store} · {u.section}
-                  </p>
-                </div>
-                {!u.expelled && (
-                  <button
-                    onClick={() => handleToggle(u)}
-                    disabled={togglingUid === u.uid}
-                    aria-label={u.active ? `Desactivar la cuenta de ${u.fullName}` : `Activar la cuenta de ${u.fullName}`}
-                    className={`w-12 h-6 rounded-full relative transition-colors shrink-0 mt-1 ${u.active ? 'bg-emerald-500' : 'bg-slate-300'} ${togglingUid === u.uid ? 'opacity-50' : ''}`}
-                  >
-                    <div className={`absolute top-1 size-4 bg-white rounded-full shadow transition-all ${u.active ? 'left-7' : 'left-1'}`}></div>
-                  </button>
-                )}
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-100">
-                {u.phone ? (
-                  <a href={`tel:${u.phone}`} className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1.5 rounded-xl active:scale-95 transition-all">
-                    <Phone size={11} /> {u.phone}
-                  </a>
-                ) : (
-                  <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-300 bg-slate-50 px-2.5 py-1.5 rounded-xl">
-                    <Phone size={11} /> Sin teléfono
-                  </span>
-                )}
-                {u.email && (
-                  <a href={`mailto:${u.email}`} className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-100 px-2.5 py-1.5 rounded-xl active:scale-95 transition-all min-w-0">
-                    <Mail size={11} className="shrink-0" /> <span className="truncate max-w-[160px]">{u.email}</span>
-                  </a>
-                )}
-                <span
-                  className={`flex items-center gap-1 text-[9px] font-black uppercase px-2 py-1.5 rounded-xl ml-auto ${u.hasPush ? 'text-emerald-600 bg-emerald-50' : 'text-slate-300 bg-slate-50'}`}
-                  title={u.hasPush ? 'Notificaciones push activadas' : 'Sin notificaciones push'}
-                >
-                  {u.hasPush ? <Bell size={11} /> : <BellOff size={11} />} Push
-                </span>
-              </div>
-
-              {/* Expulsar (se fue de la empresa) / Readmitir (solo la ve el admin) */}
-              <button
-                onClick={() => handleExpel(u)}
-                disabled={togglingUid === u.uid}
-                className={`w-full mt-2.5 py-2 rounded-xl text-[9px] font-black uppercase flex items-center justify-center gap-1.5 active:scale-95 transition-all ${u.expelled ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-100'} ${togglingUid === u.uid ? 'opacity-50' : ''}`}
-              >
-                {u.expelled ? <><UserCheck size={11} /> Readmitir</> : <><UserX size={11} /> Expulsar (se fue de la empresa)</>}
-              </button>
-            </div>
+              u={u}
+              busy={togglingUid === u.uid}
+              onToggleActive={handleToggle}
+              onExpel={handleExpel}
+            />
           ))}
         </div>
       )}
