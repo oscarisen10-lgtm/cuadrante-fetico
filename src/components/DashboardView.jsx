@@ -6,6 +6,7 @@ import { CONFIG, isAdminUser } from '../constants/config';
 import { toast, confirm } from './Toast';
 import { storage } from '../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { compressImage } from '../utils/imageUtils';
 
 // newsOnly: cuentas pendientes de activación (o admin en Modo Admin) → el Resumen
 // muestra SOLO la sección de Noticias, sin las estadísticas personales.
@@ -28,9 +29,11 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 1024 * 1024 * 5) { 
-        toast("La foto es demasiado grande (máx 5MB). Por favor, usa una foto más pequeña.", "warning");
-        e.target.value = null; 
+      // El límite del original es generoso (12MB) porque ANTES de subir se comprime
+      // en el dispositivo (ver compressImage): lo que llega a Storage son ~150-400 KB.
+      if (file.size > 1024 * 1024 * 12) {
+        toast("La foto es demasiado grande (máx 12MB). Por favor, usa una foto más pequeña.", "warning");
+        e.target.value = null;
         return;
       }
       if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -46,12 +49,15 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
     setIsLoading(true);
     try {
       let imageUrl = null;
-      
-      // Upload image to Firebase Storage if one was selected
+
+      // Upload image to Firebase Storage if one was selected.
+      // Se comprime EN EL DISPOSITIVO antes de subir (coste de descarga ~20× menor
+      // para cada usuario que abra el cartel; ver utils/imageUtils.js).
       if (selectedFile) {
-        const fileName = `noticias/${Date.now()}_${selectedFile.name}`;
+        const { blob, type, ext } = await compressImage(selectedFile);
+        const fileName = `noticias/${Date.now()}_cartel.${ext}`;
         const storageRef = ref(storage, fileName);
-        await uploadBytes(storageRef, selectedFile);
+        await uploadBytes(storageRef, blob, { contentType: type });
         imageUrl = await getDownloadURL(storageRef);
       }
 

@@ -20,6 +20,10 @@ workflows:
       - name: Install dependencies
         script: |
           npm install
+      - name: Run unit tests
+        script: |
+          # Si un test falla, el build se corta aquí y no llega nada roto a TestFlight.
+          npm test
       - name: Create environment file
         script: |
           # .env is gitignored so we must recreate it for the build.
@@ -57,14 +61,15 @@ workflows:
       - name: Set marketing version and build number
         script: |
           # Cada entrega al App Store necesita una marketing version nueva.
-          # 3.2.0 ya se entregó; esta actualización (espacio Delegados: activación de
-          # cuentas por afiliación, censo y modo admin) sube a 3.3.0.
-          NEW_VERSION=3.3.0
+          # 3.3.0 ya se entregó; esta actualización (turnos mensuales ~30× menos
+          # lecturas, compresión de imágenes, logo en cargas, cuentas pendientes
+          # con Fichar abierto) sube a 3.4.0.
+          NEW_VERSION=3.4.0
           sed -i '' "s/MARKETING_VERSION = [^;]*;/MARKETING_VERSION = $NEW_VERSION;/g" "$XCODE_PROJECT/project.pbxproj"
           echo "Marketing version -> $NEW_VERSION"
           grep -m2 "MARKETING_VERSION" "$XCODE_PROJECT/project.pbxproj"
           # Build number interno (incrementa en cada subida a App Store Connect)
-          NEW_BUILD=166
+          NEW_BUILD=167
           echo "Build number -> $NEW_BUILD"
           cd ios/App
           agvtool new-version -all "$NEW_BUILD"

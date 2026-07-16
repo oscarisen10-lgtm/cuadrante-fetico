@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ClipboardList, Plus, Trash2, RefreshCw, Store as StoreIcon, ChevronDown, ChevronUp, Users, UserPlus, Phone, Target, UserX } from 'lucide-react';
 import { fetchCensusCounts, getCenso, saveCenso, fetchStoreUsers, setUserExpelled } from '../services/firebaseService';
 import { toast, confirm } from './Toast';
+import { LoadingLogo } from './UIComponents';
 
 // Objetivo de afiliación: con este % o más, el indicador se pone en verde.
 const OBJETIVO_PCT = 30;
@@ -202,7 +203,7 @@ export const CensoView = React.memo(function CensoView({ user, delegado }) {
 
       {/* Por tienda */}
       {loading && !counts ? (
-        <div className="py-10 text-center text-emerald-600 font-bold text-xs italic uppercase tracking-widest animate-pulse">Cargando censo…</div>
+        <div className="py-10"><LoadingLogo label="Cargando censo…" /></div>
       ) : stores.length === 0 ? (
         <div className="py-14 flex flex-col items-center opacity-50 text-center px-6">
           <ClipboardList size={40} className="text-slate-300 mb-3" />

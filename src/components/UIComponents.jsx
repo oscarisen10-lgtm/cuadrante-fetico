@@ -1,6 +1,28 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { hapticLight } from '../utils/haptics';
+import appLogo from '../../icons/icon-192.webp';
+
+/**
+ * LoadingLogo — Indicador de carga ÚNICO de toda la app: el logo de Mi Cuadrante
+ * dentro de un aro girando. Sustituye a los antiguos "Cargando..." de texto y al
+ * emoji del calendario, para que cualquier espera tenga la marca de la app.
+ */
+export function LoadingLogo({ label, size = 56, className = '' }) {
+  const inset = Math.max(6, Math.round(size * 0.16));
+  return (
+    <div className={`flex flex-col items-center justify-center gap-3 ${className}`} role="status" aria-label={label || 'Cargando'}>
+      <div className="relative" style={{ width: size, height: size }}>
+        <div className="absolute inset-0 rounded-full" style={{ border: '3px solid rgba(5,150,105,0.18)' }} />
+        <div className="absolute inset-0 rounded-full animate-spin" style={{ border: '3px solid transparent', borderTopColor: '#059669', borderRightColor: '#10b981' }} />
+        <div className="absolute rounded-full overflow-hidden" style={{ inset, boxShadow: '0 4px 12px rgba(5,80,60,0.3)' }}>
+          <img src={appLogo} alt="" className="w-full h-full object-cover" />
+        </div>
+      </div>
+      {label && <span className="text-emerald-600 font-black italic text-xs uppercase tracking-widest animate-pulse">{label}</span>}
+    </div>
+  );
+}
 
 export function NavItem({ icon, label, isActive, onClick }) {
   return (

@@ -3,6 +3,7 @@ import { Timer, Trophy, Crown, Gem, StopCircle, Gamepad2, X } from 'lucide-react
 import { isAdminUser } from '../constants/config';
 import { submitArenaScore, subscribeToDailyScores, subscribeToStoreScores, getArenaUsage } from '../services/firebaseService';
 import { toast } from './Toast';
+import { LoadingLogo } from './UIComponents';
 import { TrileroCover } from './minigames/TrileroCover';
 import { TorreCover } from './minigames/TorreCover';
 import { SimonCover } from './minigames/SimonCover';
@@ -442,9 +443,8 @@ export function ArenaView({ user, onPlayingChange }) {
         const PlayComp = pg.Component;
         return (
           <Suspense fallback={
-            <div className="fixed inset-0 z-50 bg-[#1e1b4b] flex flex-col items-center justify-center text-white font-black gap-3">
-              <span className="text-5xl animate-bounce">{pg.emoji}</span>
-              <span className="text-sm uppercase tracking-widest animate-pulse">Cargando juego...</span>
+            <div className="fixed inset-0 z-50 bg-[#1e1b4b] flex flex-col items-center justify-center">
+              <LoadingLogo size={72} label="Cargando juego..." />
             </div>
           }>
             <PlayComp

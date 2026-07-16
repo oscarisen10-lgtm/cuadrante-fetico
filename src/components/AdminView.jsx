@@ -4,6 +4,7 @@ import { fetchAdminOverview, saveDelegado } from '../services/firebaseService';
 import { STORES, S_ROMERO_STORES } from '../constants/stores';
 import { COMPANY_RULES } from '../constants/config';
 import { toast, confirm } from './Toast';
+import { LoadingLogo } from './UIComponents';
 import { StoreUserManager } from './DelegadosView';
 
 // Todas las tiendas seleccionables + los valores especiales que puede tener un
@@ -148,7 +149,7 @@ export const AdminView = React.memo(function AdminView() {
         </div>
 
         {loading && !overview ? (
-          <div className="py-8 text-center text-emerald-600 font-bold text-xs italic uppercase tracking-widest animate-pulse">Cargando…</div>
+          <div className="py-8"><LoadingLogo label="Cargando…" /></div>
         ) : delegados.length === 0 ? (
           <div className="py-8 flex flex-col items-center opacity-40">
             <ShieldCheck size={32} className="text-slate-300 mb-2" />

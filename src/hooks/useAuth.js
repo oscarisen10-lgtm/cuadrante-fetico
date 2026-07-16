@@ -3,11 +3,12 @@ import { Capacitor } from '@capacitor/core';
 import {
   subscribeToAuth,
   subscribeToUserDoc,
-  subscribeToShifts,
+  subscribeToShiftMonths,
   subscribeToDelegado,
   saveUserData,
   saveShiftsBatch,
   deleteShiftsBatch,
+  migrateShiftsToMonths,
   logoutUser,
   ensureUserDoc,
   recordDeviceMeta
@@ -49,6 +50,10 @@ export const useAuth = () => {
   useEffect(() => {
     shiftsRef.current = shifts;
   }, [shifts]);
+
+  // Migración al modelo mensual de turnos: como mucho UNA vez por sesión (el
+  // marcador shiftsMonthlyMigratedAt del perfil evita repetirla entre sesiones).
+  const migrationStartedRef = useRef(false);
 
   useEffect(() => {
     let unsubUserDoc = null;
@@ -92,6 +97,14 @@ export const useAuth = () => {
             if (data.profile && (data.profile.platform !== currentPlatform || data.profile.appVersion !== __APP_VERSION__)) {
               recordDeviceMeta(firebaseUser.uid, currentPlatform, __APP_VERSION__);
             }
+            // Migración única al modelo mensual de turnos (usuarios con datos del
+            // modelo diario). Al terminar escribe el marcador en el perfil, y la
+            // suscripción a shiftMonths (ya viva) recoge los meses recién creados.
+            if (!data.shiftsMonthlyMigratedAt && !migrationStartedRef.current) {
+              migrationStartedRef.current = true;
+              migrateShiftsToMonths(firebaseUser.uid)
+                .catch((e) => console.error("Migración de turnos a modelo mensual falló:", e?.message));
+            }
             setUser((prev) => {
               const next = { ...data.profile, uid: firebaseUser.uid };
               return shallowEqualUser(prev, next) ? prev : next;
@@ -130,22 +143,19 @@ export const useAuth = () => {
           setLoading(false);
         });
 
-        // Ventana de turnos: últimos 12 MESES RODANTES. Siempre cubre el año en curso
-        // completo (que es lo único que usan las estadísticas del convenio) y el
-        // calendario puede navegar hasta un año atrás. Antes era "1 de enero del año
-        // pasado" (entre 13 y 23 meses según la época), casi el doble de documentos
-        // leídos en cada carga fría — especialmente caro en iOS (caché en memoria).
+        // Ventana de turnos: últimos 12 MESES RODANTES sobre el modelo MENSUAL
+        // (users/{uid}/shiftMonths): cargar la ventana entera son 12-13 lecturas,
+        // frente a las ~365 del modelo diario anterior. Cubre el año en curso
+        // completo (lo único que usan las estadísticas del convenio) y el
+        // calendario puede navegar hasta un año atrás.
         const sinceDate = new Date();
         sinceDate.setFullYear(sinceDate.getFullYear() - 1);
-        const y = sinceDate.getFullYear();
-        const m = String(sinceDate.getMonth() + 1).padStart(2, '0');
-        const d = String(sinceDate.getDate()).padStart(2, '0');
-        const shiftsSince = `${y}-${m}-${d}`;
-        unsubShifts = subscribeToShifts(firebaseUser.uid, (shiftsArr) => {
+        const sinceMonth = `${sinceDate.getFullYear()}-${String(sinceDate.getMonth() + 1).padStart(2, '0')}`;
+        unsubShifts = subscribeToShiftMonths(firebaseUser.uid, (shiftsArr) => {
           setShifts(shiftsArr);
         }, (error) => {
           console.error("Error al cargar turnos:", error);
-        }, shiftsSince);
+        }, sinceMonth);
 
         // ¿Es delegado? Suscripción a su propio doc delegados/{uid} (si no existe,
         // devuelve null y no se muestra la pestaña). El admin lo crea/borra en vivo.

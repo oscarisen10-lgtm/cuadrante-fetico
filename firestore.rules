@@ -85,19 +85,45 @@ service cloud.firestore {
 
       allow delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
 
-      // Turnos: subcolección por usuario. Solo el dueño (o el admin) accede.
+      // Turnos DIARIOS (modelo antiguo): subcolección por usuario. Solo el dueño
+      // (o el admin) accede. Se mantiene por compatibilidad con builds antiguas
+      // (la app nueva escribe aquí en dual-write pero LEE el modelo mensual).
       match /shifts/{shiftId} {
         allow read, delete: if request.auth != null && (
           request.auth.uid == userId ||
           isAdmin()
         );
-        // Alta/edición: dueño con cuenta ACTIVADA (o admin) y turno con forma
-        // válida. Así el bloqueo de cuentas pendientes es real también para
-        // builds antiguas, no solo cosmético en la interfaz.
+        // Alta/edición: dueño con turno de forma válida. Las cuentas PENDIENTES
+        // sí pueden registrar jornada ('work': el apartado Fichar está abierto
+        // para ellas a propósito), pero NO libres/vacaciones/bajas — eso se
+        // desbloquea al activar la cuenta. El tipo se comprueba ANTES que
+        // isActiveMember() para ahorrarse el get() en el caso común.
         allow create, update: if request.auth != null && (
-          (request.auth.uid == userId && isActiveMember()) ||
+          (request.auth.uid == userId &&
+           (request.resource.data.type == 'work' || isActiveMember())) ||
           isAdmin()
         ) && validShift(request.resource.data);
+      }
+
+      // Turnos MENSUALES (modelo v2): users/{uid}/shiftMonths/{YYYY-MM} con un
+      // mapa days { "DD": {type, hours, isHA, turn} }. Cargar un año = 12
+      // lecturas (antes ~365 con el modelo diario). Las reglas no pueden iterar
+      // mapas, así que aquí se valida la FORMA del documento; el detalle por día
+      // lo controla la interfaz (y Fichar está abierto a cuentas pendientes a
+      // propósito, igual que arriba).
+      match /shiftMonths/{monthId} {
+        allow read, delete: if request.auth != null && (
+          request.auth.uid == userId ||
+          isAdmin()
+        );
+        allow create, update: if request.auth != null && (
+          request.auth.uid == userId ||
+          isAdmin()
+        ) &&
+          request.resource.data.keys().hasOnly(['month', 'days']) &&
+          request.resource.data.month is string &&
+          request.resource.data.month.size() == 7 &&
+          request.resource.data.days is map;
       }
 
       // Cuota de uso de la IA / Arena: la escribe SOLO el backend (Admin SDK ignora
@@ -123,13 +149,15 @@ service cloud.firestore {
         request.resource.data.uid == request.auth.uid &&
         isActiveMember() &&
         request.resource.data.storeKey == myStoreKey();
-      // Actualización: solo el dueño (o el admin). uid y storeKey son INMUTABLES.
+      // Actualización: el dueño puede retocar su petición (p.ej. la nota) pero
+      // NO su status (nadie se autoaprueba: cuando exista flujo de aprobación,
+      // lo cambiará el backend), ni uid/storeKey (inmutables). Para cancelar,
+      // el dueño BORRA la petición. El admin conserva acceso de soporte.
       allow update: if request.auth != null && (
-        resource.data.uid == request.auth.uid ||
-        isAdmin()
-      ) &&
-        request.resource.data.uid == resource.data.uid &&
-        request.resource.data.storeKey == resource.data.storeKey;
+        isAdmin() ||
+        (resource.data.uid == request.auth.uid &&
+         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['uid', 'storeKey', 'status']))
+      );
       allow delete: if request.auth != null && (
         resource.data.uid == request.auth.uid ||
         isAdmin()

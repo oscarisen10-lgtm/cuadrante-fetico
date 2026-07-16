@@ -8,13 +8,12 @@ import { useNews } from './hooks/useNews';
 import { useTimer } from './hooks/useTimer';
 import { useShifts } from './hooks/useShifts';
 import { useNotifications } from './hooks/useNotifications';
-import { Clock, Calendar as CalendarIcon, PieChart, FileText, Settings, LogOut, WifiOff, Fingerprint, Trophy, X, Lock, Users, ShieldCheck, ClipboardList } from 'lucide-react';
+import { Clock, Calendar as CalendarIcon, PieChart, FileText, Settings, LogOut, WifiOff, Fingerprint, Trophy, X, Users, ShieldCheck, ClipboardList } from 'lucide-react';
 import { getFormattedDate } from './utils/dateUtils';
 import { isAdminUser } from './constants/config';
 import { markFichado } from './services/firebaseService';
-import { NavItem } from './components/UIComponents';
+import { NavItem, LoadingLogo } from './components/UIComponents';
 import AuthView from './components/AuthView';
-import { LockedView } from './components/LockedView';
 import { ToastContainer, ConfirmDialog } from './components/Toast';
 
 const DashboardView = lazy(() => import('./components/DashboardView').then(m => ({ default: m.DashboardView })));
@@ -33,10 +32,11 @@ const CensoView = lazy(() => import('./components/CensoView').then(m => ({ defau
  *
  * El hueco de "Fichar" es por rol: admin (en Modo Admin) → Competición;
  * delegado (en Modo Delegado) → Usuarios; resto → Fichar. En Modo Admin,
- * "Agenda" pasa a ser el panel "Gestión". Las cuentas PENDIENTES ven candados
- * en las pestañas bloqueadas (solo Noticias y Ajustes operativos).
+ * "Agenda" pasa a ser el panel "Gestión". Las cuentas PENDIENTES navegan con
+ * normalidad (Fichar abierto; Agenda y Permisos se ven, y el aviso de
+ * activación salta solo al intentar registrar o abrir un permiso).
  */
-function NavigationBar({ adminMode, delegadoMode, isActive }) {
+function NavigationBar({ adminMode, delegadoMode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const currentPath = location.pathname;
@@ -47,13 +47,13 @@ function NavigationBar({ adminMode, delegadoMode, isActive }) {
       ? { path: '/arena', icon: <Trophy />, label: 'Competición' }
       : delegadoMode
         ? { path: '/delegados', icon: <Users />, label: 'Usuarios' }
-        : { path: '/track', icon: isActive ? <Clock /> : <Lock />, label: 'Fichar' },
+        : { path: '/track', icon: <Clock />, label: 'Fichar' },
     adminMode
       ? { path: '/gestion', icon: <ShieldCheck />, label: 'Gestión' }
       : delegadoMode
         ? { path: '/censo', icon: <ClipboardList />, label: 'Censo' }
-        : { path: '/calendar', icon: isActive ? <CalendarIcon /> : <Lock />, label: 'Agenda' },
-    { path: '/licencias', icon: isActive ? <FileText /> : <Lock />,  label: 'Permisos' },
+        : { path: '/calendar', icon: <CalendarIcon />, label: 'Agenda' },
+    { path: '/licencias', icon: <FileText />,  label: 'Permisos' },
     { path: '/settings',  icon: <Settings />,  label: 'Ajustes' },
   ];
 
@@ -205,13 +205,15 @@ function AppContent({ user, authHook }) {
               de chunks ya en caché). React Router ya intercambia solo la ruta activa, y
               cada vista trae su propia animación de entrada. */}
           <div className="flex-1 flex flex-col min-h-0">
-          <Suspense fallback={<div className="flex-1 flex items-center justify-center text-emerald-500 font-bold text-xs italic" role="status" aria-label="Cargando contenido">Cargando...</div>}>
+          <Suspense fallback={<div className="flex-1 flex items-center justify-center"><LoadingLogo label="Cargando..." /></div>}>
             <Routes>
               <Route path="/dashboard" element={
                 <DashboardView user={user} stats={stats} newsOnly={!isActive || adminMode || delegadoMode} newsList={newsList} addNews={addNews} deleteNews={deleteNews} permissionState={permissionState} requestTokenManually={requestTokenManually} onImageClick={(url, title) => setManualImg({ url, title })} />
               } />
+              {/* Cuentas PENDIENTES: Fichar totalmente abierto; Agenda y Permisos se
+                  VEN y el aviso de activación salta dentro, solo al intentar usar
+                  lo bloqueado (registrar días / abrir un permiso). */}
               <Route path="/track" element={
-                !isActive ? <LockedView /> :
                 <TrackerView
                   activeShift={activeShift} isBreakActive={isBreakActive} workTimeAccumulated={workTimeAccumulated} breakStartTime={breakStartTime}
                   showBreakFinishedMsg={showBreakFinishedMsg} settings={settings}
@@ -219,12 +221,10 @@ function AppContent({ user, authHook }) {
                 />
               } />
               <Route path="/calendar" element={
-                !isActive ? <LockedView /> :
-                <CalendarView shifts={shifts} shiftsMap={shiftsMap} saveToCloud={saveToCloud} user={user} permissionState={permissionState} requestTokenManually={requestTokenManually} />
+                <CalendarView shifts={shifts} shiftsMap={shiftsMap} saveToCloud={saveToCloud} user={user} permissionState={permissionState} requestTokenManually={requestTokenManually} isActive={isActive} />
               } />
               <Route path="/licencias" element={
-                !isActive ? <LockedView /> :
-                <LicenciasView user={user} permissionState={permissionState} requestTokenManually={requestTokenManually} />
+                <LicenciasView user={user} permissionState={permissionState} requestTokenManually={requestTokenManually} isActive={isActive} />
               } />
               <Route path="/settings" element={
                 <SettingsView user={user} settings={settings} saveToCloud={saveToCloud} stopAlarm={stopAlarm} pushToken={pushToken} pushTokenError={pushTokenError} permissionState={permissionState} requestTokenManually={requestTokenManually} isDelegado={isDelegado} />
@@ -247,7 +247,7 @@ function AppContent({ user, authHook }) {
           </div>
         </main>
 
-        {!gameActive && <NavigationBar adminMode={adminMode} delegadoMode={delegadoMode} isActive={isActive} />}
+        {!gameActive && <NavigationBar adminMode={adminMode} delegadoMode={delegadoMode} />}
 
         {showConfirmLogout && (
           <div className="fixed inset-0 z-[110] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in" role="dialog" aria-modal="true" aria-label="Confirmar cierre de sesión">
@@ -339,13 +339,8 @@ export default function App() {
   }, [loading, user, settings?.useBiometric, isUnlocked, verifyBiometric]);
 
   if (loading) return (
-    <div className="h-screen flex flex-col items-center justify-center gap-5" style={{ background: 'radial-gradient(circle at 50% 35%, #ecfdf5, #d1fae5 60%, #a7f3d0)' }} role="status" aria-label="Cargando aplicación">
-      <div className="relative w-16 h-16">
-        <div className="absolute inset-0 rounded-full" style={{ border: '4px solid rgba(5,150,105,0.18)' }} />
-        <div className="absolute inset-0 rounded-full animate-spin" style={{ border: '4px solid transparent', borderTopColor: '#059669', borderRightColor: '#10b981' }} />
-        <div className="absolute inset-0 grid place-items-center text-2xl">🗓️</div>
-      </div>
-      <span className="text-emerald-700 font-black italic text-sm tracking-wide animate-pulse">Sincronizando…</span>
+    <div className="h-screen flex flex-col items-center justify-center" style={{ background: 'radial-gradient(circle at 50% 35%, #ecfdf5, #d1fae5 60%, #a7f3d0)' }} role="status" aria-label="Cargando aplicación">
+      <LoadingLogo size={84} label="Sincronizando…" />
     </div>
   );
 

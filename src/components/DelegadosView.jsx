@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Users, Search, Phone, Mail, Bell, BellOff, RefreshCw, Store as StoreIcon, ChevronDown, UserCheck, UserX } from 'lucide-react';
 import { fetchStoreUsers, setUserActiveStatus, setUserExpelled } from '../services/firebaseService';
 import { toast, confirm } from './Toast';
+import { LoadingLogo } from './UIComponents';
 
 // Opción especial del selector: ver juntos TODOS los usuarios (los de todas las
 // tiendas del delegado, o todos los de la app si es el admin). El backend la
@@ -171,9 +172,7 @@ export function StoreUserManager({ stores, showTotal = false, admin = false }) {
 
       {/* Lista de usuarios */}
       {loading ? (
-        <div className="py-12 text-center text-emerald-600 font-bold text-xs italic uppercase tracking-widest animate-pulse">
-          Cargando usuarios…
-        </div>
+        <div className="py-12"><LoadingLogo label="Cargando usuarios…" /></div>
       ) : filtered.length === 0 ? (
         <div className="py-12 flex flex-col items-center opacity-40">
           <Users size={36} className="text-slate-300 mb-3" />

@@ -7,7 +7,7 @@ import {
 } from "firebase/auth";
 import {
   doc, setDoc, getDoc, updateDoc, onSnapshot, collection, addDoc, deleteDoc,
-  query, getDocs, writeBatch, orderBy, where, limit
+  query, getDocs, writeBatch, orderBy, where, limit, deleteField
 } from "firebase/firestore";
 
 /**
@@ -46,34 +46,84 @@ export const subscribeToUserDoc = (uid, callback, onError) => {
   return onSnapshot(doc(db, "users", uid), callback, onError);
 };
 
+// ── TURNOS: MODELO MENSUAL (v2) ──────────────────────────────────────────────
+// Antes: un documento POR DÍA en users/{uid}/shifts/{YYYY-MM-DD} → cargar la
+// ventana de 12 meses costaba ~365 lecturas en cada arranque en frío (en iOS,
+// con caché en memoria, eso es CADA apertura de la app: el mayor coste de toda
+// la factura de Firestore y varios segundos de espera).
+// Ahora: un documento POR MES en users/{uid}/shiftMonths/{YYYY-MM} con un mapa
+// days { "DD": { type, hours, isHA, turn } } → la misma ventana son 12-13
+// lecturas (~30 veces menos). La app se migra sola la primera vez (ver
+// migrateShiftsToMonths) y, mientras queden builds antiguas instaladas que leen
+// el modelo diario, seguimos escribiendo TAMBIÉN los docs diarios (dual-write).
+// Cuando las builds antiguas mueran, poner LEGACY_SHIFTS_DUAL_WRITE en false.
+const LEGACY_SHIFTS_DUAL_WRITE = true;
+
+// Normaliza un turno para guardarlo dentro del mapa days del doc mensual
+// (sin date ni id: la fecha es la clave, y el id del cliente no aporta nada).
+const cleanShiftData = (s) => ({
+  type: s.type || 'work',
+  hours: typeof s.hours === 'number' ? s.hours : 0,
+  isHA: !!s.isHA,
+  ...(s.turn ? { turn: s.turn } : {}),
+});
+
+// Agrupa una lista de turnos (o fechas) por mes: { 'YYYY-MM': { 'DD': valor } }.
+const groupByMonth = (items, valueOf) => {
+  const byMonth = {};
+  items.forEach((item) => {
+    const date = typeof item === 'string' ? item : item.date;
+    if (!date || typeof date !== 'string' || date.length < 10) return;
+    const month = date.slice(0, 7);
+    const day = date.slice(8, 10);
+    if (!byMonth[month]) byMonth[month] = {};
+    byMonth[month][day] = valueOf(item);
+  });
+  return byMonth;
+};
+
 /**
- * Subscribe to the shifts subcollection for a user.
- * Shifts are stored in users/{uid}/shifts/{shiftId} for scalability.
+ * Suscripción a los turnos (modelo mensual). Devuelve al callback un array plano
+ * [{ date: 'YYYY-MM-DD', type, hours, isHA, turn }] idéntico al del modelo
+ * antiguo, así que el resto de la app (stats, calendario) no cambia.
+ * sinceMonth ('YYYY-MM') acota la ventana de lectura.
  */
-export const subscribeToShifts = (uid, callback, onError, sinceDate) => {
-  const shiftsRef = collection(db, "users", uid, "shifts");
-  // Si se indica sinceDate ("YYYY-MM-DD"), solo se cargan los turnos desde esa fecha
-  // en adelante (acota lecturas). Sin sinceDate, carga toda la subcolección (compatibilidad).
-  const ref = sinceDate ? query(shiftsRef, where("date", ">=", sinceDate)) : shiftsRef;
-  return onSnapshot(ref, (snapshot) => {
-    const arr = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+export const subscribeToShiftMonths = (uid, callback, onError, sinceMonth) => {
+  const monthsRef = collection(db, "users", uid, "shiftMonths");
+  const q = sinceMonth ? query(monthsRef, where("month", ">=", sinceMonth)) : monthsRef;
+  return onSnapshot(q, (snapshot) => {
+    const arr = [];
+    snapshot.docs.forEach((docSnap) => {
+      const { month, days } = docSnap.data() || {};
+      if (!month || !days) return;
+      Object.keys(days).forEach((dd) => {
+        arr.push({ date: `${month}-${dd}`, ...days[dd] });
+      });
+    });
     callback(arr);
   }, onError);
 };
 
-/**
- * Save a single shift to the subcollection.
- * Uses the date string as the document ID for easy upserts.
- */
-export const saveShift = async (uid, shift) => {
-  if (!uid || !shift.date) return;
-  await setDoc(doc(db, "users", uid, "shifts", shift.date), shift, { merge: true });
+/** Guarda turnos en los docs mensuales (merge por día: no pisa el resto del mes). */
+const saveShiftMonthsBatch = async (uid, shiftsArray) => {
+  if (!uid || !shiftsArray.length) return;
+  const byMonth = groupByMonth(shiftsArray.filter((s) => s.date), cleanShiftData);
+  await commitInChunks(Object.entries(byMonth), (batch, [month, days]) => {
+    batch.set(doc(db, "users", uid, "shiftMonths", month), { month, days }, { merge: true });
+  });
 };
 
-/**
- * Save multiple shifts in a batch (max 500 per batch).
- */
-export const saveShiftsBatch = async (uid, shiftsArray) => {
+/** Borra días concretos de los docs mensuales (deleteField sobre days.DD). */
+const deleteShiftMonthDays = async (uid, dateStrings) => {
+  if (!uid || !dateStrings.length) return;
+  const byMonth = groupByMonth(dateStrings, () => deleteField());
+  await commitInChunks(Object.entries(byMonth), (batch, [month, days]) => {
+    batch.set(doc(db, "users", uid, "shiftMonths", month), { month, days }, { merge: true });
+  });
+};
+
+/** Modelo diario antiguo — solo para el dual-write de compatibilidad. */
+const saveShiftsBatchLegacy = async (uid, shiftsArray) => {
   if (!uid || !shiftsArray.length) return;
   const valid = shiftsArray.filter((s) => s.date);
   await commitInChunks(valid, (batch, shift) => {
@@ -81,45 +131,56 @@ export const saveShiftsBatch = async (uid, shiftsArray) => {
   });
 };
 
-/**
- * Delete a shift from the subcollection.
- */
-export const deleteShift = async (uid, dateStr) => {
-  if (!uid || !dateStr) return;
-  await deleteDoc(doc(db, "users", uid, "shifts", dateStr));
-};
-
-/**
- * Delete multiple shifts in a batch.
- */
-export const deleteShiftsBatch = async (uid, dateStrings) => {
+const deleteShiftsBatchLegacy = async (uid, dateStrings) => {
   if (!uid || !dateStrings.length) return;
   await commitInChunks(dateStrings, (batch, dateStr) => {
     batch.delete(doc(db, "users", uid, "shifts", dateStr));
   });
 };
 
+/** Punto de entrada único de escritura de turnos: mensual + diario (compat). */
+export const saveShiftsBatch = async (uid, shiftsArray) => {
+  await saveShiftMonthsBatch(uid, shiftsArray);
+  if (LEGACY_SHIFTS_DUAL_WRITE) await saveShiftsBatchLegacy(uid, shiftsArray);
+};
+
+/** Punto de entrada único de borrado de turnos: mensual + diario (compat). */
+export const deleteShiftsBatch = async (uid, dateStrings) => {
+  await deleteShiftMonthDays(uid, dateStrings);
+  if (LEGACY_SHIFTS_DUAL_WRITE) await deleteShiftsBatchLegacy(uid, dateStrings);
+};
+
 /**
- * One-time migration: Move shifts[] array from user doc to subcollection.
- * Safe to run multiple times — it won't duplicate data.
+ * Migración ÚNICA por usuario al modelo mensual: lee los docs diarios (una sola
+ * vez, el mismo coste que tenía UNA carga del calendario), los agrupa por mes y
+ * marca el perfil con shiftsMonthlyMigratedAt para no repetirla. Es idempotente
+ * (re-ejecutarla escribe los mismos datos), así que una carrera entre dos
+ * dispositivos es inofensiva. Los docs diarios NO se borran: las builds antiguas
+ * siguen leyéndolos hasta que se retire el dual-write.
  */
-export const migrateShiftsToSubcollection = async (uid, shiftsArray) => {
-  if (!uid || !shiftsArray || shiftsArray.length === 0) return;
-
-  const valid = shiftsArray.filter((s) => s.date);
-  await commitInChunks(valid, (batch, shift) => {
-    batch.set(doc(db, "users", uid, "shifts", shift.date), {
-      date: shift.date,
-      type: shift.type || 'work',
-      hours: shift.hours || 0,
-      isHA: shift.isHA || false,
-      turn: shift.turn || 'morning',
-    });
+export const migrateShiftsToMonths = async (uid) => {
+  if (!uid) return 0;
+  // No-destructiva: si un día YA existe en el modelo mensual (p.ej. el usuario
+  // editó el calendario en los segundos que tarda esta migración), ese valor
+  // fresco GANA y la migración no lo pisa con el dato antiguo del modelo diario.
+  const [dailySnap, monthlySnap] = await Promise.all([
+    getDocs(collection(db, "users", uid, "shifts")),
+    getDocs(collection(db, "users", uid, "shiftMonths")),
+  ]);
+  const alreadyMonthly = new Set();
+  monthlySnap.docs.forEach((m) => {
+    const { month, days } = m.data() || {};
+    if (month && days) Object.keys(days).forEach((dd) => alreadyMonthly.add(`${month}-${dd}`));
   });
-
-  // Vacía el array legacy del doc de usuario (operación aparte, ya sin riesgo de límite).
-  await setDoc(doc(db, "users", uid), { shifts: [] }, { merge: true });
-  console.log(`Migrated ${valid.length} shifts to subcollection for user ${uid}`);
+  const shifts = dailySnap.docs
+    .map((d) => d.data())
+    .filter((s) => s && s.date && !alreadyMonthly.has(s.date));
+  if (shifts.length > 0) {
+    await saveShiftMonthsBatch(uid, shifts);
+  }
+  await setDoc(doc(db, "users", uid), { shiftsMonthlyMigratedAt: Date.now() }, { merge: true });
+  console.log(`Turnos migrados al modelo mensual: ${shifts.length} días para ${uid}`);
+  return shifts.length;
 };
 
 export const loginUser = async (email, password) => {
@@ -144,6 +205,8 @@ export const registerUser = async (email, password, profileData) => {
     membership: { active: false, createdAt: Date.now() },
     settings: { notifications: true, breakDuration: 15 },
     shifts: [],
+    // Las cuentas nuevas nacen ya en el modelo mensual de turnos: no hay nada que migrar.
+    shiftsMonthlyMigratedAt: Date.now(),
     activeShift: null,
     workTimeAccumulated: 0,
     isBreakActive: false,
@@ -190,6 +253,8 @@ export const ensureUserDoc = async (user) => {
       membership: { active: false, createdAt: Date.now() },
       settings: { notifications: true, breakDuration: 15 },
       shifts: [],
+      // Cuenta creada desde cero: nace en el modelo mensual, sin migración pendiente.
+      shiftsMonthlyMigratedAt: Date.now(),
       activeShift: null,
       workTimeAccumulated: 0,
       isBreakActive: false,
@@ -426,14 +491,15 @@ export const addRequest = async (requestData) => {
 };
 
 export const subscribeToMyRequests = (uid, callback) => {
-  // Acotado a las 90 peticiones más recientes: sin límite, esta suscripción cargaba
-  // TODO el histórico del usuario (crece sin fin con los años). Requiere el índice
-  // compuesto (uid ASC, createdAt DESC) definido en firestore.indexes.json.
+  // Acotado a las 30 peticiones más recientes (solo se usan para pintar las
+  // pendientes en el calendario; 30 cubre de sobra lo reciente y en iOS —caché en
+  // memoria— cada apertura de la Agenda pagaba este límite entero en lecturas).
+  // Requiere el índice compuesto (uid ASC, createdAt DESC) de firestore.indexes.json.
   const q = query(
     collection(db, "requests"),
     where("uid", "==", uid),
     orderBy("createdAt", "desc"),
-    limit(90)
+    limit(30)
   );
   return onSnapshot(
     q,

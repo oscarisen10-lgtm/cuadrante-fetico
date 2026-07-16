@@ -3,12 +3,16 @@ import { FileText, ChevronDown, ChevronUp, Info, Users, Clock, ClipboardCheck, B
 import { LICENCIAS_CATEGORIES, GRADOS_CONSANGUINIDAD } from '../constants/licenciasData';
 import { ChatModal } from './ChatModal';
 import { isAdminUser } from '../constants/config';
+import { ActivationGateModal } from './LockedView';
 
-export const LicenciasView = React.memo(function LicenciasView({ user, permissionState, requestTokenManually }) {
+export const LicenciasView = React.memo(function LicenciasView({ user, permissionState, requestTokenManually, isActive = true }) {
   const [expandedLicencia, setExpandedLicencia] = useState(null);
   const [showGrados, setShowGrados] = useState(false);
   const [showGeneral, setShowGeneral] = useState(true); // abierto por defecto al entrar
   const [showChat, setShowChat] = useState(false);
+  // Cuentas PENDIENTES: la lista de permisos SE VE; este aviso salta solo al
+  // intentar ABRIR el detalle de un permiso.
+  const [showActivationGate, setShowActivationGate] = useState(false);
   const [fontScale, setFontScale] = useState(() => {
     try { return parseFloat(localStorage.getItem('licFontScale')) || 1; } catch { return 1; }
   });
@@ -22,6 +26,7 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
   });
 
   const toggleLicencia = (id) => {
+    if (!isActive) { setShowActivationGate(true); return; }
     setExpandedLicencia(expandedLicencia === id ? null : id);
   };
 
@@ -257,6 +262,7 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
       </div>
 
       {showChat && <ChatModal onClose={() => setShowChat(false)} permissionState={permissionState} requestTokenManually={requestTokenManually} />}
+      {showActivationGate && <ActivationGateModal onClose={() => setShowActivationGate(false)} />}
     </div>
   );
 });

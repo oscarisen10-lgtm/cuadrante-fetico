@@ -8,6 +8,7 @@ import { HoursEditor } from './calendar/HoursEditor';
 import { subscribeToMyRequests, addRequest } from '../services/firebaseService';
 import { useTeamStatus } from '../hooks/useTeamStatus';
 import { toast } from './Toast';
+import { ActivationGateModal } from './LockedView';
 
 /**
  * getAllYearHolidays — Collects all common + municipal holidays for the year.
@@ -46,16 +47,19 @@ const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct'
  * CalendarView — Main calendar component (refactored).
  * Sub-components: MonthGrid, DayCell, WeekdayHeader, DateDetailPanel, HoursEditor
  */
-export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap, saveToCloud, user, permissionState, requestTokenManually }) {
+export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap, saveToCloud, user, permissionState, requestTokenManually, isActive = true }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('mensual'); // 'mensual' | 'anual'
-  const [selectedDates, setSelectedDates] = useState([]); 
-  const [editingDay, setEditingDay] = useState(null); 
+  const [selectedDates, setSelectedDates] = useState([]);
+  const [editingDay, setEditingDay] = useState(null);
   const [editHH, setEditHH] = useState("0");
   const [editmm, setEditmm] = useState("0");
   const [editTurn, setEditTurn] = useState("morning");
   const [showFestivos, setShowFestivos] = useState(false);
   const [myRequests, setMyRequests] = useState([]);
+  // Cuentas PENDIENTES: la agenda SE VE con normalidad; este aviso salta solo al
+  // intentar REGISTRAR algo (libre, vacaciones, ajustar horas, borrar, solicitar).
+  const [showActivationGate, setShowActivationGate] = useState(false);
 
   const userStore = user?.store;
   const holidays = useMemo(() => getAllYearHolidays(userStore), [userStore]);
@@ -86,13 +90,14 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
   }, [shiftsMap, myRequests]);
 
   const openEditHours = useCallback((dateStr) => {
+    if (!isActive) { setShowActivationGate(true); return; }
     const s = combinedShiftsMap[dateStr];
     const totalHoursDecimal = (s?.type === 'work' && s.hours > 0) ? s.hours : 6.75;
     setEditingDay(dateStr);
     setEditHH(Math.floor(totalHoursDecimal).toString());
     setEditmm(Math.round((totalHoursDecimal % 1) * 60).toString());
     setEditTurn(s?.turn || 'morning');
-  }, [combinedShiftsMap]);
+  }, [combinedShiftsMap, isActive]);
 
   const saveEditedHours = useCallback(() => {
     const hoursDecimal = (parseInt(editHH) || 0) + ((parseInt(editmm) || 0) / 60);
@@ -117,14 +122,16 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
   }, [editHH, editmm, editTurn, selectedDates, editingDay, shifts, saveToCloud]);
 
   const markMulti = useCallback((type) => {
+    if (!isActive) { setShowActivationGate(true); return; }
     const filtered = shifts.filter(s => !selectedDates.includes(s.date));
     const newEntries = selectedDates.map(date => ({ id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now() + Math.random(), date, type, hours: 0, isHA: false }));
     const newShifts = [...filtered, ...newEntries];
     setSelectedDates([]);
     saveToCloud({ shifts: newShifts });
-  }, [shifts, selectedDates, saveToCloud]);
+  }, [shifts, selectedDates, saveToCloud, isActive]);
 
   const makeRequest = useCallback(async (note = '') => {
+    if (!isActive) { setShowActivationGate(true); return; }
     if (!userStore) {
       toast("Debes configurar tu tienda en Ajustes primero.", "error");
       return;
@@ -150,13 +157,14 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
     } catch (e) {
       toast("Error al enviar solicitud", "error");
     }
-  }, [selectedDates, user, userStore]);
+  }, [selectedDates, user, userStore, isActive]);
 
   const deleteSelectedDates = useCallback(() => {
+    if (!isActive) { setShowActivationGate(true); return; }
     const newShifts = shifts.filter(s => !selectedDates.includes(s.date));
     setSelectedDates([]);
     saveToCloud({ shifts: newShifts });
-  }, [shifts, selectedDates, saveToCloud]);
+  }, [shifts, selectedDates, saveToCloud, isActive]);
 
   const handleDayClick = useCallback((dateStr) => {
     setSelectedDates(prev => 
@@ -357,7 +365,7 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
 
 
 
-      <HoursEditor 
+      <HoursEditor
         editingDay={editingDay}
         editHH={editHH}
         editmm={editmm}
@@ -368,6 +376,8 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
         setEditingDay={setEditingDay}
         saveEditedHours={saveEditedHours}
       />
+
+      {showActivationGate && <ActivationGateModal onClose={() => setShowActivationGate(false)} />}
     </div>
   );
 });

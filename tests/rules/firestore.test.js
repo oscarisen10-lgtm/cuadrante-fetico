@@ -134,6 +134,50 @@ describe('Turnos', () => {
   });
 });
 
+describe('Turnos mensuales (shiftMonths, modelo v2)', () => {
+  const MES = { month: '2026-06', days: { '10': { type: 'work', hours: 8, isHA: false } } };
+
+  test('el dueño SÍ puede escribir su doc mensual con forma válida', async () => {
+    await assertSucceeds(
+      setDoc(doc(as(BASE), 'users', BASE, 'shiftMonths', '2026-06'), MES)
+    );
+  });
+
+  test('el dueño SÍ puede leer sus docs mensuales', async () => {
+    await assertSucceeds(getDoc(doc(as(BASE), 'users', BASE, 'shiftMonths', '2026-06')));
+  });
+
+  test('un compañero NO puede leer los turnos mensuales de otro', async () => {
+    await assertFails(getDoc(doc(as(BASE2), 'users', BASE, 'shiftMonths', '2026-06')));
+  });
+
+  test('un compañero NO puede escribir los turnos mensuales de otro', async () => {
+    await assertFails(
+      setDoc(doc(as(BASE2), 'users', BASE, 'shiftMonths', '2026-06'), MES)
+    );
+  });
+
+  test('NO se puede escribir un doc mensual con campos extra (forma controlada)', async () => {
+    await assertFails(
+      setDoc(doc(as(BASE), 'users', BASE, 'shiftMonths', '2026-06'), { ...MES, hacked: true })
+    );
+  });
+
+  test('NO se puede escribir un doc mensual con month inválido', async () => {
+    await assertFails(
+      setDoc(doc(as(BASE), 'users', BASE, 'shiftMonths', 'x'), { month: 'x', days: {} })
+    );
+  });
+
+  // La migración y Fichar deben funcionar también para cuentas pendientes
+  // (el detalle por día lo controla la interfaz; ver comentario en las reglas).
+  test('una cuenta pendiente SÍ puede escribir su doc mensual (migración + Fichar)', async () => {
+    await assertSucceeds(
+      setDoc(doc(as(PENDIENTE), 'users', PENDIENTE, 'shiftMonths', '2026-06'), MES)
+    );
+  });
+});
+
 describe('Peticiones (días libres)', () => {
   // La aprobación por responsables se hará por Cloud Function cuando se reactive; desde
   // el cliente, un rango autodeclarado NO puede tocar la petición de otro (anti-escalada).
@@ -145,8 +189,14 @@ describe('Peticiones (días libres)', () => {
     await assertFails(updateDoc(doc(as(BASE2), 'requests', 'req1'), { status: 'approved' }));
   });
 
-  test('el dueño SÍ puede modificar su propia petición (p.ej. cancelarla)', async () => {
-    await assertSucceeds(updateDoc(doc(as(BASE), 'requests', 'req1'), { status: 'cancelled' }));
+  test('el dueño SÍ puede retocar su propia petición (p.ej. la nota)', async () => {
+    await assertSucceeds(updateDoc(doc(as(BASE), 'requests', 'req1'), { note: 'cita médica' }));
+  });
+
+  // status lo gestionará el backend cuando exista flujo de aprobación: si el dueño
+  // pudiera tocarlo, se autoaprobaría con una llamada REST. Para cancelar, borra.
+  test('el dueño NO puede cambiar el status de su petición (nadie se autoaprueba)', async () => {
+    await assertFails(updateDoc(doc(as(BASE), 'requests', 'req1'), { status: 'approved' }));
   });
 
   test('alguien de OTRA tienda NO puede leer la petición', async () => {
@@ -240,9 +290,18 @@ describe('Sistema de delegados (activación de cuentas)', () => {
     );
   });
 
-  test('una cuenta pendiente NO puede crear turnos (bloqueo real, también en apps antiguas)', async () => {
-    await assertFails(
+  // Fichar está abierto a las cuentas pendientes A PROPÓSITO (decisión de producto):
+  // pueden registrar su jornada ('work'), pero libres/vacaciones/bajas siguen
+  // bloqueados hasta que se active la cuenta.
+  test('una cuenta pendiente SÍ puede registrar jornada (Fichar abierto)', async () => {
+    await assertSucceeds(
       setDoc(doc(as(PENDIENTE), 'users', PENDIENTE, 'shifts', '2026-06-20'), { date: '2026-06-20', type: 'work', hours: 8 })
+    );
+  });
+
+  test('una cuenta pendiente NO puede marcar libres/vacaciones (se desbloquea al activar)', async () => {
+    await assertFails(
+      setDoc(doc(as(PENDIENTE), 'users', PENDIENTE, 'shifts', '2026-06-21'), { date: '2026-06-21', type: 'rest', hours: 0 })
     );
   });
 
