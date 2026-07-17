@@ -293,7 +293,8 @@ exports.askFeticoAssistant = onCall({
     throw new HttpsError("invalid-argument", `El mensaje es demasiado largo (máximo ${MAX_MESSAGE_LENGTH} caracteres).`);
   }
 
-  const isAdmin = request.auth.token && request.auth.token.email === "oscargarcia@fetico.es";
+  // Admin SOLO por custom-claim (el fallback por email se eliminó el 17-jul-2026).
+  const isAdmin = !!(request.auth.token && request.auth.token.admin === true);
 
   // 2. Rate Limiting Check (Firestore)
   if (!isAdmin) {
@@ -429,6 +430,10 @@ ${convenioText}`;
 // La Arena/Competición (submitArenaScore + leaderboards) se ELIMINÓ del
 // proyecto el 17-jul-2026 para recortar lecturas/escrituras: la función se
 // borró del despliegue y la colección leaderboards se purgó.
+
+// Email del admin: SOLO se usa para PROTEGER su perfil (que un delegado no
+// pueda desactivar/expulsar esa cuenta). La AUTORIZACIÓN de admin va por
+// custom-claim exclusivamente desde el 17-jul-2026 (incidente de borrado).
 const ADMIN_EMAIL_FN = "oscargarcia@fetico.es";
 
 /**
@@ -440,7 +445,7 @@ const ADMIN_EMAIL_FN = "oscargarcia@fetico.es";
  */
 exports.adminStats = onCall({ maxInstances: 5 }, async (request) => {
   const token = request.auth && request.auth.token;
-  const isAdmin = token && (token.admin === true || token.email === ADMIN_EMAIL_FN);
+  const isAdmin = !!(token && token.admin === true); // solo claim (17-jul-2026)
   if (!isAdmin) {
     throw new HttpsError("permission-denied", "Solo el administrador puede ver las estadísticas.");
   }
@@ -481,8 +486,8 @@ exports.adminStats = onCall({ maxInstances: 5 }, async (request) => {
 // perfiles ajenos o toque membership, igual que ya ocurre con teamStatus.
 // ---------------------------------------------------------------------------
 
-const isAdminToken = (token) =>
-  !!(token && (token.admin === true || token.email === ADMIN_EMAIL_FN));
+// Admin SOLO por custom-claim (fallback por email eliminado el 17-jul-2026).
+const isAdminToken = (token) => !!(token && token.admin === true);
 
 /** Doc del delegado que llama, o null si no es delegado (o está desactivado). */
 async function getDelegadoDoc(uid) {

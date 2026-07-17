@@ -17,13 +17,14 @@ service cloud.firestore {
       return p.company + "_" + p.store + "_" + p.section;
     }
 
-    // Admin por custom-claim (recomendado) con fallback al email histórico
-    // para no perder acceso durante la migración a claims.
+    // Admin SOLO por custom-claim. El fallback por email se ELIMINÓ el
+    // 17-jul-2026 tras el incidente de borrado: el email de un token puede no
+    // estar verificado, mientras que el claim solo lo pone el backend/owner
+    // (scripts/set-admin-claim.js). Si el admin pierde acceso: re-ejecutar ese
+    // script y cerrar/abrir sesión.
     function isAdmin() {
-      return request.auth != null && request.auth.token != null && (
-        request.auth.token.admin == true ||
-        request.auth.token.email == "oscargarcia@fetico.es"
-      );
+      return request.auth != null && request.auth.token != null &&
+        request.auth.token.admin == true;
     }
 
     // ⚠️ SEGURIDAD (escalada de privilegios): el "rango" (jefe/coordinador…) lo
