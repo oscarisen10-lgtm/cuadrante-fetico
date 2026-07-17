@@ -13,9 +13,12 @@ import { LoadingLogo } from './UIComponents';
  *
  * El delegado publica noticias SOLO para sus tiendas autorizadas (colección
  * noticiasTienda; las reglas impiden dirigirse a tiendas ajenas o a toda la
- * app — el canal global es exclusivo del admin) y, si marca la casilla, el
- * backend envía además la notificación push por token directo únicamente a
- * los usuarios de esas tiendas (ver sendStoreNews en functions).
+ * app — el canal global es exclusivo del admin).
+ *
+ * Noticias y PUSH van SEPARADOS, igual que en el panel del admin: la noticia
+ * se publica en el feed sin avisar a nadie, y el botón "Push" lanza una
+ * notificación (doc con isPushRequest:true, oculto del feed) que el backend
+ * envía por token directo solo a los usuarios de sus tiendas (sendStoreNews).
  */
 export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ user, delegado }) {
   const stores = useMemo(
@@ -28,12 +31,18 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [targetStores, setTargetStores] = useState(stores); // por defecto, todas las suyas
-  const [sendPush, setSendPush] = useState(true);
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [publishing, setPublishing] = useState(false);
 
-  useEffect(() => { setTargetStores(stores); }, [stores]);
+  // Modal de PUSH (separado de las noticias, como en el panel del admin).
+  const [showPushModal, setShowPushModal] = useState(false);
+  const [pushTitle, setPushTitle] = useState('');
+  const [pushBody, setPushBody] = useState('');
+  const [pushStores, setPushStores] = useState(stores);
+  const [pushSending, setPushSending] = useState(false);
+
+  useEffect(() => { setTargetStores(stores); setPushStores(stores); }, [stores]);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -59,11 +68,45 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
   };
 
   const resetComposer = () => {
-    setTitle(''); setDesc(''); setTargetStores(stores); setSendPush(true);
+    setTitle(''); setDesc(''); setTargetStores(stores);
     setSelectedFile(null);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
     setShowComposer(false);
+  };
+
+  const togglePushStore = (s) => {
+    setPushStores((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]);
+  };
+
+  // Push separado: crea un doc con isPushRequest:true (OCULTO del feed, igual
+  // que hace el admin) y sendPush:true para que el backend lo envíe SOLO a los
+  // usuarios de las tiendas elegidas.
+  const sendPushNotification = async (e) => {
+    e.preventDefault();
+    if (!pushTitle.trim() || !pushBody.trim()) { toast("Título y mensaje son obligatorios.", "warning"); return; }
+    if (pushStores.length === 0) { toast("Elige al menos una tienda destino.", "warning"); return; }
+    setPushSending(true);
+    try {
+      await addStoreNews({
+        title: pushTitle.trim(),
+        desc: pushBody.trim(),
+        stores: pushStores,
+        authorUid: user.uid,
+        authorName: user.fullName || 'Delegado/a',
+        isPushRequest: true,
+        sendPush: true,
+        date: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
+        createdAt: Date.now(),
+      });
+      toast("¡Push enviado! Llegará a tus tiendas en unos segundos.", "success");
+      setPushTitle(''); setPushBody(''); setPushStores(stores);
+      setShowPushModal(false);
+    } catch (error) {
+      console.error("Error enviando push de tienda:", error);
+      toast("No se pudo enviar: " + (error?.message || error), "error");
+    }
+    setPushSending(false);
   };
 
   const publish = async (e) => {
@@ -89,11 +132,10 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
         stores: targetStores,
         authorUid: user.uid,
         authorName: user.fullName || 'Delegado/a',
-        sendPush,
         date: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
         createdAt: Date.now(),
       });
-      toast(sendPush ? "¡Publicada! El push saldrá en unos segundos." : "¡Noticia publicada!", "success");
+      toast("¡Noticia publicada!", "success");
       resetComposer();
     } catch (error) {
       console.error("Error publicando noticia de tienda:", error);
@@ -137,15 +179,24 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
         </div>
       ) : (
         <>
-          {/* Botón / compositor */}
+          {/* Botones: Nueva noticia + Push, SEPARADOS (como en el panel del admin) */}
           {!showComposer ? (
-            <button
-              onClick={() => setShowComposer(true)}
-              className="btn3d w-full text-white font-black py-4 rounded-2xl uppercase text-xs flex items-center justify-center gap-2"
-              style={{ background: 'linear-gradient(180deg,#34d399,#059669)', boxShadow: '0 8px 18px rgba(5,150,105,0.4), inset 0 1.5px 1px rgba(255,255,255,0.45)' }}
-            >
-              <Plus size={16} /> Nueva noticia para tu gente
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowComposer(true)}
+                className="btn3d flex-[2] text-white font-black py-4 rounded-2xl uppercase text-xs flex items-center justify-center gap-2"
+                style={{ background: 'linear-gradient(180deg,#34d399,#059669)', boxShadow: '0 8px 18px rgba(5,150,105,0.4), inset 0 1.5px 1px rgba(255,255,255,0.45)' }}
+              >
+                <Plus size={16} /> Nueva Noticia
+              </button>
+              <button
+                onClick={() => setShowPushModal(true)}
+                className="btn3d flex-1 text-white font-black py-4 rounded-2xl uppercase text-xs flex items-center justify-center gap-2"
+                style={{ background: 'linear-gradient(180deg,#818cf8,#4f46e5)', boxShadow: '0 8px 18px rgba(79,70,229,0.4), inset 0 1.5px 1px rgba(255,255,255,0.4)' }}
+              >
+                <Bell size={15} /> Push
+              </button>
+            </div>
           ) : (
             <form onSubmit={publish} className="rounded-[2rem] p-5 space-y-4" style={{ background: 'linear-gradient(180deg,#ffffff,#f8f9fb)', boxShadow: '0 14px 34px -16px rgba(30,41,59,0.25), inset 0 1.5px 1px rgba(255,255,255,0.9)', border: '1px solid rgba(15,23,42,0.05)' }}>
               <div className="flex justify-between items-center border-b border-slate-100 pb-3">
@@ -202,21 +253,10 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
               </div>
 
               {/* Foto opcional */}
-              <div className="flex items-center gap-3">
-                <label className="flex-1 bg-slate-100 border border-slate-200 text-slate-600 rounded-xl p-3 flex items-center justify-center gap-2 cursor-pointer hover:bg-slate-200 active:scale-95 transition-all text-xs font-bold shadow-inner">
-                  <Upload size={15}/> {selectedFile ? "Cambiar foto" : "Foto (opcional)"}
-                  <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} className="hidden" />
-                </label>
-                {/* Enviar push */}
-                <button
-                  type="button"
-                  onClick={() => setSendPush((v) => !v)}
-                  aria-pressed={sendPush}
-                  className={`flex items-center gap-2 px-3 py-3 rounded-xl text-[10px] font-black uppercase transition-all active:scale-95 ${sendPush ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-slate-400 ring-1 ring-slate-200'}`}
-                >
-                  <Bell size={13} /> Push {sendPush ? 'SÍ' : 'NO'}
-                </button>
-              </div>
+              <label className="w-full bg-slate-100 border border-slate-200 text-slate-600 rounded-xl p-3 flex items-center justify-center gap-2 cursor-pointer hover:bg-slate-200 active:scale-95 transition-all text-xs font-bold shadow-inner">
+                <Upload size={15}/> {selectedFile ? "Cambiar foto" : "Foto (opcional)"}
+                <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} className="hidden" />
+              </label>
 
               {previewUrl && (
                 <div className="relative border-2 border-emerald-100 rounded-2xl p-1 bg-emerald-50 animate-in fade-in">
@@ -230,7 +270,7 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
                 disabled={publishing || targetStores.length === 0}
                 className={`w-full bg-emerald-600 text-white font-black py-3.5 rounded-2xl uppercase text-xs active:scale-95 transition-all shadow-xl flex items-center justify-center gap-2 ${publishing || targetStores.length === 0 ? 'opacity-60' : ''}`}
               >
-                {publishing ? 'PUBLICANDO...' : <><Send size={15}/> {sendPush ? 'PUBLICAR + ENVIAR PUSH' : 'PUBLICAR NOTICIA'}</>}
+                {publishing ? 'PUBLICANDO...' : <><Send size={15}/> PUBLICAR NOTICIA</>}
               </button>
             </form>
           )}
@@ -244,23 +284,22 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
 
           {myNews === null ? (
             <div className="py-8"><LoadingLogo label="Cargando…" /></div>
-          ) : myNews.length === 0 ? (
+          ) : myNews.filter((n) => !n.isPushRequest).length === 0 ? (
             <div className="py-10 flex flex-col items-center opacity-40">
               <Newspaper size={36} className="text-slate-300 mb-3" />
               <p className="text-[10px] text-slate-400 text-center italic uppercase font-bold tracking-widest">Aún no has publicado nada</p>
             </div>
           ) : (
             <div className="space-y-5">
-              {myNews.map((n) => (
+              {/* Los envíos de push (isPushRequest) no se listan: son avisos
+                  puntuales, no publicaciones — mismo criterio que el admin. */}
+              {myNews.filter((n) => !n.isPushRequest).map((n) => (
                 <div key={n.id} className="flex flex-col pb-5 border-b border-slate-200 last:border-b-0 last:pb-0">
                   <div className="flex justify-between items-center mb-2.5">
                     <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                       {(n.stores || []).map((s) => (
                         <span key={s} className="text-[8px] font-black text-emerald-700 uppercase tracking-tighter bg-emerald-500/10 px-2 py-0.5 rounded-md">{s}</span>
                       ))}
-                      {n.sendPush && (
-                        <span className="text-[8px] font-black text-indigo-600 uppercase tracking-tighter bg-indigo-500/10 px-2 py-0.5 rounded-md flex items-center gap-1"><Bell size={8}/> Push</span>
-                      )}
                       <span className="text-[8px] text-slate-400 font-bold">{n.date}</span>
                     </div>
                     <button onClick={() => handleDelete(n)} className="text-rose-500 p-2 bg-rose-500/10 hover:bg-rose-500/20 rounded-xl transition-colors shrink-0" aria-label="Borrar noticia">
@@ -277,6 +316,76 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
             </div>
           )}
         </>
+      )}
+
+      {/* MODAL DE PUSH — separado de las noticias, como en el panel del admin,
+          pero dirigido SOLO a las tiendas del delegado. */}
+      {showPushModal && (
+        <div className="fixed inset-0 z-[120] bg-slate-900/95 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-[2.5rem] p-7 shadow-2xl w-full max-w-sm border border-indigo-50 animate-in zoom-in-95 flex flex-col">
+            <div className="flex justify-between items-center mb-5 shrink-0">
+              <div className="flex flex-col">
+                <h3 className="text-sm font-black text-indigo-700 uppercase italic tracking-widest">Lanzar Alerta Push</h3>
+                <span className="text-[8px] font-bold text-slate-400 uppercase mt-1">Solo a los dispositivos de tus tiendas</span>
+              </div>
+              <button onClick={() => setShowPushModal(false)} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 text-slate-400"><X size={20}/></button>
+            </div>
+
+            <form onSubmit={sendPushNotification} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-indigo-600 uppercase ml-1 tracking-tight">Título de la Alerta</label>
+                <input
+                  value={pushTitle}
+                  onChange={(e) => setPushTitle(e.target.value)}
+                  maxLength={200}
+                  required
+                  className="w-full bg-slate-50 border-none p-3 text-sm rounded-xl outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm text-slate-800"
+                  placeholder="Ej: Asamblea mañana"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-indigo-600 uppercase ml-1 tracking-tight">Mensaje a mostrar</label>
+                <textarea
+                  value={pushBody}
+                  onChange={(e) => setPushBody(e.target.value)}
+                  required
+                  rows={3}
+                  className="w-full bg-slate-50 border-none p-3 text-sm rounded-xl outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm text-slate-800"
+                  placeholder="Escribe aquí el contenido de la notificación..."
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-indigo-600 uppercase ml-1 tracking-tight flex items-center gap-1"><StoreIcon size={11}/> Tiendas destino</label>
+                <div className="flex gap-2 flex-wrap">
+                  {stores.map((s) => {
+                    const on = pushStores.includes(s);
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => togglePushStore(s)}
+                        aria-pressed={on}
+                        className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-tight transition-all active:scale-95 ${on ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-slate-400 ring-1 ring-slate-200'}`}
+                      >
+                        {s}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={pushSending || pushStores.length === 0}
+                className={`w-full bg-indigo-600 text-white font-black py-4 rounded-2xl uppercase text-xs active:scale-95 transition-all shadow-xl flex items-center justify-center gap-2 mt-2 ${pushSending || pushStores.length === 0 ? 'opacity-60' : ''}`}
+              >
+                {pushSending ? 'ENVIANDO A DISPOSITIVOS...' : <><Bell size={15}/> LANZAR NOTIFICACIÓN</>}
+              </button>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
