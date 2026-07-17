@@ -48,71 +48,9 @@ body {
   }
 }
 
-/* ===== Kit visual de minijuegos (gameFx) ===== */
-/* Glow con degradado radial (sin filter:blur → mucho más fluido en móvil).
-   Solo animamos translate3d (capa compuesta), nunca scale (que re-rasteriza). */
-.gfx-orb {
-  position: absolute;
-  width: 420px; height: 420px;
-  border-radius: 9999px;
-  opacity: 0.55;
-  will-change: transform;
-  transform: translateZ(0);
-  animation: gfx-float 20s ease-in-out infinite;
-}
-@keyframes gfx-float {
-  0%, 100% { transform: translate3d(0, 0, 0); }
-  50%      { transform: translate3d(22px, -20px, 0); }
-}
-/* Rejilla estática (se rasteriza una vez = coste casi nulo). */
-.gfx-grid {
-  background-image:
-    linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
-  background-size: 42px 42px;
-  -webkit-mask-image: radial-gradient(ellipse at center, #000 25%, transparent 78%);
-          mask-image: radial-gradient(ellipse at center, #000 25%, transparent 78%);
-}
-.gfx-pop  { animation: gfx-pop 0.35s cubic-bezier(.2,.8,.2,1.2) both; }
-@keyframes gfx-pop {
-  0%   { transform: scale(0.3); opacity: 0; }
-  60%  { transform: scale(1.15); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
-}
-.gfx-rise { animation: gfx-rise 0.9s ease-out forwards; }
-@keyframes gfx-rise {
-  0%   { transform: translateY(0) scale(1); opacity: 1; }
-  100% { transform: translateY(-70px) scale(1.5); opacity: 0; }
-}
-.gfx-shine {
-  background: linear-gradient(110deg, #fff 35%, rgba(255,255,255,0.45) 50%, #fff 65%);
-  background-size: 220% auto;
-  -webkit-background-clip: text; background-clip: text;
-  color: transparent;
-  animation: gfx-shimmer 3.5s linear infinite;
-}
-@keyframes gfx-shimmer {
-  0%   { background-position: 220% 0; }
-  100% { background-position: -220% 0; }
-}
-/* brillo giratorio para insignias/botones destacados */
-@keyframes gfx-spin { to { transform: rotate(360deg); } }
-.gfx-conic {
-  background: conic-gradient(from 0deg, transparent 0 40%, rgba(255,255,255,0.35) 50%, transparent 60% 100%);
-  animation: gfx-spin 4s linear infinite;
-}
-/* estallido de partículas */
-.gfx-spark { animation: gfx-spark 0.62s ease-out forwards; }
-@keyframes gfx-spark {
-  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
-  100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
-}
-/* barra de cuenta atrás (scaleX = barato para la GPU) */
-.gfx-bar { transform-origin: left center; animation: gfx-bar linear forwards; }
-@keyframes gfx-bar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
-
 /* ============================================================
-   KIT PREMIUM PARA EL LOBBY (Arena) — todo transform/opacity (GPU, 60fps)
+   KIT VISUAL DE LA APP — todo transform/opacity (GPU, 60fps)
+   (El kit de minijuegos gfx-*/hud-*/trilero-* se eliminó junto con la Arena.)
    ============================================================ */
 
 /* Botón 3D con volumen y "press" físico */
@@ -129,92 +67,9 @@ body {
 }
 @keyframes sheen { 0%, 55% { transform: translateX(-160%); } 100% { transform: translateX(160%); } }
 
-/* Flotación suave (parallax/idle) */
-.float-soft { animation: float-soft 3.6s ease-in-out infinite; will-change: transform; }
-@keyframes float-soft { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
-
 /* Respiración (escala muy sutil) */
 .breathe { animation: breathe 3.4s ease-in-out infinite; will-change: transform; }
 @keyframes breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.035); } }
-
-/* Entrada con rebote (pop) y subida (rise, para listas con delay inline) */
-.pop-in { animation: pop-in .5s cubic-bezier(.2,.8,.2,1.35) both; }
-@keyframes pop-in { 0% { opacity: 0; transform: translateY(12px) scale(.9); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
-.rise-in { animation: rise-in .5s cubic-bezier(.2,.85,.25,1) both; }
-@keyframes rise-in { 0% { opacity: 0; transform: translateY(16px); } 100% { opacity: 1; transform: translateY(0); } }
-
-/* Destello giratorio (corona / campeón) */
-.twinkle { animation: twinkle 2.4s ease-in-out infinite; }
-@keyframes twinkle { 0%,100% { opacity:.5; transform: scale(.85) rotate(0deg); } 50% { opacity:1; transform: scale(1.1) rotate(180deg); } }
-
-/* Confeti de victoria (cae y gira) */
-.confetti { position: absolute; top: -24px; width: 9px; height: 14px; border-radius: 2px; will-change: transform, opacity; animation: confetti-fall linear forwards; }
-@keyframes confetti-fall {
-  0%   { transform: translateY(-24px) rotate(0deg);   opacity: 1; }
-  100% { transform: translateY(105vh)  rotate(620deg); opacity: 0; }
-}
-
-/* Aparición tipo "pop" para números/iconos destacados */
-.count-pop { animation: count-pop .5s cubic-bezier(.2,.8,.2,1.45) both; }
-@keyframes count-pop { 0% { opacity: 0; transform: scale(.55); } 60% { transform: scale(1.14); } 100% { opacity: 1; transform: scale(1); } }
-
-/* Chip de HUD premium (marcadores dentro de los juegos). Sin backdrop-blur:
-   barato a 60fps aunque el fondo cambie cada frame. Reemplaza a bg-black/30. */
-.hud-chip {
-  background: linear-gradient(180deg, rgba(20,20,28,0.62), rgba(0,0,0,0.5));
-  border: 1px solid rgba(255,255,255,0.16);
-  box-shadow: inset 0 1px 1px rgba(255,255,255,0.2), 0 4px 12px rgba(0,0,0,0.4);
-}
-/* "Pop" del marcador al subir la puntuación */
-.hud-pop { animation: hud-pop .34s cubic-bezier(.2,.8,.2,1.5) both; }
-@keyframes hud-pop { 0% { transform: scale(1); } 40% { transform: scale(1.22); } 100% { transform: scale(1); } }
-
-/* ============================================================
-   TRILERO GAME — efectos premium
-   ============================================================ */
-
-/* Temblor de pantalla al fallar */
-@keyframes trilero-shake {
-  0%   { transform: translate(0, 0) rotate(0deg); }
-  12%  { transform: translate(-11px, -2px) rotate(-1.8deg); }
-  24%  { transform: translate(10px,  2px) rotate( 1.8deg); }
-  36%  { transform: translate(-8px, -1px) rotate(-1.1deg); }
-  50%  { transform: translate(7px,   1px) rotate( 0.9deg); }
-  64%  { transform: translate(-4px,  0) rotate(-0.5deg); }
-  80%  { transform: translate(3px,   0) rotate( 0.3deg); }
-  100% { transform: translate(0, 0) rotate(0deg); }
-}
-.trilero-shake { animation: trilero-shake 0.52s cubic-bezier(.36,.07,.19,.97) both; }
-
-/* Flash rojo al fallar */
-@keyframes trilero-flash {
-  0%   { opacity: 0.42; }
-  100% { opacity: 0; }
-}
-.trilero-flash { animation: trilero-flash 0.55s ease-out forwards; }
-
-/* Anillo que se expande al acertar o fallar */
-@keyframes trilero-ring {
-  0%   { transform: translate(-50%, -50%) scale(0.08); opacity: 0.95; }
-  100% { transform: translate(-50%, -50%) scale(1);    opacity: 0; }
-}
-.trilero-ring {
-  position: absolute;
-  width: 110px; height: 110px;
-  border-radius: 50%;
-  border: 3px solid currentColor;
-  pointer-events: none;
-  animation: trilero-ring 0.55s ease-out forwards;
-}
-
-/* Vaso se asienta con rebote al aterrizar */
-@keyframes trilero-land {
-  0%   { transform: scaleY(1) translateY(0); }
-  28%  { transform: scaleY(0.89) translateY(3px); }
-  62%  { transform: scaleY(1.07) translateY(-4px); }
-  100% { transform: scaleY(1) translateY(0); }
-}
-.trilero-land { animation: trilero-land 0.28s cubic-bezier(.2,.6,.4,1.3) both; }
 
 /* ============================================================
    AHORRO DE BATERÍA / ACCESIBILIDAD (M-1)
@@ -224,7 +79,7 @@ body {
    interacción (botones) se mantienen casi instantáneas.
    ============================================================ */
 @media (prefers-reduced-motion: reduce) {
-  .sheen::after, .breathe, .float-soft, .twinkle, .gfx-orb, .gfx-conic, .gfx-shine,
+  .sheen::after, .breathe,
   .animate-pulse, .animate-bounce, .animate-ping, .animate-spin {
     animation: none !important;
   }

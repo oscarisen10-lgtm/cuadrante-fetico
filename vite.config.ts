@@ -28,12 +28,6 @@ export default defineConfig({
           'firebase-msg': ['firebase/messaging'],
           'vendor': ['react', 'react-dom'],
           'icons': ['lucide-react'],
-          // 3D: `three` (~600 KB) es estable y se comparte entre todos los minijuegos.
-          // Aislarlo en su propio chunk hace que, cuando solo cambie el código de la app
-          // entre despliegues, el usuario NO tenga que re-descargar three (queda en caché
-          // por su hash). El motor de React (fiber + postprocessing) va en otro chunk.
-          'three': ['three'],
-          'r3f': ['@react-three/fiber', '@react-three/postprocessing'],
         }
       }
     }

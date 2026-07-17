@@ -8,7 +8,7 @@ import { useNews } from './hooks/useNews';
 import { useTimer } from './hooks/useTimer';
 import { useShifts } from './hooks/useShifts';
 import { useNotifications } from './hooks/useNotifications';
-import { Clock, Calendar as CalendarIcon, PieChart, FileText, Settings, LogOut, WifiOff, Fingerprint, Trophy, X, Newspaper, ShieldCheck, ClipboardList } from 'lucide-react';
+import { Clock, Calendar as CalendarIcon, PieChart, FileText, Settings, LogOut, WifiOff, Fingerprint, X, Newspaper, ShieldCheck, ClipboardList } from 'lucide-react';
 import { getFormattedDate } from './utils/dateUtils';
 import { isAdminUser } from './constants/config';
 import { markFichado } from './services/firebaseService';
@@ -21,7 +21,6 @@ const TrackerView = lazy(() => import('./components/TrackerView').then(m => ({ d
 const CalendarView = lazy(() => import('./components/CalendarView').then(m => ({ default: m.CalendarView })));
 const LicenciasView = lazy(() => import('./components/LicenciasView').then(m => ({ default: m.LicenciasView })));
 const SettingsView = lazy(() => import('./components/SettingsView').then(m => ({ default: m.SettingsView })));
-const ArenaView = lazy(() => import('./components/ArenaView').then(m => ({ default: m.ArenaView })));
 const DelegadoNoticiasView = lazy(() => import('./components/DelegadoNoticiasView').then(m => ({ default: m.DelegadoNoticiasView })));
 const AdminView = lazy(() => import('./components/AdminView').then(m => ({ default: m.AdminView })));
 const CensoView = lazy(() => import('./components/CensoView').then(m => ({ default: m.CensoView })));
@@ -30,11 +29,11 @@ const CensoView = lazy(() => import('./components/CensoView').then(m => ({ defau
  * NavigationBar — Bottom tab bar with React Router integration.
  * Each tab navigates to a route, and the browser back button works correctly.
  *
- * El hueco de "Fichar" es por rol: admin (en Modo Admin) → Competición;
- * delegado (en Modo Delegado) → Usuarios; resto → Fichar. En Modo Admin,
- * "Agenda" pasa a ser el panel "Gestión". Las cuentas PENDIENTES navegan con
- * normalidad (Fichar abierto; Agenda y Permisos se ven, y el aviso de
- * activación salta solo al intentar registrar o abrir un permiso).
+ * El hueco de "Fichar" es por rol: delegado (en Modo Delegado) → Noticias;
+ * resto (incluido el admin) → Fichar. En Modo Admin, "Agenda" pasa a ser el
+ * panel "Gestión". Las cuentas PENDIENTES navegan con normalidad (Fichar
+ * abierto; Agenda y Permisos se ven, y el aviso de activación salta solo al
+ * intentar registrar o abrir un permiso).
  */
 function NavigationBar({ adminMode, delegadoMode }) {
   const navigate = useNavigate();
@@ -43,11 +42,9 @@ function NavigationBar({ adminMode, delegadoMode }) {
 
   const tabs = [
     { path: '/dashboard', icon: <PieChart />, label: 'Resumen' },
-    adminMode
-      ? { path: '/arena', icon: <Trophy />, label: 'Competición' }
-      : delegadoMode
-        ? { path: '/delegados', icon: <Newspaper />, label: 'Noticias' }
-        : { path: '/track', icon: <Clock />, label: 'Fichar' },
+    delegadoMode
+      ? { path: '/delegados', icon: <Newspaper />, label: 'Noticias' }
+      : { path: '/track', icon: <Clock />, label: 'Fichar' },
     adminMode
       ? { path: '/gestion', icon: <ShieldCheck />, label: 'Gestión' }
       : delegadoMode
@@ -94,8 +91,8 @@ function AppContent({ user, authHook }) {
   const { shiftsMap, stats } = useShifts(shifts, user);
 
   const isAdmin = isAdminUser(user);
-  // Modo Admin (interruptor en Ajustes): con él activo, el admin ve Competición,
-  // el panel Gestión y el Resumen solo con noticias. Apagado = app de usuario normal.
+  // Modo Admin (interruptor en Ajustes): con él activo, el admin ve el panel
+  // Gestión y el Resumen solo con noticias. Apagado = app de usuario normal.
   const adminMode = isAdmin && settings?.adminMode !== false;
   const isDelegado = !!delegado;
   // Modo Delegado (interruptor en Ajustes): con él activo, el delegado ve la
@@ -106,7 +103,6 @@ function AppContent({ user, authHook }) {
 
   const [showConfirmLogout, setShowConfirmLogout] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
-  const [gameActive, setGameActive] = useState(false); // true mientras se juega un minijuego (oculta cabecera y barra)
 
   // ── Cartel flotante ──
   // El cartel = la noticia más reciente que lleva imagen. Aparece a pantalla casi
@@ -118,7 +114,7 @@ function AppContent({ user, authHook }) {
   const [manualImg, setManualImg] = useState(null); // imagen ampliada manualmente desde Resumen { url, title }
 
   // El cartel salta solo (una vez por cartel nuevo). Ampliar manualmente desde Resumen tiene prioridad.
-  const autoCartelOpen = !!activeCartel && !gameActive && String(activeCartel.id) !== String(seenCartelId);
+  const autoCartelOpen = !!activeCartel && String(activeCartel.id) !== String(seenCartelId);
   const lightbox = manualImg || (autoCartelOpen ? { url: activeCartel.imageUrl, title: activeCartel.title, isAuto: true } : null);
   const closeLightbox = useCallback(() => {
     if (lightbox?.isAuto && activeCartel?.id != null) {
@@ -183,7 +179,6 @@ function AppContent({ user, authHook }) {
     <div className="h-full bg-slate-50 flex justify-center font-sans overflow-hidden text-slate-800 relative">
       <div className="w-full max-w-md bg-white h-full flex flex-col relative overflow-hidden">
         
-        {!gameActive && (
         <header className="text-white pb-3 px-4 rounded-b-[1.5rem] shrink-0 z-10 relative overflow-hidden" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.6rem)', background: 'linear-gradient(160deg, #10b981 0%, #059669 55%, #047857 100%)', boxShadow: '0 8px 22px rgba(5,120,87,0.35), inset 0 2px 2px rgba(255,255,255,0.3)' }} role="banner">
           <div className="pointer-events-none absolute -top-10 -right-4 w-40 h-40 rounded-full" style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.18), transparent 70%)' }} />
           <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.16), transparent)' }} />
@@ -199,7 +194,6 @@ function AppContent({ user, authHook }) {
             </div>
           )}
         </header>
-        )}
 
         <main className="flex-1 p-4 overflow-y-auto scrollbar-hide flex flex-col min-h-0 relative z-0" role="main">
           {/* Sin key={location.pathname}: antes forzaba desmontar/re-montar Suspense+Routes
@@ -231,9 +225,6 @@ function AppContent({ user, authHook }) {
               <Route path="/settings" element={
                 <SettingsView user={user} settings={settings} saveToCloud={saveToCloud} stopAlarm={stopAlarm} pushToken={pushToken} pushTokenError={pushTokenError} permissionState={permissionState} requestTokenManually={requestTokenManually} isDelegado={isDelegado} />
               } />
-              <Route path="/arena" element={
-                <ArenaView user={user} onPlayingChange={setGameActive} />
-              } />
               <Route path="/delegados" element={
                 isDelegado ? <DelegadoNoticiasView user={user} delegado={delegado} /> : <Navigate to="/dashboard" replace />
               } />
@@ -249,7 +240,7 @@ function AppContent({ user, authHook }) {
           </div>
         </main>
 
-        {!gameActive && <NavigationBar adminMode={adminMode} delegadoMode={delegadoMode} />}
+        <NavigationBar adminMode={adminMode} delegadoMode={delegadoMode} />
 
         {showConfirmLogout && (
           <div className="fixed inset-0 z-[110] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in" role="dialog" aria-modal="true" aria-label="Confirmar cierre de sesión">

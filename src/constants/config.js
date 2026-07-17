@@ -65,7 +65,7 @@ export const COMPANY_RULES = {
 export const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || "";
 
 // Único punto de verdad para "¿este usuario es admin?" (antes repetido en App,
-// ArenaView, DashboardView y SettingsView). Comparación de email sin distinguir
+// DashboardView y SettingsView). Comparación de email sin distinguir
 // mayúsculas. Nota: es solo para la UI; el control real está en reglas y backend.
 export const isAdminUser = (user) =>
   !!(user?.email && ADMIN_EMAIL && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase());

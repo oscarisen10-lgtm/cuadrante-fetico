@@ -126,7 +126,7 @@ service cloud.firestore {
           request.resource.data.days is map;
       }
 
-      // Cuota de uso de la IA / Arena: la escribe SOLO el backend (Admin SDK ignora
+      // Cuota de uso de la IA: la escribe SOLO el backend (Admin SDK ignora
       // reglas). El cliente puede leer su propia cuota; nadie la escribe desde el cliente.
       match /usage/{usageId} {
         allow read: if request.auth != null && request.auth.uid == userId;
@@ -249,13 +249,8 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // ---------- Rankings de la Competición ----------
-    // Cualquier usuario con sesión puede VER los rankings; solo el backend
-    // (función submitArenaScore vía Admin SDK) puede escribir las puntuaciones.
-    match /leaderboards/{document=**} {
-      allow read: if request.auth != null;
-      allow write: if false;
-    }
+    // (La Arena/Competición y sus rankings `leaderboards` se eliminaron del
+    // proyecto el 17-jul-2026; la colección se purgó y la regla se retiró.)
 
     // Por defecto, denegar todo lo demás (el admin conserva acceso de soporte).
     match /{document=**} {

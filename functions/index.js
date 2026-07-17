@@ -6,8 +6,8 @@ admin.initializeApp();
 
 // REGIÓN: europe-west1 (Bélgica), pegada a Firestore (eur3) y a los usuarios (España).
 // Antes todo corría en us-central1: cada llamada cruzaba el Atlántico dos veces y las
-// consultas a Firestore pagaban latencia cross-region (especialmente caras en las
-// transacciones de submitArenaScore y en el recursiveDelete de deleteMyAccount).
+// consultas a Firestore pagaban latencia cross-region (cara en el recursiveDelete de
+// deleteMyAccount, por ejemplo).
 // EXCEPCIÓN: teamStatus se queda en us-central1 (ver su comentario) hasta que las
 // builds nativas antiguas dejen de usarse.
 setGlobalOptions({ region: "europe-west1" });
@@ -426,91 +426,10 @@ ${convenioText}`;
   }
 });
 
-/**
- * submitArenaScore — Guarda la puntuación de un minijuego (modelo "por diversión").
- * - Límite de partidas/día por usuario (el admin está exento, como en la IA).
- * - Tope de cordura en la puntuación (anti-trampa básico; nada de premios reales).
- * - El nombre y la tienda se leen del perfil en el SERVIDOR (el cliente no los puede falsear).
- * - Guarda la MEJOR marca del día y mantiene un agregado por tienda (suma de mejores marcas).
- */
-// Tope de cordura por partida. La marca legítima MÁS ALTA de los 31 minijuegos es 2500
-// (la mayoría se autolimitan a ≤1500 en el cliente). Con 3000 dejamos margen para no
-// rechazar nunca una marca real, pero recortamos a la mitad lo que podría inventar quien
-// llame a la función a mano (antes el tope era 5000). Es "solo por diversión": no hay
-// premios reales, así que este tope de cordura basta como anti-trampa básico.
-const ARENA_MAX_SCORE = 3000;
-const ARENA_DAILY_PLAYS = 3;      // partidas puntuables por usuario y día
+// La Arena/Competición (submitArenaScore + leaderboards) se ELIMINÓ del
+// proyecto el 17-jul-2026 para recortar lecturas/escrituras: la función se
+// borró del despliegue y la colección leaderboards se purgó.
 const ADMIN_EMAIL_FN = "oscargarcia@fetico.es";
-
-exports.submitArenaScore = onCall({ enforceAppCheck: false, maxInstances: 10 }, async (request) => {
-  if (!request.auth || !request.auth.uid) {
-    throw new HttpsError("unauthenticated", "Debes iniciar sesión para competir.");
-  }
-  const uid = request.auth.uid;
-
-  let { gameId, score } = request.data || {};
-  if (typeof gameId !== "string" || gameId.length === 0 || gameId.length > 30) {
-    throw new HttpsError("invalid-argument", "Juego no válido.");
-  }
-  // Tope de cordura: entero entre 0 y ARENA_MAX_SCORE.
-  score = Math.max(0, Math.min(ARENA_MAX_SCORE, Math.floor(Number(score) || 0)));
-
-  const db = admin.firestore();
-  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-  const isAdmin = request.auth.token && (request.auth.token.admin === true || request.auth.token.email === ADMIN_EMAIL_FN);
-
-  // Perfil (servidor): nombre y tienda reales, no manipulables por el cliente.
-  const userSnap = await db.collection("users").doc(uid).get();
-  const profile = (userSnap.exists && userSnap.data().profile) || {};
-  const name = profile.fullName || "Compañero/a";
-  const company = profile.company || "—";
-  const store = profile.store || "—";
-  const storeKey = `${company}__${store}`;
-
-  const usageRef = db.collection("users").doc(uid).collection("usage").doc(`arena_${today}`);
-  const playerRef = db.collection("leaderboards").doc(today).collection("players").doc(uid);
-  const storeRef = db.collection("leaderboards").doc(today).collection("stores").doc(storeKey);
-
-  const result = await db.runTransaction(async (tx) => {
-    const usageDoc = await tx.get(usageRef);
-    const playerDoc = await tx.get(playerRef);
-    const storeDoc = await tx.get(storeRef);
-
-    const used = usageDoc.exists ? (usageDoc.data().count || 0) : 0;
-    if (!isAdmin && used >= ARENA_DAILY_PLAYS) {
-      return { allowed: false };
-    }
-
-    const oldBest = playerDoc.exists ? (playerDoc.data().score || 0) : 0;
-    const newBest = Math.max(oldBest, score);
-
-    tx.set(playerRef, {
-      uid, name, company, store, storeKey, gameId,
-      score: newBest, date: today,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    }, { merge: true });
-
-    const delta = newBest - oldBest;
-    if (delta > 0) {
-      const prevTotal = storeDoc.exists ? (storeDoc.data().total || 0) : 0;
-      tx.set(storeRef, { company, store, storeKey, date: today, total: prevTotal + delta }, { merge: true });
-    }
-
-    if (!isAdmin) tx.set(usageRef, { count: used + 1 }, { merge: true });
-
-    return {
-      allowed: true,
-      best: newBest,
-      improved: delta > 0,
-      attemptsLeft: isAdmin ? 999 : Math.max(0, ARENA_DAILY_PLAYS - (used + 1)),
-    };
-  });
-
-  if (!result.allowed) {
-    throw new HttpsError("resource-exhausted", "Has agotado tus partidas de hoy. ¡Vuelve mañana!");
-  }
-  return { success: true, ...result };
-});
 
 /**
  * adminStats — Recuentos agregados para el panel de administración (SOLO admin).
@@ -968,15 +887,11 @@ exports.deleteMyAccount = onCall({ maxInstances: 5 }, async (request) => {
       await batch.commit();
     }
 
-    // 3) Sus entradas en los rankings (llevan su NOMBRE → RGPD). listDocuments()
-    // devuelve también los padres "virtuales" leaderboards/{fecha}; borrar un doc
-    // inexistente es un no-op, así que se recorre sin comprobar existencia.
-    const dayRefs = await db.collection("leaderboards").listDocuments();
-    for (let i = 0; i < dayRefs.length; i += 400) {
+    // 3) Sus noticias de delegado, si las tuviera (llevan su nombre → RGPD).
+    const newsSnap = await db.collection("noticiasTienda").where("authorUid", "==", uid).get();
+    for (let i = 0; i < newsSnap.docs.length; i += 400) {
       const batch = db.batch();
-      dayRefs.slice(i, i + 400).forEach((day) => {
-        batch.delete(day.collection("players").doc(uid));
-      });
+      newsSnap.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
       await batch.commit();
     }
 
@@ -1063,33 +978,17 @@ exports.teamStatus = onCall({ region: "us-central1", maxInstances: 10 }, async (
 
 /**
  * dailyCleanup — Limpieza programada (optimización de almacenamiento F-4).
- * Borra rankings y caché de IA con más de 30 días para que esas colecciones no
- * crezcan indefinidamente. Se ejecuta de madrugada (hora de Madrid).
+ * Borra la caché de IA con más de 30 días para que no crezca indefinidamente.
+ * Se ejecuta de madrugada (hora de Madrid). (La limpieza de leaderboards se
+ * retiró junto con la Arena: la colección se purgó y ya nadie escribe en ella.)
  */
 exports.dailyCleanup = onSchedule(
   { schedule: "every day 04:30", timeZone: "Europe/Madrid", maxInstances: 1 },
   async () => {
     const db = admin.firestore();
-    const cutoffMs = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    const cutoffDate = new Date(cutoffMs);
-    const cutoffStr = cutoffDate.toISOString().split("T")[0]; // YYYY-MM-DD
+    const cutoffDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    // 1) leaderboards/{YYYY-MM-DD} (con subcolecciones) más antiguos que el corte.
-    // ⚠️ IMPORTANTE: hay que usar listDocuments(), NO .get(). submitArenaScore escribe
-    // en leaderboards/{fecha}/players/... sin crear nunca el doc padre {fecha}, así que
-    // esos padres son "virtuales" y una query .get() los devuelve VACÍOS → la versión
-    // anterior de esta limpieza no borraba NADA (bug silencioso). listDocuments() sí
-    // devuelve las referencias de los padres virtuales.
-    let removedLb = 0;
-    const dayRefs = await db.collection("leaderboards").listDocuments();
-    for (const ref of dayRefs) {
-      if (ref.id < cutoffStr) {
-        await db.recursiveDelete(ref);
-        removedLb += 1;
-      }
-    }
-
-    // 2) ai_cache con timestamp anterior al corte (en lotes de 400).
+    // ai_cache con timestamp anterior al corte (en lotes de 400).
     let removedCache = 0;
     while (true) {
       const old = await db.collection("ai_cache")
@@ -1104,7 +1003,7 @@ exports.dailyCleanup = onSchedule(
       if (old.size < 400) break;
     }
 
-    console.log(`Limpieza: ${removedLb} rankings y ${removedCache} cachés de IA eliminados.`);
+    console.log(`Limpieza: ${removedCache} cachés de IA eliminados.`);
     return null;
   }
 );

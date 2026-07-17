@@ -198,7 +198,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
           <div className="flex justify-between items-center bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
             <div className="flex flex-col">
                 <span className="text-xs font-bold text-white uppercase leading-none">Vibración</span>
-                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Vibración al pulsar y en los juegos</span>
+                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Vibración al pulsar botones</span>
             </div>
             <button onClick={() => {
                 const v = !haptics;
@@ -270,15 +270,15 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
           {isAdmin && (
             <>
               {/* Interruptor Modo Admin ↔ Modo Usuario. Con el modo admin activo:
-                  Resumen solo noticias, hueco de Fichar → Competición y Agenda →
-                  panel Gestión. Apagado, el admin ve la app como un usuario normal. */}
+                  Resumen solo noticias y Agenda → panel Gestión. Apagado, el
+                  admin ve la app como un usuario normal. */}
               <div className="flex justify-between items-center bg-indigo-500/10 p-4 rounded-2xl border border-indigo-500/25 mt-2">
                 <div className="flex flex-col">
                   <span className="text-xs font-bold text-indigo-300 uppercase leading-none flex items-center gap-1.5">
                     <ShieldCheck size={14} className="text-indigo-400"/> Modo Admin
                   </span>
                   <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">
-                    {settings?.adminMode !== false ? 'Gestión, competición y noticias' : 'Viendo la app como usuario normal'}
+                    {settings?.adminMode !== false ? 'Gestión y noticias' : 'Viendo la app como usuario normal'}
                   </span>
                 </div>
                 <button
