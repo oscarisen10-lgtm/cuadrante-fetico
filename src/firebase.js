@@ -54,14 +54,81 @@ if (isNative) {
 export { auth };
 
 // Firestore — caché según plataforma:
-// - iOS (WKWebView): SOLO memoria. persistentLocalCache puede colgar el arranque aquí.
+// - iOS (WKWebView): se INTENTA la caché persistente (igual que Android) con una
+//   red de seguridad, porque históricamente IndexedDB + Firestore colgaba el
+//   arranque en WKWebView (por eso antes iOS iba solo en memoria, pagando ~50
+//   lecturas por CADA apertura). Los SDK modernos lo han ido arreglando; si en
+//   este dispositivo volviera a colgarse, el mecanismo de abajo lo detecta,
+//   desactiva la persistencia PARA SIEMPRE en ese dispositivo y recarga.
 // - Android (WebView Chromium): caché PERSISTENTE en disco → en reaperturas sirve los
-//   datos desde el móvil sin gastar lecturas de Firestore (Android no sufre el cuelgue de iOS).
+//   datos desde el móvil sin gastar lecturas de Firestore.
 // - Web/escritorio: caché persistente multipestaña + transporte por defecto.
+
+// ── Red de seguridad de la caché persistente en iOS ──────────────────────────
+// 1. Marcador de arranque: se pone ANTES de iniciar Firestore y se quita cuando
+//    llega la primera respuesta (markFirestoreAlive, lo llama useAuth). Si la app
+//    se abre y el marcador de la vez anterior sigue puesto, aquel arranque murió
+//    a medias: se suma un strike. Con 2 strikes seguidos (tolera un cierre
+//    forzado inocente), la persistencia queda desactivada en este dispositivo.
+// 2. Watchdog en vivo: si a los 20s la primera respuesta no ha llegado (el
+//    cuelgue clásico deja promesas colgadas, no bloquea el hilo), se desactiva
+//    la persistencia y se recarga la app sola — el usuario ve un reinicio, no
+//    una pantalla congelada.
+const IOS_CACHE_DISABLED_KEY = 'iosPersistentCacheDisabled';
+const IOS_BOOT_PENDING_KEY = 'iosCacheBootPending';
+const IOS_BOOT_STRIKES_KEY = 'iosCacheBootStrikes';
+
+const iosPersistentAllowed = (() => {
+  if (platform !== 'ios') return false;
+  try {
+    if (localStorage.getItem(IOS_CACHE_DISABLED_KEY) === '1') return false;
+    if (localStorage.getItem(IOS_BOOT_PENDING_KEY) === '1') {
+      // El arranque anterior nunca llegó a completarse.
+      const strikes = (Number(localStorage.getItem(IOS_BOOT_STRIKES_KEY)) || 0) + 1;
+      localStorage.setItem(IOS_BOOT_STRIKES_KEY, String(strikes));
+      if (strikes >= 2) {
+        localStorage.setItem(IOS_CACHE_DISABLED_KEY, '1');
+        return false;
+      }
+    }
+    localStorage.setItem(IOS_BOOT_PENDING_KEY, '1');
+    return true;
+  } catch {
+    return false; // sin localStorage no hay red de seguridad → modo memoria
+  }
+})();
+
+/** La llama useAuth cuando Firestore responde por primera vez (o no hace falta). */
+export const markFirestoreAlive = () => {
+  if (platform !== 'ios') return;
+  try {
+    localStorage.removeItem(IOS_BOOT_PENDING_KEY);
+    localStorage.removeItem(IOS_BOOT_STRIKES_KEY);
+  } catch { /* sin almacenamiento */ }
+};
+
+/** Para el panel de diagnóstico de Ajustes (admin): qué caché está activa. */
+export const firestoreCacheMode =
+  platform === 'ios'
+    ? (iosPersistentAllowed ? 'persistente (iOS, en prueba)' : 'memoria (persistencia desactivada)')
+    : 'persistente';
+
+if (platform === 'ios' && iosPersistentAllowed) {
+  setTimeout(() => {
+    try {
+      if (localStorage.getItem(IOS_BOOT_PENDING_KEY) === '1') {
+        console.warn('[Firestore iOS] Sin respuesta en 20s con caché persistente: se desactiva y se recarga.');
+        localStorage.setItem(IOS_CACHE_DISABLED_KEY, '1');
+        window.location.reload();
+      }
+    } catch { /* sin almacenamiento */ }
+  }, 20000);
+}
+
 export const db = (() => {
   if (platform === 'ios') {
     return initializeFirestore(app, {
-      localCache: memoryLocalCache(),
+      localCache: iosPersistentAllowed ? persistentLocalCache() : memoryLocalCache(),
       experimentalForceLongPolling: true,
     });
   }

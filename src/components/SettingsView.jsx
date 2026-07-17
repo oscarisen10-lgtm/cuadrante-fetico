@@ -3,6 +3,7 @@ import { User, Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fing
 import { COMPANY_RULES, isAdminUser } from '../constants/config';
 import { STORES, S_ROMERO_STORES } from '../constants/stores';
 import { deleteUserAccount, checkRankAvailability, fetchAdminStats } from '../services/firebaseService';
+import { firestoreCacheMode } from '../firebase';
 import { toast } from './Toast';
 import { setHapticsEnabled, isHapticsEnabled, hapticLight } from '../utils/haptics';
 
@@ -299,6 +300,12 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                     <div className="flex justify-between items-center bg-white/5 p-2.5 rounded-xl">
                        <span className="text-[9px] text-white/50 uppercase font-bold">Permiso:</span>
                        <span className="text-[9px] text-emerald-400 font-black uppercase">{permissionState}</span>
+                    </div>
+                    {/* Diagnóstico de la prueba de caché persistente en iOS (TestFlight):
+                        "persistente" = la optimización está activa en este dispositivo. */}
+                    <div className="flex justify-between items-center bg-white/5 p-2.5 rounded-xl">
+                       <span className="text-[9px] text-white/50 uppercase font-bold">Caché Firestore:</span>
+                       <span className="text-[9px] text-emerald-400 font-black uppercase">{firestoreCacheMode}</span>
                     </div>
                     <div className="flex flex-col bg-white/5 p-2.5 rounded-xl gap-1">
                        <span className="text-[9px] text-white/50 uppercase font-bold">Token FCM:</span>

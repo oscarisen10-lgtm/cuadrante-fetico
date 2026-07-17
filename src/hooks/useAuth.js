@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { markFirestoreAlive } from '../firebase';
 import {
   subscribeToAuth,
   subscribeToUserDoc,
@@ -88,6 +89,9 @@ export const useAuth = () => {
           snapshotFired = true;
           clearTimeout(safetyTimeout);
           clearTimeout(docTimeout);
+          // Firestore ha respondido: desarma la red de seguridad de la caché
+          // persistente de iOS (ver firebase.js).
+          markFirestoreAlive();
           if (docSnap.exists()) {
             const data = docSnap.data();
             // Analítica (admin): registrar plataforma + versión SOLO si cambió respecto a lo
@@ -138,6 +142,9 @@ export const useAuth = () => {
           snapshotFired = true;
           clearTimeout(safetyTimeout);
           clearTimeout(docTimeout);
+          // Un error también es una RESPUESTA: Firestore está vivo (el cuelgue
+          // de WKWebView se caracteriza por no responder nada en absoluto).
+          markFirestoreAlive();
           console.error("Error al cargar perfil de usuario:", error);
           toast("Error al cargar datos: " + error.message, "error");
           setLoading(false);
@@ -163,6 +170,9 @@ export const useAuth = () => {
 
       } else {
         clearTimeout(safetyTimeout);
+        // Sin sesión no se usa Firestore: no dejes armado el marcador de arranque
+        // (evita un falso positivo que desactivaría la caché sin motivo).
+        markFirestoreAlive();
         if (unsubUserDoc) { unsubUserDoc(); unsubUserDoc = null; }
         if (unsubShifts) { unsubShifts(); unsubShifts = null; }
         if (unsubDelegado) { unsubDelegado(); unsubDelegado = null; }
