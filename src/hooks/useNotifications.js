@@ -97,8 +97,9 @@ export const useNotifications = (user) => {
       });
 
       PushNotifications.addListener('registration', async (token) => {
+        let fcmToken = null;
         try {
-          let fcmToken = token.value;
+          fcmToken = token.value;
           if (Capacitor.getPlatform() === 'ios') {
             // En iOS `token.value` es el token APNs (hex), NO el token FCM. Convertimos.
             fcmToken = await getFcmTokenWithRetry();
@@ -112,15 +113,24 @@ export const useNotifications = (user) => {
           console.error("Error al obtener token FCM en iOS:", err);
           setTokenError(err?.message || 'No se pudo obtener el token FCM');
           if (Capacitor.getPlatform() !== 'ios') {
-            setToken(token.value);
-            updateDoc(doc(db, 'users', user.uid), { 'profile.fcmToken': token.value }).catch(()=>{});
+            fcmToken = token.value;
+            setToken(fcmToken);
+            updateDoc(doc(db, 'users', user.uid), { 'profile.fcmToken': fcmToken }).catch(()=>{});
+          } else {
+            fcmToken = null;
           }
         }
-        // Suscripción al topic de noticias (nativo): la hace el plugin FCM en el
-        // dispositivo, sin backend. Va FUERA del try del token: aunque la conversión
-        // a token FCM fallara, la suscripción al topic puede funcionar igualmente.
+        // Suscripción al topic de noticias por DOS vías (cinturón y tirantes):
+        // 1) El plugin FCM en el dispositivo. En iOS se observó que puede fallar
+        //    en silencio (push directo al token OK pero el del topic no llegaba).
         FCM.subscribeTo({ topic: NEWS_TOPIC })
-          .catch((e) => console.warn('No se pudo suscribir al topic de noticias:', e?.message));
+          .catch((e) => console.warn('No se pudo suscribir al topic (plugin):', e?.message));
+        // 2) El backend (subscribeToNewsTopic, Admin SDK): fiable e idempotente.
+        //    Es la misma vía que ya usaba la web; ahora también nativo.
+        if (fcmToken) {
+          subscribeTokenToNewsTopic(fcmToken)
+            .catch((e) => console.warn('No se pudo suscribir al topic (backend):', e?.message));
+        }
       });
 
       PushNotifications.addListener('registrationError', (err) => {
