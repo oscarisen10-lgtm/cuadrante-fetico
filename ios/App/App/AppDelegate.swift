@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import UserNotifications
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -41,7 +42,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
-        // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
+        // Al abrir/volver a la app, limpiar el badge del icono. El push lleva badge:1,
+        // pero iOS NO lo quita solo al leer/descartar la notificación ni al abrir la app:
+        // hay que ponerlo a 0 explícitamente, o el "1" se queda anclado en el icono.
+        if #available(iOS 16.0, *) {
+            UNUserNotificationCenter.current().setBadgeCount(0)
+        } else {
+            application.applicationIconBadgeNumber = 0
+        }
     }
 
     func applicationWillTerminate(_ application: UIApplication) {
