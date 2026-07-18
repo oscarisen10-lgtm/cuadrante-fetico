@@ -214,6 +214,94 @@ exports.sendStoreNews = onDocumentCreated({ document: "noticiasTienda/{docId}", 
   return null;
 });
 
+/**
+ * notifyDelegadoNewUser — Al CREARSE una cuenta nueva PENDIENTE de activar, avisa por push
+ * al/los delegado(s) de la tienda del nuevo usuario Y al admin (siempre), para que la
+ * activen desde la app. Así ninguna cuenta pendiente se queda sin que nadie la active.
+ * Solo dispara si:
+ *   - membership.active === false (cuenta nueva pendiente), y
+ *   - hay una tienda concreta (las auto-reparaciones nacen "Centro sin definir" y se ignoran).
+ * Coste: 1 query a delegados + 1 query de sus tokens + 1 envío. Los registros son escasos.
+ */
+exports.notifyDelegadoNewUser = onDocumentCreated({ document: "users/{uid}", maxInstances: 5 }, async (event) => {
+  const data = event.data && event.data.data();
+  if (!data) return null;
+
+  // Solo cuentas nuevas pendientes de activar.
+  if (!data.membership || data.membership.active !== false) return null;
+
+  const profile = data.profile || {};
+  const store = profile.store;
+  // Sin tienda concreta no hay delegado a quien avisar.
+  if (!store || store === "Centro sin definir") return null;
+
+  const db = admin.firestore();
+  const tokens = new Set(); // Set: dedup por si el admin es además delegado de la tienda.
+
+  // Delegados ACTIVOS cuya lista de tiendas incluye la del nuevo usuario.
+  const delegadosSnap = await db.collection("delegados")
+    .where("stores", "array-contains", store)
+    .get();
+  const delegadoUids = delegadosSnap.docs
+    .filter((d) => d.data().active !== false)
+    .map((d) => d.id);
+
+  // Tokens FCM de esos delegados (users/{uid}.profile.fcmToken; "in" admite 30).
+  for (let i = 0; i < delegadoUids.length; i += 30) {
+    const snap = await db.collection("users")
+      .where(admin.firestore.FieldPath.documentId(), "in", delegadoUids.slice(i, i + 30))
+      .select("profile.fcmToken")
+      .get();
+    snap.forEach((d) => {
+      const t = d.data().profile && d.data().profile.fcmToken;
+      if (t) tokens.add(t);
+    });
+  }
+
+  // Avisar TAMBIÉN al admin (siempre, por su email fijo), tenga la tienda delegado o no.
+  const adminSnap = await db.collection("users")
+    .where("profile.email", "==", ADMIN_EMAIL_FN)
+    .select("profile.fcmToken")
+    .limit(1)
+    .get();
+  adminSnap.forEach((d) => {
+    const t = d.data().profile && d.data().profile.fcmToken;
+    if (t) tokens.add(t);
+  });
+
+  if (tokens.size === 0) return null;
+
+  const nombre = profile.fullName || "Un compañero/a";
+  const title = "Nueva cuenta por activar";
+  const body = `${nombre} se ha registrado en ${store}. Ábrela para activar su cuenta.`;
+  const base = {
+    notification: { title, body },
+    webpush: {
+      notification: {
+        icon: "https://mi-calendario-fe.web.app/img/push-icon-192.png",
+        badge: "https://mi-calendario-fe.web.app/img/push-badge-96.png",
+      },
+      fcmOptions: { link: "https://mi-calendario-fe.web.app" },
+    },
+    android: {
+      priority: "high",
+      notification: { channelId: "default", icon: "ic_launcher", color: "#059669", sound: "default" },
+    },
+    apns: {
+      headers: { "apns-priority": "10", "apns-push-type": "alert" },
+      payload: { aps: { alert: { title, body }, sound: "default", badge: 1 } },
+    },
+  };
+
+  try {
+    const res = await admin.messaging().sendEachForMulticast({ ...base, tokens: [...tokens] });
+    console.log(`notifyDelegadoNewUser → ${store}: ${res.successCount} avisados, ${res.failureCount} fallos.`);
+  } catch (e) {
+    console.error("notifyDelegadoNewUser error:", e);
+  }
+  return null;
+});
+
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret, defineString } = require("firebase-functions/params");
 const { GoogleGenAI } = require("@google/genai");
