@@ -64,12 +64,12 @@ workflows:
           # 3.3.0 ya se entregó; esta actualización (turnos mensuales ~30× menos
           # lecturas, compresión de imágenes, logo en cargas, cuentas pendientes
           # con Fichar abierto) sube a 3.4.0.
-          NEW_VERSION=3.4.0
+          NEW_VERSION=3.4.1
           sed -i '' "s/MARKETING_VERSION = [^;]*;/MARKETING_VERSION = $NEW_VERSION;/g" "$XCODE_PROJECT/project.pbxproj"
           echo "Marketing version -> $NEW_VERSION"
           grep -m2 "MARKETING_VERSION" "$XCODE_PROJECT/project.pbxproj"
           # Build number interno (incrementa en cada subida a App Store Connect)
-          NEW_BUILD=169
+          NEW_BUILD=170
           echo "Build number -> $NEW_BUILD"
           cd ios/App
           agvtool new-version -all "$NEW_BUILD"
