@@ -61,9 +61,9 @@ workflows:
       - name: Set marketing version and build number
         script: |
           # Cada entrega al App Store necesita una marketing version nueva.
-          # 3.3.0 ya se entregó; esta actualización (turnos mensuales ~30× menos
-          # lecturas, compresión de imágenes, logo en cargas, cuentas pendientes
-          # con Fichar abierto) sube a 3.4.0.
+          # 3.4.1 (build 170) ya se entregó; esta actualización (activación de la
+          # empresa ECI con sus 13 tiendas + corrección de los festivos locales
+          # 2026 de la Comunidad) sube a 3.4.2.
           NEW_VERSION=3.4.2
           sed -i '' "s/MARKETING_VERSION = [^;]*;/MARKETING_VERSION = $NEW_VERSION;/g" "$XCODE_PROJECT/project.pbxproj"
           echo "Marketing version -> $NEW_VERSION"

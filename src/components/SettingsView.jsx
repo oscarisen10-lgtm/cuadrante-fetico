@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User, Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, BarChart3, ShieldCheck, Users } from 'lucide-react';
 import { COMPANY_RULES, isAdminUser } from '../constants/config';
-import { STORES, S_ROMERO_STORES } from '../constants/stores';
+import { STORES, S_ROMERO_STORES, ECI_STORES } from '../constants/stores';
 import { deleteUserAccount, checkRankAvailability, fetchAdminStats } from '../services/firebaseService';
 import { firestoreCacheMode } from '../firebase';
 import { toast } from './Toast';
@@ -72,8 +72,10 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
   let filteredStores = STORES;
   if (currentCompany === "S. Romero") {
     filteredStores = STORES.filter(s => S_ROMERO_STORES.includes(s.name));
+  } else if (currentCompany === "ECI") {
+    filteredStores = STORES.filter(s => ECI_STORES.includes(s.name));
   } else if (currentCompany === "Supercor" || currentCompany === "S. Express") {
-    filteredStores = STORES.filter(s => !S_ROMERO_STORES.includes(s.name));
+    filteredStores = STORES.filter(s => !S_ROMERO_STORES.includes(s.name) && !ECI_STORES.includes(s.name));
   }
   const sortedStores = [...filteredStores].sort((a, b) => a.name.localeCompare(b.name));
 
@@ -96,8 +98,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                     onChange={(e) => {
                       const newCompany = e.target.value;
                       const firstRank = Object.keys(COMPANY_RULES[newCompany] || {})[0];
-                      const newStore = newCompany === "ECI" ? "En construcción" : "";
-                      handleProfileChange({ company: newCompany, rank: firstRank, store: newStore });
+                      handleProfileChange({ company: newCompany, rank: firstRank, store: "" });
                     }}
                     className="w-full bg-white/10 border border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] p-2 rounded-xl text-xs outline-none text-white appearance-none"
                   >
@@ -126,16 +127,10 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                       onChange={(e) => handleProfileChange({ store: e.target.value })}
                       className="w-full bg-white/10 border border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] p-2.5 pr-8 rounded-xl text-xs outline-none text-white appearance-none font-medium"
                     >
-                      {currentCompany === "ECI" ? (
-                        <option value="En construcción" className="text-slate-800">En construcción</option>
-                      ) : (
-                        <>
-                          <option value="" disabled className="text-slate-800">Selecciona tu tienda...</option>
-                          {sortedStores.map(s => (
-                            <option key={s.name} value={s.name} className="text-slate-800">{s.name}</option>
-                          ))}
-                        </>
-                      )}
+                      <option value="" disabled className="text-slate-800">Selecciona tu tienda...</option>
+                      {sortedStores.map(s => (
+                        <option key={s.name} value={s.name} className="text-slate-800">{s.name}</option>
+                      ))}
                     </select>
                     <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-white/30">
                       <ChevronDown size={14} />

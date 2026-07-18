@@ -3,7 +3,7 @@ import { User, Lock, Mail, Store, ShieldCheck, KeyRound, X, ChevronDown, Phone }
 import { loginUser, registerUser, resetPassword } from '../services/firebaseService';
 import { InputGroup } from './UIComponents';
 import { COMPANY_RULES } from '../constants/config';
-import { STORES, S_ROMERO_STORES } from '../constants/stores';
+import { STORES, S_ROMERO_STORES, ECI_STORES } from '../constants/stores';
 import appLogo from '../../icons/icon-192.webp';
 
 // ⚠️ MODO TESTERS: Cambiar a `true` para reactivar el registro público
@@ -56,8 +56,10 @@ export default function AuthView() {
     let filteredStores = STORES;
     if (formCompany === "S. Romero") {
       filteredStores = STORES.filter(s => S_ROMERO_STORES.includes(s.name));
+    } else if (formCompany === "ECI") {
+      filteredStores = STORES.filter(s => ECI_STORES.includes(s.name));
     } else if (formCompany === "Supercor" || formCompany === "S. Express") {
-      filteredStores = STORES.filter(s => !S_ROMERO_STORES.includes(s.name));
+      filteredStores = STORES.filter(s => !S_ROMERO_STORES.includes(s.name) && !ECI_STORES.includes(s.name));
     }
     return [...filteredStores].sort((a, b) => a.name.localeCompare(b.name));
   }, [formCompany]);
@@ -164,28 +166,17 @@ export default function AuthView() {
                       <Store size={10}/> Centro / Tienda
                     </label>
                     <div className="relative">
-                      {formCompany === "ECI" ? (
-                        <select 
-                          name="store" 
-                          className="w-full bg-slate-50 border-none p-1.5 pr-8 rounded-lg text-sm outline-none ring-1 ring-slate-200 appearance-none font-medium"
-                          defaultValue="En construcción"
-                          required
-                        >
-                          <option value="En construcción">En construcción</option>
-                        </select>
-                      ) : (
-                        <select 
-                          name="store" 
-                          className="w-full bg-slate-50 border-none p-1.5 pr-8 rounded-lg text-sm outline-none ring-1 ring-slate-200 appearance-none font-medium"
-                          defaultValue=""
-                          required
-                        >
-                          <option value="" disabled>Selecciona tu tienda...</option>
-                          {sortedStores.map(s => (
-                            <option key={s.name} value={s.name}>{s.name}</option>
-                          ))}
-                        </select>
-                      )}
+                      <select
+                        name="store"
+                        className="w-full bg-slate-50 border-none p-1.5 pr-8 rounded-lg text-sm outline-none ring-1 ring-slate-200 appearance-none font-medium"
+                        defaultValue=""
+                        required
+                      >
+                        <option value="" disabled>Selecciona tu tienda...</option>
+                        {sortedStores.map(s => (
+                          <option key={s.name} value={s.name}>{s.name}</option>
+                        ))}
+                      </select>
                       <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                         <ChevronDown size={14} />
                       </div>

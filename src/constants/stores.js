@@ -61,7 +61,42 @@ export const STORES = [
   { name: "BARQUILLO", city: "Madrid" },
   { name: "ODONNEL", city: "Madrid" },
   { name: "DIEGO DE LEON", city: "Madrid" },
-  { name: "BOADILLA", city: "Boadilla del Monte" }
+  { name: "BOADILLA", city: "Boadilla del Monte" },
+
+  // El Corte Inglés (ECI). Centros de Madrid capital y municipios de la Comunidad.
+  // Su `city` alimenta los festivos municipales (ver MUNICIPAL_HOLIDAYS).
+  { name: "El Corte Inglés Preciados - Callao", city: "Madrid" },
+  { name: "El Corte Inglés Castellana", city: "Madrid" },
+  { name: "El Corte Inglés Goya", city: "Madrid" },
+  { name: "El Corte Inglés Princesa", city: "Madrid" },
+  { name: "El Corte Inglés Serrano", city: "Madrid" },
+  { name: "El Corte Inglés Sanchinarro", city: "Madrid" },
+  { name: "El Corte Inglés Campo de Las Naciones", city: "Madrid" },
+  { name: "El Corte Inglés Vista Alegre", city: "Madrid" },
+  { name: "El Corte Inglés Pozuelo", city: "Pozuelo de Alarcón" },
+  { name: "El Corte Inglés San José de Valderas", city: "Alcorcón" },
+  { name: "El Corte Inglés El Bercial", city: "Getafe" },
+  { name: "El Corte Inglés Madrid Xanadú", city: "Arroyomolinos" },
+  { name: "El Corte Inglés Alcalá de Henares", city: "Alcalá de Henares" }
+];
+
+// Centros que pertenecen a El Corte Inglés (ECI). Igual que S_ROMERO_STORES,
+// es una lista de nombres para filtrar STORES por empresa en el registro,
+// en Ajustes y en el panel de administración.
+export const ECI_STORES = [
+  "El Corte Inglés Preciados - Callao",
+  "El Corte Inglés Castellana",
+  "El Corte Inglés Goya",
+  "El Corte Inglés Princesa",
+  "El Corte Inglés Serrano",
+  "El Corte Inglés Sanchinarro",
+  "El Corte Inglés Campo de Las Naciones",
+  "El Corte Inglés Vista Alegre",
+  "El Corte Inglés Pozuelo",
+  "El Corte Inglés San José de Valderas",
+  "El Corte Inglés El Bercial",
+  "El Corte Inglés Madrid Xanadú",
+  "El Corte Inglés Alcalá de Henares"
 ];
 
 export const S_ROMERO_STORES = [
@@ -76,22 +111,30 @@ export const S_ROMERO_STORES = [
   "ZIELO"
 ];
 
+// Fiestas laborales de ámbito local. Fechas en formato MM-DD referidas al año en
+// curso (2026, BOCM 12-dic-2025). OJO: las de base religiosa se mueven con la
+// Semana Santa, así que hay que revisarlas cada año (p. ej. Lunes de Pascua,
+// Ascensión, Corpus).
 export const MUNICIPAL_HOLIDAYS = {
+  "Alcalá de Henares": { "08-06": "Santos Niños", "10-09": "Fiesta local" }, // ECI Alcalá de Henares (fijas)
   "Alcobendas": { "01-24": "Ntra. Sra. de la Paz", "05-15": "San Isidro" },
-  "Boadilla del Monte": { "05-26": "San Babilés", "10-06": "Ntra. Sra. del Rosario" },
-  "Collado Villalba": { "06-13": "San Antonio de Padua", "07-24": "Santiago Apóstol" },
-  "Colmenar Viejo": { "09-01": "Virgen de los Remedios (I)", "09-02": "Virgen de los Remedios (II)" },
-  "Galapagar": { "05-15": "San Isidro", "09-15": "Stmo. Cristo de las Mercedes" },
-  "Guadarrama": { "09-29": "San Miguel", "10-04": "San Francisco de Asís" },
-  "Las Rozas de Madrid": { "05-05": "Ntra. Sra. del Retamar", "09-29": "San Miguel Arcángel" },
+  "Alcorcón": { "04-06": "Lunes de Pascua", "09-08": "Fiesta local" }, // ECI San José de Valderas
+  "Arroyomolinos": { "06-04": "Corpus Christi", "06-05": "Fiesta local" }, // ECI Madrid Xanadú
+  "Boadilla del Monte": { "06-01": "San Babilés", "10-05": "Ntra. Sra. del Rosario" },
+  "Collado Villalba": { "06-12": "San Antonio de Padua", "07-24": "Santiago Apóstol" },
+  "Colmenar Viejo": { "08-31": "Virgen de los Remedios (I)", "09-01": "Virgen de los Remedios (II)" },
+  "Galapagar": { "05-15": "San Isidro", "09-14": "Stmo. Cristo de las Mercedes" },
+  "Getafe": { "05-14": "Ascensión", "05-25": "Lunes de Pentecostés" }, // ECI El Bercial
+  "Guadarrama": { "09-29": "San Miguel", "10-05": "San Francisco de Asís" },
+  "Las Rozas de Madrid": { "05-04": "Ntra. Sra. del Retamar", "09-29": "San Miguel Arcángel" },
   "Madrid": { "05-15": "San Isidro", "11-09": "Ntra. Sra. de la Almudena" },
   "Majadahonda": { "09-14": "Stmo. Cristo de los Remedios", "11-25": "Santa Catalina" },
   "Pinto": { "03-19": "San José", "05-15": "San Isidro" },
-  "Pozuelo de Alarcón": { "07-16": "Virgen del Carmen", "09-08": "Ntra. Sra. de la Consolación" },
-  "Rivas-Vaciamadrid": { "05-15": "San Isidro", "05-16": "Fiestas Locales" },
+  "Pozuelo de Alarcón": { "07-16": "Virgen del Carmen", "09-07": "Ntra. Sra. de la Consolación" },
+  "Rivas-Vaciamadrid": { "05-14": "Fiestas Locales", "05-15": "San Isidro" },
   "San Sebastián de los Reyes": { "01-20": "San Sebastián", "08-28": "Stmo. Cristo de los Remedios" },
   "Torrelodones": { "07-16": "Virgen del Carmen", "08-14": "Asunción de la Virgen (Local)" },
   "Tres Cantos": { "03-21": "Aniversario de la Ciudad", "06-24": "San Juan" },
-  "Villanueva de la Cañada": { "05-15": "San Isidro", "07-28": "San Ignacio de Loyola" },
-  "Villaviciosa de Odón": { "01-20": "San Sebastián", "09-22": "Stmo. Cristo del Milagro" }
+  "Villanueva de la Cañada": { "05-15": "San Isidro", "07-24": "San Ignacio de Loyola" },
+  "Villaviciosa de Odón": { "01-20": "San Sebastián", "09-21": "Stmo. Cristo del Milagro" }
 };

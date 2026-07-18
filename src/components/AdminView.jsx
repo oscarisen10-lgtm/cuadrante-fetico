@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ShieldCheck, Users, Bell, UserCheck, UserX, Plus, Trash2, RefreshCw, X, Mail, Store as StoreIcon, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
 import { fetchAdminOverview, saveDelegado } from '../services/firebaseService';
-import { STORES, S_ROMERO_STORES } from '../constants/stores';
+import { STORES, S_ROMERO_STORES, ECI_STORES } from '../constants/stores';
 import { COMPANY_RULES } from '../constants/config';
 import { toast, confirm } from './Toast';
 import { LoadingLogo } from './UIComponents';
@@ -13,10 +13,14 @@ const ALL_STORES = [...STORES.map((s) => s.name), "En construcción", "Centro si
 
 // Tiendas de cada empresa (mismo filtro que en el registro y en Ajustes).
 const storesForCompany = (company) => {
-  if (company === "ECI") return ["En construcción"];
-  const list = company === "S. Romero"
-    ? STORES.filter((s) => S_ROMERO_STORES.includes(s.name))
-    : STORES.filter((s) => !S_ROMERO_STORES.includes(s.name));
+  let list;
+  if (company === "ECI") {
+    list = STORES.filter((s) => ECI_STORES.includes(s.name));
+  } else if (company === "S. Romero") {
+    list = STORES.filter((s) => S_ROMERO_STORES.includes(s.name));
+  } else {
+    list = STORES.filter((s) => !S_ROMERO_STORES.includes(s.name) && !ECI_STORES.includes(s.name));
+  }
   return list.map((s) => s.name).sort((a, b) => a.localeCompare(b, 'es'));
 };
 
