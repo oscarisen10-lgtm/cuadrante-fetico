@@ -2,8 +2,7 @@ import { auth, db, functions, functionsUsCentral } from '../firebase';
 import { httpsCallable } from "firebase/functions";
 import {
   onAuthStateChanged, signOut, signInWithEmailAndPassword,
-  createUserWithEmailAndPassword, sendPasswordResetEmail,
-  GoogleAuthProvider, OAuthProvider, signInWithPopup
+  createUserWithEmailAndPassword, sendPasswordResetEmail
 } from "firebase/auth";
 import {
   doc, setDoc, getDoc, updateDoc, onSnapshot, collection, addDoc, deleteDoc,
@@ -213,22 +212,6 @@ export const registerUser = async (email, password, profileData) => {
     breakStartTime: null
   }));
 
-  return res;
-};
-
-export const signInWithGoogle = async () => {
-  const provider = new GoogleAuthProvider();
-  const res = await signInWithPopup(auth, provider);
-  await ensureUserDoc(res.user);
-  return res;
-};
-
-export const signInWithApple = async () => {
-  const provider = new OAuthProvider('apple.com');
-  provider.addScope('email');
-  provider.addScope('name');
-  const res = await signInWithPopup(auth, provider);
-  await ensureUserDoc(res.user);
   return res;
 };
 
