@@ -6,7 +6,6 @@ import { MonthGrid, WeekdayHeader } from './calendar/CalendarGrid';
 import { DateDetailPanel } from './calendar/DateDetailPanel';
 import { HoursEditor } from './calendar/HoursEditor';
 import { subscribeToMyRequests, addRequest } from '../services/firebaseService';
-import { useTeamStatus } from '../hooks/useTeamStatus';
 import { toast } from './Toast';
 import { ActivationGateModal } from './LockedView';
 
@@ -66,7 +65,6 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
   // Set "MM-DD" precalculado una vez para que las celdas comprueben festivo en O(1)
   // (antes cada celda recorría STORES en su propia llamada a isHoliday()).
   const holidaySet = useMemo(() => new Set(holidays.map(h => h.date)), [holidays]);
-  const { canRequestOff } = useTeamStatus(user);
 
   React.useEffect(() => {
     if (user?.uid) {
@@ -304,7 +302,6 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
               deleteSelectedDates={deleteSelectedDates}
               user={user}
               makeRequest={makeRequest}
-              canRequestOff={canRequestOff}
             />
 
             {/* Botón Festivos del Año - Ahora debajo de DateDetailPanel */}
