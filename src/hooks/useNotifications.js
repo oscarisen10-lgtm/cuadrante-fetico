@@ -70,7 +70,9 @@ export const useNotifications = (user) => {
       const currentToken = await getToken(messaging, { vapidKey: VAPID_KEY });
       if (currentToken) {
         setToken(currentToken);
-        if (auth.currentUser) {
+        // Escribe el token SOLO si cambió respecto al guardado (mismo criterio que
+        // recordDeviceMeta): evita una escritura por cada apertura de la app.
+        if (auth.currentUser && currentToken !== user?.fcmToken) {
           await updateDoc(doc(db, 'users', auth.currentUser.uid), {
             'profile.fcmToken': currentToken
           });
@@ -106,7 +108,11 @@ export const useNotifications = (user) => {
           }
           setToken(fcmToken);
           setTokenError(null);
-          updateDoc(doc(db, 'users', user.uid), { 'profile.fcmToken': fcmToken }).catch(()=>{});
+          // Solo si cambió: en cada arranque el token suele ser el mismo, así que evitamos
+          // una escritura por apertura (a 50k usuarios, millones de escrituras/mes de más).
+          if (fcmToken !== user.fcmToken) {
+            updateDoc(doc(db, 'users', user.uid), { 'profile.fcmToken': fcmToken }).catch(()=>{});
+          }
         } catch (err) {
           // OJO: en iOS NO guardamos token.value (es APNs, no FCM) porque haría fallar
           // el envío desde el backend. Preferimos no guardar nada y reflejar el error.
@@ -115,7 +121,9 @@ export const useNotifications = (user) => {
           if (Capacitor.getPlatform() !== 'ios') {
             fcmToken = token.value;
             setToken(fcmToken);
-            updateDoc(doc(db, 'users', user.uid), { 'profile.fcmToken': fcmToken }).catch(()=>{});
+            if (fcmToken !== user.fcmToken) {
+              updateDoc(doc(db, 'users', user.uid), { 'profile.fcmToken': fcmToken }).catch(()=>{});
+            }
           } else {
             fcmToken = null;
           }

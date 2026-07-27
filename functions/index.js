@@ -1078,10 +1078,14 @@ exports.teamStatus = onCall({ region: "us-central1", maxInstances: 10 }, async (
     return { memberCount: 0, bossCount: 0, bossCountExcludingMe: 0, canRequestOff: false };
   }
 
-  // Igualdad por empresa+tienda (sin índice compuesto); la sección se filtra en memoria.
+  // Los 3 filtros de IGUALDAD (empresa+tienda+sección) se resuelven con los índices de
+  // campo único (zigzag merge join), SIN índice compuesto. Antes se leía la tienda ENTERA
+  // y se filtraba la sección en memoria; ahora se leen solo los docs de la sección: misma
+  // respuesta, muchísimas menos lecturas en tiendas grandes.
   const snap = await db.collection("users")
     .where("profile.company", "==", company)
     .where("profile.store", "==", store)
+    .where("profile.section", "==", section)
     .get();
 
   let memberCount = 0;
@@ -1089,7 +1093,6 @@ exports.teamStatus = onCall({ region: "us-central1", maxInstances: 10 }, async (
   let bossCountExcludingMe = 0;
   snap.forEach((d) => {
     const p = d.data().profile || {};
-    if (p.section !== section) return;
     memberCount += 1;
     if (p.rank && BOSS_RE.test(p.rank)) {
       bossCount += 1;
