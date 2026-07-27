@@ -61,15 +61,15 @@ workflows:
       - name: Set marketing version and build number
         script: |
           # Cada entrega al App Store necesita una marketing version nueva.
-          # 3.4.1 (build 170) ya se entregó; esta actualización (activación de la
-          # empresa ECI con sus 13 tiendas + corrección de los festivos locales
-          # 2026 de la Comunidad) sube a 3.4.2.
-          NEW_VERSION=3.4.2
+          # 3.4.2 (build 171) ya se entregó; esta actualización (finde de calidad por
+          # puesto: largo de 4 días —sáb-dom-lun-mar— para coordinadores de frescos,
+          # jefes, segundos de tiendas y gestores) sube a 3.4.3.
+          NEW_VERSION=3.4.3
           sed -i '' "s/MARKETING_VERSION = [^;]*;/MARKETING_VERSION = $NEW_VERSION;/g" "$XCODE_PROJECT/project.pbxproj"
           echo "Marketing version -> $NEW_VERSION"
           grep -m2 "MARKETING_VERSION" "$XCODE_PROJECT/project.pbxproj"
           # Build number interno (incrementa en cada subida a App Store Connect)
-          NEW_BUILD=171
+          NEW_BUILD=172
           echo "Build number -> $NEW_BUILD"
           cd ios/App
           agvtool new-version -all "$NEW_BUILD"

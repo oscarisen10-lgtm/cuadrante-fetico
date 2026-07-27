@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { PieChart, Newspaper, Plus, Trash2, Link, X, Upload } from 'lucide-react';
 import { StatBar, InputGroup } from './UIComponents';
 import { formatTotalTime } from '../utils/dateUtils';
-import { CONFIG, isAdminUser } from '../constants/config';
+import { CONFIG, isAdminUser, tieneFindeLargoDe4Dias } from '../constants/config';
 import { toast, confirm } from './Toast';
 import { storage } from '../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -12,6 +12,15 @@ import { compressImage } from '../utils/imageUtils';
 // muestra SOLO la sección de Noticias, sin las estadísticas personales.
 export const DashboardView = React.memo(function DashboardView({ user, stats, newsList, addNews, deleteNews, permissionState, requestTokenManually, onImageClick, newsOnly = false }) {
   const isAdmin = isAdminUser(user);
+
+  // Desglose de findes de calidad según el puesto. Algunos puestos (coordinadores de
+  // frescos, jefes) tienen finde largo de 4 días (sáb-dom-lun-mar) con reparto
+  // 2 cortos / 8 largos; el resto, largo de 3 días (sáb-dom-lun) con reparto 6 cortos / 4 largos.
+  const findeLargo4Dias = tieneFindeLargoDe4Dias(user?.rank);
+  const calidadCortoTarget = findeLargo4Dias ? 2 : 6;
+  const calidadLargoTarget = findeLargo4Dias ? 8 : 4;
+  const calidadLargoLabel = findeLargo4Dias ? "Sáb-Dom-Lun-Mar" : "Sáb-Dom-Lun";
+
   const [showAddNewsModal, setShowAddNewsModal] = useState(false);
 
   const [formTitle, setFormTitle] = useState("");
@@ -167,8 +176,8 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
             <div>
               <StatBar label="Calidad" currentValue={stats.findesCalidad} percentage={(stats.findesCalidad/(stats.targets?.calidad || 10))*100} totalValue={stats.targets?.calidad || 10} color="bg-emerald-600" large={true} />
               <div className="flex gap-3 mt-1.5 ml-1">
-                <span className="text-[9px] font-black text-emerald-700 uppercase tracking-wider">● Sáb-Dom: {stats.findesCalidadCorto}/6</span>
-                <span className="text-[9px] font-black text-emerald-500 uppercase tracking-wider">● Sáb-Dom-Lun: {stats.findesCalidadLargo}/4</span>
+                <span className="text-[9px] font-black text-emerald-700 uppercase tracking-wider">● Sáb-Dom: {stats.findesCalidadCorto}/{calidadCortoTarget}</span>
+                <span className="text-[9px] font-black text-emerald-500 uppercase tracking-wider">● {calidadLargoLabel}: {stats.findesCalidadLargo}/{calidadLargoTarget}</span>
               </div>
             </div>
           )}

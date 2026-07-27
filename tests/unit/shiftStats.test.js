@@ -53,6 +53,53 @@ describe('computeShiftStats', () => {
     expect(stats.diasLibres).toBe(3);
   });
 
+  test('Coordinador de frescos: Sáb+Dom+Lun+Mar de descanso cuenta como finde de calidad LARGO', () => {
+    const COORD = { company: 'Supercor', rank: 'Coordinadores de frescos' };
+    const shifts = [
+      { date: '2026-01-17', type: 'rest' }, // Sábado
+      { date: '2026-01-18', type: 'rest' }, // Domingo
+      { date: '2026-01-19', type: 'rest' }, // Lunes
+      { date: '2026-01-20', type: 'rest' }, // Martes
+    ];
+    const stats = computeShiftStats(shifts, toMap(shifts), COORD, NOW);
+    expect(stats.findesCalidad).toBe(1);
+    expect(stats.findesCalidadLargo).toBe(1);
+    expect(stats.findesCalidadCorto).toBe(0);
+  });
+
+  test('Coordinador de frescos: Sáb+Dom+Lun sin el martes libre NO es largo (cuenta como corto)', () => {
+    const COORD = { company: 'Supercor', rank: 'Coordinadores de frescos' };
+    const shifts = [
+      { date: '2026-01-17', type: 'rest' },            // Sábado
+      { date: '2026-01-18', type: 'rest' },            // Domingo
+      { date: '2026-01-19', type: 'rest' },            // Lunes
+      { date: '2026-01-20', type: 'work', hours: 8 },  // Martes trabajado → no llega a largo
+    ];
+    const stats = computeShiftStats(shifts, toMap(shifts), COORD, NOW);
+    expect(stats.findesCalidad).toBe(1);
+    expect(stats.findesCalidadLargo).toBe(0);
+    expect(stats.findesCalidadCorto).toBe(1);
+  });
+
+  test('Jefes: mismo criterio que coordinadores, el largo exige el martes libre', () => {
+    const JEFE = { company: 'Supercor', rank: 'Jefes' };
+    const conMartes = [
+      { date: '2026-01-17', type: 'rest' }, { date: '2026-01-18', type: 'rest' },
+      { date: '2026-01-19', type: 'rest' }, { date: '2026-01-20', type: 'rest' }, // + martes
+    ];
+    const largo = computeShiftStats(conMartes, toMap(conMartes), JEFE, NOW);
+    expect(largo.findesCalidadLargo).toBe(1);
+    expect(largo.findesCalidadCorto).toBe(0);
+
+    const sinMartes = [
+      { date: '2026-01-17', type: 'rest' }, { date: '2026-01-18', type: 'rest' },
+      { date: '2026-01-19', type: 'rest' }, { date: '2026-01-20', type: 'work', hours: 8 },
+    ];
+    const corto = computeShiftStats(sinMartes, toMap(sinMartes), JEFE, NOW);
+    expect(corto.findesCalidadLargo).toBe(0);
+    expect(corto.findesCalidadCorto).toBe(1);
+  });
+
   test('sin turnos, todo a cero y targets por defecto (Supercor / Personal de fresco)', () => {
     const stats = computeShiftStats([], {}, USER, NOW);
     expect(stats.horasTotales).toBe(0);

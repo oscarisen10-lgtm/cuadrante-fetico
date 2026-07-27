@@ -61,6 +61,13 @@ export const COMPANY_RULES = {
   }
 };
 
+// Puestos cuyo "finde de calidad largo" abarca 4 días (sábado+domingo+lunes+martes)
+// en vez de 3 (sábado+domingo+lunes). Reparto teórico del objetivo de 10 findes:
+// 2 cortos / 8 largos. El resto de puestos tiene largo de 3 días y reparto 6 cortos / 4 largos.
+// Punto único de verdad: usado por el cálculo (useShifts) y por el desglose (DashboardView).
+export const RANGOS_FINDE_LARGO_4_DIAS = ["Coordinadores de frescos", "Jefes", "Segundos de tiendas", "Gestores"];
+export const tieneFindeLargoDe4Dias = (rank) => RANGOS_FINDE_LARGO_4_DIAS.includes(rank);
+
 // 👇 EMAIL DE ADMINISTRADOR 👇
 export const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || "";
 

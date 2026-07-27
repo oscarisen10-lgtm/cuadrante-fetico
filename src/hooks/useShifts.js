@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { getFormattedDate } from '../utils/dateUtils';
-import { CONFIG, COMPANY_RULES } from '../constants/config';
+import { CONFIG, COMPANY_RULES, tieneFindeLargoDe4Dias } from '../constants/config';
 import { isHoliday } from '../utils/holidayUtils';
 
 /**
@@ -40,6 +40,9 @@ export const computeShiftStats = (shifts, shiftsMap, user, now = new Date()) => 
   const year = now.getFullYear();
   const start = new Date(year, 0, 1);
   const end = now;
+  // Algunos puestos (coordinadores de frescos, jefes) tienen finde de calidad largo de
+  // 4 días (sábado + domingo + lunes + martes). El resto, de 3 (hasta el lunes).
+  const findeLargo4Dias = tieneFindeLargoDe4Dias(user?.rank || "Personal de fresco");
   let current = new Date(start);
   while (current <= end) {
     if (current.getDay() === 6) {
@@ -55,7 +58,16 @@ export const computeShiftStats = (shifts, shiftsMap, user, now = new Date()) => 
       const monS = shiftsMap[monStr];
       if (satS?.type === 'rest' && sunS?.type === 'rest') {
         findesCalidad++;
-        if (monS?.type === 'rest') {
+        const lunesLibre = monS?.type === 'rest';
+        let esLargo = lunesLibre;
+        if (findeLargo4Dias) {
+          // Estos puestos exigen también el martes libre para el finde largo.
+          const tueDate = new Date(current);
+          tueDate.setDate(current.getDate() + 3);
+          const tueS = shiftsMap[getFormattedDate(tueDate)];
+          esLargo = lunesLibre && tueS?.type === 'rest';
+        }
+        if (esLargo) {
           findesCalidadLargo++;
         } else {
           findesCalidadCorto++;

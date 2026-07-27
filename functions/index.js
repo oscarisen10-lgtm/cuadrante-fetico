@@ -1,6 +1,9 @@
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { setGlobalOptions } = require("firebase-functions/v2");
+// v1: los triggers de ciclo de vida de Auth (onDelete) son de 1ª generación. Convive sin
+// problema con las funciones v2 de este mismo fichero.
+const functionsV1 = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 admin.initializeApp();
 
@@ -947,6 +950,47 @@ exports.subscribeToNewsTopic = onCall({ maxInstances: 10 }, async (request) => {
 });
 
 /**
+ * purgeUserData — Borra de Firestore TODO lo asociado a un uid (perfil + subcolecciones,
+ * peticiones y noticias de delegado) y da de baja su token del topic de noticias. NO toca
+ * la cuenta de Auth. Lo comparten DOS caminos: el borrado voluntario desde la app
+ * (deleteMyAccount) y el trigger que salta al eliminarse la cuenta de Auth desde CUALQUIER
+ * sitio, incluida la consola de Firebase (cleanupOnAuthDelete). Idempotente: si los datos
+ * ya no existen, es un no-op (por eso da igual que ambos caminos se solapen).
+ */
+async function purgeUserData(uid) {
+  const db = admin.firestore();
+
+  // Token FCM antes de borrar nada, para dar de baja el dispositivo del topic de noticias.
+  const userSnap = await db.collection("users").doc(uid).get();
+  const fcmToken = (userSnap.exists && userSnap.data().profile && userSnap.data().profile.fcmToken) || null;
+
+  // 1) Documento de usuario + subcolecciones (shifts, usage) en una sola pasada.
+  await db.recursiveDelete(db.collection("users").doc(uid));
+
+  // 2) Peticiones del usuario (colección de nivel superior).
+  const reqSnap = await db.collection("requests").where("uid", "==", uid).get();
+  for (let i = 0; i < reqSnap.docs.length; i += 400) {
+    const batch = db.batch();
+    reqSnap.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+
+  // 3) Sus noticias de delegado, si las tuviera (llevan su nombre → RGPD).
+  const newsSnap = await db.collection("noticiasTienda").where("authorUid", "==", uid).get();
+  for (let i = 0; i < newsSnap.docs.length; i += 400) {
+    const batch = db.batch();
+    newsSnap.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+
+  // 4) Baja del topic de noticias (mejor esfuerzo: si falla, no aborta el borrado).
+  if (fcmToken) {
+    await admin.messaging().unsubscribeFromTopic(fcmToken, NEWS_TOPIC)
+      .catch((e) => console.warn("No se pudo desuscribir del topic:", e.message));
+  }
+}
+
+/**
  * deleteMyAccount — Borra la cuenta del usuario que llama, ENTERA y desde el servidor.
  * Antes el borrado era en el cliente y tenía dos problemas:
  *   1) deleteUser() de Auth falla con "requires-recent-login" muy a menudo → quedaba la
@@ -961,40 +1005,13 @@ exports.deleteMyAccount = onCall({ maxInstances: 5 }, async (request) => {
     throw new HttpsError("unauthenticated", "Debes iniciar sesión.");
   }
   const uid = request.auth.uid;
-  const db = admin.firestore();
 
   try {
-    // 0) Antes de borrar nada: el token FCM, para dar de baja el dispositivo del topic
-    // de noticias (si no, seguiría recibiendo push tras eliminar la cuenta).
-    const userSnap = await db.collection("users").doc(uid).get();
-    const fcmToken = (userSnap.exists && userSnap.data().profile && userSnap.data().profile.fcmToken) || null;
+    // 1) Datos de Firestore + baja del topic (helper compartido con cleanupOnAuthDelete).
+    await purgeUserData(uid);
 
-    // 1) Documento de usuario + subcolecciones (shifts, usage) en una sola pasada.
-    await db.recursiveDelete(db.collection("users").doc(uid));
-
-    // 2) Peticiones del usuario (colección de nivel superior).
-    const reqSnap = await db.collection("requests").where("uid", "==", uid).get();
-    for (let i = 0; i < reqSnap.docs.length; i += 400) {
-      const batch = db.batch();
-      reqSnap.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
-      await batch.commit();
-    }
-
-    // 3) Sus noticias de delegado, si las tuviera (llevan su nombre → RGPD).
-    const newsSnap = await db.collection("noticiasTienda").where("authorUid", "==", uid).get();
-    for (let i = 0; i < newsSnap.docs.length; i += 400) {
-      const batch = db.batch();
-      newsSnap.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
-      await batch.commit();
-    }
-
-    // 4) Baja del topic de noticias (mejor esfuerzo: si falla, no aborta el borrado).
-    if (fcmToken) {
-      await admin.messaging().unsubscribeFromTopic(fcmToken, NEWS_TOPIC)
-        .catch((e) => console.warn("No se pudo desuscribir del topic:", e.message));
-    }
-
-    // 5) La cuenta de Auth (el Admin SDK no exige login reciente).
+    // 2) La cuenta de Auth, al final (el Admin SDK no exige login reciente). Esto dispara
+    // además cleanupOnAuthDelete, pero los datos ya no están → repaso idempotente inofensivo.
     await admin.auth().deleteUser(uid);
 
     return { success: true };
@@ -1003,6 +1020,25 @@ exports.deleteMyAccount = onCall({ maxInstances: 5 }, async (request) => {
     throw new HttpsError("internal", "No se pudo borrar la cuenta por completo. Inténtalo de nuevo.");
   }
 });
+
+/**
+ * cleanupOnAuthDelete — Trigger de Auth (1ª gen): salta cuando se ELIMINA cualquier cuenta de
+ * Authentication, venga de donde venga (app, Admin SDK o la consola de Firebase). Limpia los
+ * datos de Firestore para que NUNCA quede un perfil huérfano — que si no, seguiría apareciendo
+ * en las listas de admin/delegado, porque esas se leen de la colección `users` (no de Auth).
+ * Región europe-west1 como el resto del backend. Nunca lanza: registra el error y sigue.
+ */
+exports.cleanupOnAuthDelete = functionsV1
+  .region("europe-west1")
+  .auth.user()
+  .onDelete(async (user) => {
+    try {
+      await purgeUserData(user.uid);
+      console.log(`cleanupOnAuthDelete → datos de ${user.uid} eliminados de Firestore.`);
+    } catch (e) {
+      console.error("cleanupOnAuthDelete error:", e);
+    }
+  });
 
 /**
  * teamStatus — Devuelve SOLO RECUENTOS del equipo (sin nombres ni emails).
