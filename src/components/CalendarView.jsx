@@ -79,7 +79,7 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
     
     const filtered = shifts.filter(s => !targetDates.includes(s.date));
     
-    const newEntries = targetDates.map((date, idx) => ({
+    const newEntries = targetDates.map((date) => ({
       id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now() + Math.random(), 
       date: date, 
       type: 'work', 

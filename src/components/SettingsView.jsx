@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { User, Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, BarChart3, ShieldCheck, Users } from 'lucide-react';
+import { Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, BarChart3, ShieldCheck, Users } from 'lucide-react';
 import { COMPANY_RULES, isAdminUser } from '../constants/config';
 import { STORES, S_ROMERO_STORES, ECI_STORES } from '../constants/stores';
 import { deleteUserAccount, fetchAdminStats } from '../services/firebaseService';
 import { firestoreCacheMode } from '../firebase';
-import { toast } from './Toast';
+import { toast } from '../services/toastBus';
 import { setHapticsEnabled, isHapticsEnabled, hapticLight } from '../utils/haptics';
 
 export const SettingsView = React.memo(function SettingsView({ user, settings, saveToCloud, stopAlarm, pushToken, pushTokenError, permissionState, requestTokenManually, isDelegado = false }) {

@@ -14,7 +14,7 @@ import {
   ensureUserDoc,
   recordDeviceMeta
 } from '../services/firebaseService';
-import { toast } from '../components/Toast';
+import { toast } from '../services/toastBus';
 
 // Compara dos objetos "user" a nivel superficial. Evita crear una referencia
 // nueva (y disparar re-renders en cascada en vistas memoizadas y en useShifts)
@@ -200,15 +200,19 @@ export const useAuth = () => {
       // Handle shifts separately — they go to subcollection now
       if (updates.shifts !== undefined) {
         const newShifts = updates.shifts;
-        const oldDates = new Set(shiftsRef.current.map(s => s.date));
+        // Índice fecha -> turno anterior. Antes esto era un find() lineal DENTRO
+        // del filter() de abajo, o sea O(n²) sobre la ventana de 12 meses de turnos
+        // (cientos de días). Con el Map se recorre una vez: O(n).
+        const previousByDate = new Map(shiftsRef.current.map(s => [s.date, s]));
         const newDates = new Set(newShifts.map(s => s.date));
-        
-        // Find shifts to delete (in old but not in new)
-        const datesToDelete = [...oldDates].filter(d => !newDates.has(d));
-        
+
+        // Find shifts to delete (in old but not in new). Las claves del Map ya son
+        // únicas, igual que el Set que había antes.
+        const datesToDelete = [...previousByDate.keys()].filter(d => !newDates.has(d));
+
         // Find shifts to save (in new but different or not in old)
         const shiftsToSave = newShifts.filter(s => {
-          const existing = shiftsRef.current.find(e => e.date === s.date);
+          const existing = previousByDate.get(s.date);
           if (!existing) return true;
           return JSON.stringify(existing) !== JSON.stringify(s);
         });

@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { User, Lock, Mail, Store, ShieldCheck, KeyRound, X, ChevronDown, Phone } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { User, Lock, Mail, Store, ShieldCheck, KeyRound, X, ChevronDown } from 'lucide-react';
 import { loginUser, registerUser, resetPassword } from '../services/firebaseService';
 import { InputGroup } from './UIComponents';
 import { COMPANY_RULES } from '../constants/config';
@@ -92,7 +92,6 @@ export default function AuthView() {
         const newUserProfile = {
           email: emailInput,
           fullName: formData.get('fullName') || 'Compañero/a',
-          phone: formData.get('phone')?.trim() || "",
           company: formData.get('company') || "Supercor",
           store: formData.get('store') || "Centro sin definir",
           rank: formData.get('rank') || "Personal base"
@@ -119,7 +118,9 @@ export default function AuthView() {
       await resetPassword(emailInput);
       setRecoveryError("¡Éxito! Revisa tu email para crear una nueva contraseña.");
       setTimeout(() => { setShowForgotModal(false); setRecoveryError(""); }, 3000);
-    } catch (error) {
+    } catch {
+      // Mensaje genérico a propósito: no revelamos si el email existe o no
+      // (evita que el formulario sirva para enumerar cuentas).
       setRecoveryError("Cuenta no encontrada en la Nube.");
     }
     setIsLoading(false);
@@ -145,7 +146,6 @@ export default function AuthView() {
               <>
                 <InputGroup label="Nombre Apellidos" name="fullName" small icon={<User size={14}/>} />
                 <InputGroup label="Email" name="email" type="email" small icon={<Mail size={14}/>} />
-                <InputGroup label="Teléfono (opcional)" name="phone" type="tel" small icon={<Phone size={14}/>} required={false} inputMode="tel" autoComplete="tel" />
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-0.5">
                     <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight">Empresa</label>

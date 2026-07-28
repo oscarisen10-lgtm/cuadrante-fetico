@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { X, Send, Bot, User, Loader2, Lock } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { X, Send, User, Loader2, Lock } from 'lucide-react';
 import { askAssistant } from '../services/aiService';
 
 export function ChatModal({ onClose, permissionState, requestTokenManually }) {

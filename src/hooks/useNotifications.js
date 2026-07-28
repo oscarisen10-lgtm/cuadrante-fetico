@@ -6,7 +6,7 @@ import { db, auth } from '../firebase';
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { FCM } from '@capacitor-community/fcm';
-import { toast } from '../components/Toast';
+import { toast } from '../services/toastBus';
 import { subscribeTokenToNewsTopic } from '../services/firebaseService';
 
 // Topic de broadcast de noticias (debe coincidir con NEWS_TOPIC de las functions).
@@ -99,7 +99,8 @@ export const useNotifications = (user) => {
       });
 
       PushNotifications.addListener('registration', async (token) => {
-        let fcmToken = null;
+        // Sin valor inicial: todas las ramas (try y catch) lo asignan antes de leerlo.
+        let fcmToken;
         try {
           fcmToken = token.value;
           if (Capacitor.getPlatform() === 'ios') {

@@ -25,7 +25,7 @@ export const useNews = (user) => {
 
   const store = user?.store;
   useEffect(() => {
-    if (!store) { setStoreNews([]); return; }
+    if (!store) return;
     const unsub = subscribeToStoreNews(store, (arr) => {
       setStoreNews(arr.map((n) => ({ ...n, isStoreNews: true })));
     });
@@ -33,10 +33,13 @@ export const useNews = (user) => {
   }, [store]);
 
   const newsList = useMemo(
-    () => [...globalNews, ...storeNews]
+    // Sin tienda no se muestran noticias de delegado. Se DERIVA aquí en vez de
+    // vaciar storeNews desde el efecto: llamar a setState dentro de un efecto
+    // provoca un render en cascada innecesario (react-hooks/set-state-in-effect).
+    () => [...globalNews, ...(store ? storeNews : [])]
       .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
       .slice(0, 40),
-    [globalNews, storeNews]
+    [globalNews, storeNews, store]
   );
 
   const addNews = useCallback(async (newsData) => {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ClipboardList, Plus, Trash2, RefreshCw, Store as StoreIcon, ChevronDown, ChevronUp, Users, UserPlus, Phone, Target } from 'lucide-react';
 import { fetchCensusCounts, getCenso, saveCenso, fetchStoreUsers, setUserActiveStatus, setUserExpelled } from '../services/firebaseService';
-import { toast, confirm } from './Toast';
+import { toast, confirm } from '../services/toastBus';
 import { LoadingLogo } from './UIComponents';
 import { UserCard } from './UserCard';
 

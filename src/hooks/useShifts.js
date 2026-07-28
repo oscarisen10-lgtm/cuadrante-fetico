@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { getFormattedDate } from '../utils/dateUtils';
-import { CONFIG, COMPANY_RULES, tieneFindeLargoDe4Dias } from '../constants/config';
+import { COMPANY_RULES, tieneFindeLargoDe4Dias } from '../constants/config';
 import { isHoliday } from '../utils/holidayUtils';
 
 /**

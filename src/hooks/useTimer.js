@@ -121,8 +121,13 @@ export const useTimer = (activeShift, isBreakActive, workTimeAccumulated, breakS
     if (beepRef.current) beepRef.current.stop();
   }, []);
 
-  // Keep ref in sync with state to avoid stale closures
-  breakFinishedRef.current = showBreakFinishedMsg;
+  // Espejo del estado en un ref para que `tick` (que vive en un setInterval) no lea
+  // un valor obsoleto. Se sincroniza en un EFECTO, no durante el render: escribir en
+  // un ref mientras se renderiza rompe el render concurrente y el doble render de
+  // <StrictMode> (que la app sí usa, ver main.jsx).
+  useEffect(() => {
+    breakFinishedRef.current = showBreakFinishedMsg;
+  }, [showBreakFinishedMsg]);
 
   // Inicializar audio y limpieza
   useEffect(() => {

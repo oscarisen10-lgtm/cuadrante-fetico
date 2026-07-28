@@ -4,7 +4,7 @@ import { addStoreNews, deleteStoreNews, subscribeToMyStoreNews } from '../servic
 import { storage } from '../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { compressImage } from '../utils/imageUtils';
-import { toast, confirm } from './Toast';
+import { toast, confirm } from '../services/toastBus';
 import { LoadingLogo } from './UIComponents';
 
 /**

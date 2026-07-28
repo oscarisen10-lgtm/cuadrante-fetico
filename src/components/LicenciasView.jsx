@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, ChevronDown, ChevronUp, Info, Users, Clock, ClipboardCheck, Bot, Sparkles } from 'lucide-react';
+import { FileText, ChevronDown, ChevronUp, Info, Users, Clock, ClipboardCheck, Sparkles } from 'lucide-react';
 import { LICENCIAS_CATEGORIES, GRADOS_CONSANGUINIDAD } from '../constants/licenciasData';
 import { ChatModal } from './ChatModal';
 import { isAdminUser } from '../constants/config';

@@ -1,0 +1,22 @@
+{
+  "_comment": [
+    "El proyecto es JavaScript/JSX. Antes había tres tsconfig.*.json con 'strict',",
+    "'noUnusedLocals' y demás, pero eran INERTES: no hay paquete typescript instalado",
+    "ni ningún 'tsc' en el build, y tras pasar main.tsx a .jsx no queda un solo fichero",
+    "TypeScript. Este jsconfig es lo que sí usa el editor (VS Code) para resolver",
+    "imports, entender el JSX y tipar import.meta.env. Si algún día se migra a",
+    "TypeScript de verdad: npm i -D typescript && npx tsc --init."
+  ],
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"],
+    "checkJs": false,
+    "baseUrl": "."
+  },
+  "include": ["src", "vite.config.js", "eslint.config.js"],
+  "exclude": ["node_modules", "dist", "android", "ios", "functions/node_modules"]
+}

@@ -14,6 +14,8 @@ export const askAssistant = async (message) => {
   } catch (error) {
     // Si la cuota se excede o hay error, la función lanza un HttpsError que Firebase Functions
     // mapea automáticamente aquí. Extraemos el mensaje original.
-    throw new Error(error.message || 'Error desconocido al contactar con el asistente.');
+    // `cause` conserva el HttpsError original (código, detalles) para diagnóstico,
+    // mientras el mensaje que ve el usuario sigue siendo el legible.
+    throw new Error(error.message || 'Error desconocido al contactar con el asistente.', { cause: error });
   }
 };

@@ -3,7 +3,7 @@ import { ShieldCheck, Users, Bell, UserCheck, UserX, Plus, Trash2, RefreshCw, X,
 import { fetchAdminOverview, saveDelegado } from '../services/firebaseService';
 import { STORES, S_ROMERO_STORES, ECI_STORES } from '../constants/stores';
 import { COMPANY_RULES } from '../constants/config';
-import { toast, confirm } from './Toast';
+import { toast, confirm } from '../services/toastBus';
 import { LoadingLogo } from './UIComponents';
 import { StoreUserManager } from './StoreUserManager';
 

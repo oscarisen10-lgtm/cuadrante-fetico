@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, Suspense, lazy, useCallback } from 'react';
+import { useState, useEffect, useMemo, Suspense, lazy, useCallback } from 'react';
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Network } from '@capacitor/network';
@@ -15,8 +15,8 @@ import { markFichado } from './services/firebaseService';
 import { NavItem, LoadingLogo } from './components/UIComponents';
 import AuthView from './components/AuthView';
 import { ToastContainer, ConfirmDialog } from './components/Toast';
+import { DashboardView } from './components/DashboardView';
 
-const DashboardView = lazy(() => import('./components/DashboardView').then(m => ({ default: m.DashboardView })));
 const TrackerView = lazy(() => import('./components/TrackerView').then(m => ({ default: m.TrackerView })));
 const CalendarView = lazy(() => import('./components/CalendarView').then(m => ({ default: m.CalendarView })));
 const LicenciasView = lazy(() => import('./components/LicenciasView').then(m => ({ default: m.LicenciasView })));
@@ -295,7 +295,10 @@ function AppContent({ user, authHook }) {
  */
 export default function App() {
   const authHook = useAuth();
-  const { user, loading, settings } = authHook;
+  // logoutUser lo usa el botón de escape de la pantalla de bloqueo biométrico
+  // ("Acceder con correo y contraseña"). Estaba disponible en AppContent pero NO
+  // aquí, así que pulsarlo lanzaba un ReferenceError justo cuando más falta hace.
+  const { user, loading, settings, logoutUser } = authHook;
 
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [biometricError, setBiometricError] = useState(false);
@@ -351,10 +354,13 @@ export default function App() {
         <p className="relative text-sm font-medium text-emerald-50/90 mb-8 max-w-xs">Usa tu huella dactilar o FaceID para acceder a tu información privada.</p>
 
         {biometricError && (
-           <p className="relative text-xs text-white font-bold px-4 py-2 rounded-xl mb-6" style={{ background: 'rgba(190,18,60,0.5)', border: '1px solid rgba(251,113,133,0.4)' }} role="alert">Error al verificar identidad. Inténtalo de nuevo.</p>
+           <div className="flex flex-col items-center gap-3 mb-6">
+             <p className="relative text-xs text-white font-bold px-4 py-2 rounded-xl" style={{ background: 'rgba(190,18,60,0.5)', border: '1px solid rgba(251,113,133,0.4)' }} role="alert">Error al verificar identidad. Inténtalo de nuevo.</p>
+             <button onClick={logoutUser} className="relative z-10 text-xs text-emerald-100 font-medium underline opacity-90 p-2 active:scale-95 transition-transform" aria-label="Volver a inicio de sesión">Acceder con correo y contraseña</button>
+           </div>
         )}
 
-        <button onClick={verifyBiometric} className="btn3d relative text-emerald-700 font-black px-9 py-4 rounded-full uppercase text-sm" style={{ background: 'linear-gradient(180deg,#ffffff,#e8efe9)', boxShadow: '0 10px 24px rgba(0,0,0,0.3), inset 0 2px 2px rgba(255,255,255,0.9)' }} aria-label="Desbloquear aplicación con biometría">
+        <button onClick={verifyBiometric} className={`btn3d relative z-10 text-emerald-700 font-black px-9 py-4 rounded-full uppercase text-sm ${!biometricError ? 'mb-6' : ''}`} style={{ background: 'linear-gradient(180deg,#ffffff,#e8efe9)', boxShadow: '0 10px 24px rgba(0,0,0,0.3), inset 0 2px 2px rgba(255,255,255,0.9)' }} aria-label="Desbloquear aplicación con biometría">
           Desbloquear
         </button>
       </div>

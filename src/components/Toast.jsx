@@ -1,13 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-react';
+import { registerToastHandler, registerConfirmHandler, resolvePendingConfirm } from '../services/toastBus';
 
-// --- Toast System ---
-let toastId = 0;
-let addToastGlobal = null;
-
-export function toast(message, type = 'info') {
-  if (addToastGlobal) addToastGlobal({ id: ++toastId, message, type });
-}
+// Este fichero exporta SOLO componentes. La API imperativa (`toast`, `confirm`) vive
+// en services/toastBus.js para no romper el Fast Refresh — impórtala desde allí.
 
 const ICONS = {
   success: <CheckCircle size={17} className="text-white" />,
@@ -26,10 +22,7 @@ const ACCENT = {
 export function ToastContainer() {
   const [toasts, setToasts] = useState([]);
 
-  useEffect(() => {
-    addToastGlobal = (t) => setToasts(prev => [...prev, t]);
-    return () => { addToastGlobal = null; };
-  }, []);
+  useEffect(() => registerToastHandler((t) => setToasts(prev => [...prev, t])), []);
 
   const remove = useCallback((id) => {
     setToasts(prev => prev.filter(t => t.id !== id));
@@ -67,29 +60,16 @@ export function ToastContainer() {
 }
 
 // --- Confirm Modal (replaces window.confirm) ---
-let resolveConfirm = null;
-let showConfirmGlobal = null;
-
-export function confirm(message) {
-  return new Promise((resolve) => {
-    resolveConfirm = resolve;
-    if (showConfirmGlobal) showConfirmGlobal(message);
-  });
-}
-
 export function ConfirmDialog() {
   const [msg, setMsg] = useState(null);
 
-  useEffect(() => {
-    showConfirmGlobal = (m) => setMsg(m);
-    return () => { showConfirmGlobal = null; };
-  }, []);
+  useEffect(() => registerConfirmHandler((m) => setMsg(m)), []);
 
   if (!msg) return null;
 
   const handle = (val) => {
     setMsg(null);
-    if (resolveConfirm) resolveConfirm(val);
+    resolvePendingConfirm(val);
   };
 
   return (
