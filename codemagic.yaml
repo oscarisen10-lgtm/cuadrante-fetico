@@ -6,6 +6,15 @@ workflows:
     environment:
       groups:
         - apple_credentials
+        # Config de Firebase para el .env del build. Se define en Codemagic >
+        # Settings > Environment variables (grupo `firebase_config`). Antes estaba
+        # aquí en texto plano y, por tanto, versionada en GitHub.
+        # Variables que debe contener: VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN,
+        # VITE_FIREBASE_PROJECT_ID, VITE_FIREBASE_STORAGE_BUCKET,
+        # VITE_FIREBASE_MESSAGING_SENDER_ID, VITE_FIREBASE_APP_ID,
+        # VITE_FIREBASE_MEASUREMENT_ID, VITE_ADMIN_EMAIL, VITE_FIREBASE_VAPID_KEY
+        # y (opcional, cuando se active App Check) VITE_APPCHECK_SITE_KEY.
+        - firebase_config
       vars:
         XCODE_SCHEME: "App"
         XCODE_PROJECT: "ios/App/App.xcodeproj"
@@ -20,27 +29,44 @@ workflows:
       - name: Install dependencies
         script: |
           npm install
+      - name: Lint
+        script: |
+          # Falla solo con errores; los avisos no cortan el build.
+          npm run lint
       - name: Run unit tests
         script: |
           # Si un test falla, el build se corta aquí y no llega nada roto a TestFlight.
           npm test
       - name: Create environment file
         script: |
-          # .env is gitignored so we must recreate it for the build.
-          # Firebase config is public/client-side — safe to embed here.
+          # .env está en .gitignore, así que hay que recrearlo para el build. Los
+          # valores vienen del grupo cifrado `firebase_config` de Codemagic, NO del
+          # repositorio. Si falta alguno, el build corta aquí en vez de generar un
+          # .env a medias que produciría una app rota en TestFlight.
+          set -eu
+          : "${VITE_FIREBASE_API_KEY:?falta en el grupo firebase_config}"
+          : "${VITE_FIREBASE_AUTH_DOMAIN:?falta en el grupo firebase_config}"
+          : "${VITE_FIREBASE_PROJECT_ID:?falta en el grupo firebase_config}"
+          : "${VITE_FIREBASE_STORAGE_BUCKET:?falta en el grupo firebase_config}"
+          : "${VITE_FIREBASE_MESSAGING_SENDER_ID:?falta en el grupo firebase_config}"
+          : "${VITE_FIREBASE_APP_ID:?falta en el grupo firebase_config}"
+          : "${VITE_FIREBASE_MEASUREMENT_ID:?falta en el grupo firebase_config}"
+          : "${VITE_ADMIN_EMAIL:?falta en el grupo firebase_config}"
+          : "${VITE_FIREBASE_VAPID_KEY:?falta en el grupo firebase_config}"
           printf '%s\n' \
-            "VITE_FIREBASE_API_KEY=AIzaSyCdsO08si23ZQDzgnRCqPEfUZp0TK-K5q8" \
-            "VITE_FIREBASE_AUTH_DOMAIN=mi-calendario-fe.firebaseapp.com" \
-            "VITE_FIREBASE_PROJECT_ID=mi-calendario-fe" \
-            "VITE_FIREBASE_STORAGE_BUCKET=mi-calendario-fe.firebasestorage.app" \
-            "VITE_FIREBASE_MESSAGING_SENDER_ID=484679385374" \
-            "VITE_FIREBASE_APP_ID=1:484679385374:web:fc54045bde29b3cb7f890f" \
-            "VITE_FIREBASE_MEASUREMENT_ID=G-M133C7LHEF" \
-            "VITE_ADMIN_EMAIL=oscargarcia@fetico.es" \
-            "VITE_FIREBASE_VAPID_KEY=BK7WzHqm7hFFEzFIq8VUlsz60L1jgRDcTghvGcIqUNUuY7vXExnl-K5PW2912EhqiM1ImLzAmTTtyNPwOHS1v78" \
+            "VITE_FIREBASE_API_KEY=$VITE_FIREBASE_API_KEY" \
+            "VITE_FIREBASE_AUTH_DOMAIN=$VITE_FIREBASE_AUTH_DOMAIN" \
+            "VITE_FIREBASE_PROJECT_ID=$VITE_FIREBASE_PROJECT_ID" \
+            "VITE_FIREBASE_STORAGE_BUCKET=$VITE_FIREBASE_STORAGE_BUCKET" \
+            "VITE_FIREBASE_MESSAGING_SENDER_ID=$VITE_FIREBASE_MESSAGING_SENDER_ID" \
+            "VITE_FIREBASE_APP_ID=$VITE_FIREBASE_APP_ID" \
+            "VITE_FIREBASE_MEASUREMENT_ID=$VITE_FIREBASE_MEASUREMENT_ID" \
+            "VITE_ADMIN_EMAIL=$VITE_ADMIN_EMAIL" \
+            "VITE_FIREBASE_VAPID_KEY=$VITE_FIREBASE_VAPID_KEY" \
+            "VITE_APPCHECK_SITE_KEY=${VITE_APPCHECK_SITE_KEY:-}" \
             > .env
-          echo "--- .env created ---"
-          cat .env
+          # OJO: NUNCA hacer `cat .env` aquí — volcaría las claves al log del build.
+          echo "--- .env creado con $(wc -l < .env) variables ---"
       - name: Build web assets
         script: |
           npm run build
@@ -61,10 +87,11 @@ workflows:
       - name: Set marketing version and build number
         script: |
           # Cada entrega al App Store necesita una marketing version nueva.
-          # 3.4.2 (build 171) ya se entregó; esta actualización (finde de calidad por
-          # puesto: largo de 4 días —sáb-dom-lun-mar— para coordinadores de frescos,
-          # jefes, segundos de tiendas y gestores) sube a 3.4.3.
-          NEW_VERSION=3.4.3
+          # PUNTO ÚNICO DE VERDAD: la versión sale de package.json, la misma que Vite
+          # inyecta como __APP_VERSION__ en la etiqueta "Versión App" de Ajustes. Antes
+          # estaba escrita a mano aquí y había que acordarse de tocar los dos sitios.
+          # Para publicar una versión nueva: sube "version" en package.json y ya.
+          NEW_VERSION=$(node -p "require('./package.json').version")
           sed -i '' "s/MARKETING_VERSION = [^;]*;/MARKETING_VERSION = $NEW_VERSION;/g" "$XCODE_PROJECT/project.pbxproj"
           echo "Marketing version -> $NEW_VERSION"
           grep -m2 "MARKETING_VERSION" "$XCODE_PROJECT/project.pbxproj"
