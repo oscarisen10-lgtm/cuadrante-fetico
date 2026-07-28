@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { User, Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, BarChart3, ShieldCheck, Users } from 'lucide-react';
 import { COMPANY_RULES, isAdminUser } from '../constants/config';
 import { STORES, S_ROMERO_STORES, ECI_STORES } from '../constants/stores';
-import { deleteUserAccount, checkRankAvailability, fetchAdminStats } from '../services/firebaseService';
+import { deleteUserAccount, fetchAdminStats } from '../services/firebaseService';
 import { firestoreCacheMode } from '../firebase';
 import { toast } from './Toast';
 import { setHapticsEnabled, isHapticsEnabled, hapticLight } from '../utils/haptics';
@@ -42,22 +42,6 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
   const currentStore = user?.store || "";
 
   const handleProfileChange = async (updates) => {
-    const newCompany = updates.company || currentCompany;
-    const newStore = updates.store !== undefined ? updates.store : currentStore;
-    const newSection = updates.section !== undefined ? updates.section : (user?.section || "Sin especificar");
-    const newRank = updates.rank || currentRank;
-
-    // Solo validamos si cambia algún campo que afecte a la ubicación o el rango
-    if (updates.rank !== undefined || updates.store !== undefined || updates.section !== undefined || updates.company !== undefined) {
-      try {
-        await checkRankAvailability(newCompany, newStore, newSection, newRank, user.uid);
-      } catch (err) {
-        toast(err.message, "error");
-        // Revertimos el select localmente forzando un re-render sin guardar
-        return; 
-      }
-    }
-    
     saveToCloud({ profile: { ...user, ...updates } });
   };
 

@@ -5,8 +5,6 @@ import { STORES, MUNICIPAL_HOLIDAYS } from '../constants/stores';
 import { MonthGrid, WeekdayHeader } from './calendar/CalendarGrid';
 import { DateDetailPanel } from './calendar/DateDetailPanel';
 import { HoursEditor } from './calendar/HoursEditor';
-import { subscribeToMyRequests, addRequest } from '../services/firebaseService';
-import { toast } from './Toast';
 import { ActivationGateModal } from './LockedView';
 
 /**
@@ -55,7 +53,6 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
   const [editmm, setEditmm] = useState("0");
   const [editTurn, setEditTurn] = useState("morning");
   const [showFestivos, setShowFestivos] = useState(false);
-  const [myRequests, setMyRequests] = useState([]);
   // Cuentas PENDIENTES: la agenda SE VE con normalidad; este aviso salta solo al
   // intentar REGISTRAR algo (libre, vacaciones, ajustar horas, borrar, solicitar).
   const [showActivationGate, setShowActivationGate] = useState(false);
@@ -66,36 +63,15 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
   // (antes cada celda recorría STORES en su propia llamada a isHoliday()).
   const holidaySet = useMemo(() => new Set(holidays.map(h => h.date)), [holidays]);
 
-  React.useEffect(() => {
-    if (user?.uid) {
-      const unsubscribe = subscribeToMyRequests(user.uid, (data) => {
-        setMyRequests(data);
-      });
-      return () => unsubscribe();
-    }
-  }, [user?.uid]);
-
-  // Merge requests into shiftsMap so CalendarGrid and DateDetailPanel can see them.
-  const combinedShiftsMap = useMemo(() => {
-    const map = { ...shiftsMap };
-    myRequests.forEach(req => {
-      // If a day has a pending request, we override the type just for the view.
-      if (req.status === 'pending') {
-        map[req.date] = { ...map[req.date], type: 'request', requestData: req };
-      }
-    });
-    return map;
-  }, [shiftsMap, myRequests]);
-
   const openEditHours = useCallback((dateStr) => {
     if (!isActive) { setShowActivationGate(true); return; }
-    const s = combinedShiftsMap[dateStr];
+    const s = shiftsMap[dateStr];
     const totalHoursDecimal = (s?.type === 'work' && s.hours > 0) ? s.hours : 6.75;
     setEditingDay(dateStr);
     setEditHH(Math.floor(totalHoursDecimal).toString());
     setEditmm(Math.round((totalHoursDecimal % 1) * 60).toString());
     setEditTurn(s?.turn || 'morning');
-  }, [combinedShiftsMap, isActive]);
+  }, [shiftsMap, isActive]);
 
   const saveEditedHours = useCallback(() => {
     const hoursDecimal = (parseInt(editHH) || 0) + ((parseInt(editmm) || 0) / 60);
@@ -127,35 +103,6 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
     setSelectedDates([]);
     saveToCloud({ shifts: newShifts });
   }, [shifts, selectedDates, saveToCloud, isActive]);
-
-  const makeRequest = useCallback(async (note = '') => {
-    if (!isActive) { setShowActivationGate(true); return; }
-    if (!userStore) {
-      toast("Debes configurar tu tienda en Ajustes primero.", "error");
-      return;
-    }
-    const storeKey = `${user?.company || "Supercor"}_${userStore}_${user?.section || "Sin especificar"}`;
-    
-    try {
-      for (const date of selectedDates) {
-        await addRequest({
-          uid: user.uid,
-          fullName: user.fullName || "Compañero",
-          company: user.company || "Supercor",
-          store: userStore,
-          section: user.section || "Sin especificar",
-          storeKey,
-          date,
-          status: 'pending',
-          note: note
-        });
-      }
-      toast("Solicitud enviada correctamente", "success");
-      setSelectedDates([]);
-    } catch (e) {
-      toast("Error al enviar solicitud", "error");
-    }
-  }, [selectedDates, user, userStore, isActive]);
 
   const deleteSelectedDates = useCallback(() => {
     if (!isActive) { setShowActivationGate(true); return; }
@@ -240,7 +187,7 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
                         <MonthGrid
                           targetYear={currentDate.getFullYear()}
                           targetMonth={currentDate.getMonth()}
-                          shiftsMap={combinedShiftsMap}
+                          shiftsMap={shiftsMap}
                           isSmall={false}
                           selectedDates={selectedDates}
                           holidaySet={holidaySet}
@@ -272,7 +219,7 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
                        <MonthGrid
                          targetYear={currentDate.getFullYear()}
                          targetMonth={m}
-                         shiftsMap={combinedShiftsMap}
+                         shiftsMap={shiftsMap}
                          isSmall={true}
                          selectedDates={selectedDates}
                          holidaySet={holidaySet}
@@ -295,13 +242,12 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
 
             <DateDetailPanel
               selectedDates={selectedDates}
-              shiftsMap={combinedShiftsMap}
+              shiftsMap={shiftsMap}
               setSelectedDates={setSelectedDates}
               markMulti={markMulti}
               openEditHours={openEditHours}
               deleteSelectedDates={deleteSelectedDates}
               user={user}
-              makeRequest={makeRequest}
             />
 
             {/* Botón Festivos del Año - Ahora debajo de DateDetailPanel */}

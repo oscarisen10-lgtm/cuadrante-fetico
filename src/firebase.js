@@ -163,11 +163,6 @@ export const storage = getStorage(app);
 // para todas las funciones nuevas.
 export const functions = getFunctions(app, "europe-west1");
 
-// TRANSICIÓN: solo para `teamStatus`, que sigue desplegada en us-central1 por
-// compatibilidad con las builds nativas antiguas (ver comentario en functions/index.js).
-// Cuando teamStatus migre a europe-west1, eliminar esta instancia y su único uso.
-export const functionsUsCentral = getFunctions(app, "us-central1");
-
 // Clave VAPID para Web Push. Se obtiene en Firebase Console > Configuración del proyecto
 // > Cloud Messaging > Certificados push web, y se define en .env como
 // VITE_FIREBASE_VAPID_KEY. Sin ella, getToken() falla en web (el push nativo no la usa).

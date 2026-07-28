@@ -1,4 +1,4 @@
-import { auth, db, functions, functionsUsCentral } from '../firebase';
+import { auth, db, functions } from '../firebase';
 import { httpsCallable } from "firebase/functions";
 import {
   onAuthStateChanged, signOut, signInWithEmailAndPassword,
@@ -478,72 +478,12 @@ export const deleteStoreNews = async (id) => {
 // sirve estático desde constants/licenciasData.js. Se eliminaron subscribeToLicencias,
 // addLicencia, updateLicencia y deleteLicencia por ser código muerto.)
 
-// --- PETICIONES (REQUESTS) & EQUIPO ---
-
-/**
- * Estado del equipo SIN leer perfiles ajenos (privacidad). Pide al backend solo
- * cifras agregadas. Devuelve { memberCount, bossCount, bossCountExcludingMe, canRequestOff }.
- */
-export const fetchTeamStatus = async (overrides = {}) => {
-  // TRANSICIÓN: teamStatus sigue en us-central1 (compatibilidad con builds nativas
-  // antiguas). Cuando migre a europe-west1, cambiar a `functions` (ver firebase.js).
-  const fn = httpsCallable(functionsUsCentral, 'teamStatus');
-  const { data } = await fn(overrides);
-  return data;
-};
-
-export const checkRankAvailability = async (company, store, section, newRank, userUid) => {
-  // Solo aplicamos el límite si el nuevo rango es de tipo Responsable
-  const isBossRank = (rank) => rank && rank.match(/.*(jefe|segundo|gestor|coordinador).*/i);
-
-  if (!isBossRank(newRank)) return true; // Si es personal base, siempre permitido
-
-  try {
-    // El recuento de responsables lo hace el SERVIDOR (el cliente ya no lee al equipo).
-    const data = await fetchTeamStatus({ company, store, section });
-    if ((data?.bossCountExcludingMe || 0) >= 3) {
-      throw new Error("Límite alcanzado: Ya hay 3 responsables asignados en esta tienda y sección.");
-    }
-    return true;
-  } catch (e) {
-    // Si es nuestro límite de negocio, lo propagamos. Si es un fallo de red/infra,
-    // no bloqueamos al usuario (la restricción es una ayuda, no una barrera crítica).
-    if (e instanceof Error && e.message.startsWith("Límite alcanzado")) throw e;
-    console.warn("teamStatus no disponible, se permite el cambio:", e?.message);
-    return true;
-  }
-};
-
-export const addRequest = async (requestData) => {
-  return await addDoc(collection(db, "requests"), {
-    ...requestData,
-    createdAt: Date.now()
-  });
-};
-
-export const subscribeToMyRequests = (uid, callback) => {
-  // Acotado a las 30 peticiones más recientes (solo se usan para pintar las
-  // pendientes en el calendario; 30 cubre de sobra lo reciente y en iOS —caché en
-  // memoria— cada apertura de la Agenda pagaba este límite entero en lecturas).
-  // Requiere el índice compuesto (uid ASC, createdAt DESC) de firestore.indexes.json.
-  const q = query(
-    collection(db, "requests"),
-    where("uid", "==", uid),
-    orderBy("createdAt", "desc"),
-    limit(30)
-  );
-  return onSnapshot(
-    q,
-    (snapshot) => {
-      const arr = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      callback(arr);
-    },
-    // Manejador de error explícito: si el índice aún se está construyendo (o hay un
-    // corte de red), no dejamos morir el listener en silencio — al menos queda
-    // registrado y el resto del calendario sigue operativo.
-    (error) => console.error("subscribeToMyRequests:", error?.message || error)
-  );
-};
+// --- PETICIONES / EQUIPO ---
+// Eliminado (28-jul-2026): el flujo de "pedir día libre" y la callable teamStatus
+// (que servía para el límite de responsables y para que el coordinador viera las
+// peticiones) se retiraron por completo. No se implementará. La colección `requests`
+// se conserva solo por las peticiones que dejaran las builds antiguas; deleteMyAccount
+// sigue limpiándola. Ver historial git para el código anterior.
 
 // --- ARENA / COMPETICIÓN ---
 // Eliminada del proyecto (17-jul-2026): se quitaron los 31 minijuegos, la vista,
