@@ -69,43 +69,73 @@ async function sendToNewsTopic(title, body) {
   return admin.messaging().send({ ...buildMessage(title, body), topic: NEWS_TOPIC });
 }
 
+// Lotes de envío simultáneos. Los lotes se mandaban de uno en uno con `await`, así
+// que el tiempo total crecía linealmente con el nº de destinatarios: con miles de
+// tokens se podía agotar el timeout de la función y los lotes restantes NO se
+// enviaban nunca, sin reintento y sin que nadie se enterara. En paralelo cabe mucho
+// más dentro del mismo tiempo; el tope evita saturar la API de FCM.
+const SEND_CONCURRENCY = 5;
+const TOKENS_PER_MULTICAST = 500; // máximo que admite sendEachForMulticast
+
 /**
- * Envío dirigido por token. `sendEachForMulticast` admite 500 tokens por llamada,
- * así que trocea solo. Devuelve el recuento agregado.
+ * Envío dirigido por token, en lotes paralelos.
+ * Devuelve { ok, ko, total } — si `ok + ko < total`, el envío quedó INCOMPLETO y
+ * quien llama debe registrarlo (no es lo mismo que un token muerto).
  */
 async function sendToTokens(tokens, title, body) {
   const all = [...tokens];
   const base = buildMessage(title, body);
+
+  const chunks = [];
+  for (let i = 0; i < all.length; i += TOKENS_PER_MULTICAST) {
+    chunks.push(all.slice(i, i + TOKENS_PER_MULTICAST));
+  }
+
   let ok = 0;
   let ko = 0;
-  for (let i = 0; i < all.length; i += 500) {
-    const res = await admin.messaging().sendEachForMulticast({
-      ...base,
-      tokens: all.slice(i, i + 500),
+  for (let i = 0; i < chunks.length; i += SEND_CONCURRENCY) {
+    const wave = chunks.slice(i, i + SEND_CONCURRENCY);
+    // allSettled: que un lote falle entero no debe impedir el envío de los demás.
+    const results = await Promise.allSettled(
+      wave.map((batch) => admin.messaging().sendEachForMulticast({ ...base, tokens: batch }))
+    );
+    results.forEach((r, idx) => {
+      if (r.status === "fulfilled") {
+        ok += r.value.successCount;
+        ko += r.value.failureCount;
+      } else {
+        ko += wave[idx].length;
+        console.error("sendToTokens: un lote completo falló:", r.reason && r.reason.message);
+      }
     });
-    ok += res.successCount;
-    ko += res.failureCount;
   }
-  return { ok, ko };
+  return { ok, ko, total: all.length };
 }
 
 /**
  * Recolecta los tokens FCM de los usuarios de unas tiendas concretas.
- * El operador "in" de Firestore admite 30 valores → se trocea.
+ * El operador "in" de Firestore admite 30 valores → se trocea, y los trozos se
+ * consultan en paralelo (son independientes entre sí).
  * Devuelve un Set (deduplica si un usuario apareciera dos veces).
  */
 async function tokensForStores(db, stores) {
-  const tokens = new Set();
+  const chunks = [];
   for (let i = 0; i < stores.length; i += 30) {
-    const snap = await db().collection("users")
-      .where("profile.store", "in", stores.slice(i, i + 30))
-      .select("profile.fcmToken")
-      .get();
-    snap.forEach((d) => {
-      const t = d.data().profile && d.data().profile.fcmToken;
-      if (t) tokens.add(t);
-    });
+    chunks.push(stores.slice(i, i + 30));
   }
+
+  const snaps = await Promise.all(
+    chunks.map((chunk) => db().collection("users")
+      .where("profile.store", "in", chunk)
+      .select("profile.fcmToken")
+      .get())
+  );
+
+  const tokens = new Set();
+  snaps.forEach((snap) => snap.forEach((d) => {
+    const t = d.data().profile && d.data().profile.fcmToken;
+    if (t) tokens.add(t);
+  }));
   return tokens;
 }
 

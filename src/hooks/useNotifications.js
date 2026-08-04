@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { getToken, onMessage } from 'firebase/messaging';
 import { messaging, VAPID_KEY } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -36,7 +36,11 @@ export const useNotifications = (user) => {
   const [tokenError, setTokenError] = useState(null);
   const [permissionState, setPermissionState] = useState('Notification' in window ? Notification.permission : 'default');
 
-  const requestTokenManually = async () => {
+  // useCallback NO es cosmético aquí: esta función viaja como prop a cuatro vistas
+  // envueltas en React.memo (Dashboard, Calendario, Ajustes, Licencias). Sin
+  // memoizarla se recreaba en CADA render de AppContent —que ocurre, por ejemplo,
+  // cada vez que fluctúa el estado de red— y anulaba el memo de las cuatro.
+  const requestTokenManually = useCallback(async () => {
     if (Capacitor.isNativePlatform()) {
       try {
         const permStatus = await PushNotifications.requestPermissions();
@@ -87,7 +91,7 @@ export const useNotifications = (user) => {
     } catch (error) {
       setTokenError(error.message);
     }
-  };
+  }, [user?.fcmToken]);
 
   useEffect(() => {
     if (!user || !user.uid) return;

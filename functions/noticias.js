@@ -55,29 +55,38 @@ async function ensureTopicMigration() {
  * sendPushNotification — se dispara al crear un documento en `noticias`.
  * maxInstances acota el coste/concurrencia ante picos.
  */
-exports.sendPushNotification = onDocumentCreated({ document: "noticias/{docId}", maxInstances: 5 }, async (event) => {
-  const data = event.data.data();
+exports.sendPushNotification = onDocumentCreated(
+  { document: "noticias/{docId}", maxInstances: 5, timeoutSeconds: 300, memory: "256MiB" },
+  async (event) => {
+    const data = event.data.data();
 
-  // Only react to explicit PUSH requests from admin
-  if (data.isPushRequest !== true) {
+    // Only react to explicit PUSH requests from admin
+    if (data.isPushRequest !== true) {
+      return null;
+    }
+
+    const title = data.title || "Nueva notificación";
+    const body = data.desc || "";
+
+    // Una sola vez tras el despliegue: pasa los tokens antiguos al topic.
+    // Con try/catch propio: si la migración falla (fallo transitorio de Firestore),
+    // el push al topic debe intentarse igualmente en vez de morir aquí sin log útil.
+    try {
+      await ensureTopicMigration();
+    } catch (error) {
+      console.error("ensureTopicMigration falló (se continúa con el envío):", error);
+    }
+
+    try {
+      const messageId = await sendToNewsTopic(title, body);
+      console.log(`Push enviado al topic "${NEWS_TOPIC}":`, messageId);
+    } catch (error) {
+      console.error("Error enviando push al topic:", error);
+    }
+
     return null;
   }
-
-  const title = data.title || "Nueva notificación";
-  const body = data.desc || "";
-
-  // Una sola vez tras el despliegue: pasa los tokens antiguos al topic.
-  await ensureTopicMigration();
-
-  try {
-    const messageId = await sendToNewsTopic(title, body);
-    console.log(`Push enviado al topic "${NEWS_TOPIC}":`, messageId);
-  } catch (error) {
-    console.error("Error enviando push al topic:", error);
-  }
-
-  return null;
-});
+);
 
 /**
  * sendStoreNews — Push DIRIGIDO de las noticias de delegado (noticiasTienda).
@@ -89,33 +98,48 @@ exports.sendPushNotification = onDocumentCreated({ document: "noticias/{docId}",
  *     autorizadas (las reglas ya lo exigen al crear el doc; doble cinturón).
  * Coste: una lectura por usuario de las tiendas destino (decenas) + el envío.
  */
-exports.sendStoreNews = onDocumentCreated({ document: "noticiasTienda/{docId}", maxInstances: 5 }, async (event) => {
-  const data = event.data.data();
-  if (data.sendPush !== true) return null;
+exports.sendStoreNews = onDocumentCreated(
+  { document: "noticiasTienda/{docId}", maxInstances: 5, timeoutSeconds: 300, memory: "256MiB" },
+  async (event) => {
+    const data = event.data.data();
+    if (data.sendPush !== true) return null;
 
-  const stores = Array.isArray(data.stores) ? data.stores.filter((s) => typeof s === "string" && s) : [];
-  if (stores.length === 0) return null;
+    const stores = Array.isArray(data.stores) ? data.stores.filter((s) => typeof s === "string" && s) : [];
+    if (stores.length === 0) return null;
 
-  // Re-validación de autoría en servidor (defensa en profundidad).
-  const delegadoSnap = await db().collection("delegados").doc(String(data.authorUid || "")).get();
-  const delegado = delegadoSnap.exists ? delegadoSnap.data() : null;
-  const authorized = delegado && delegado.active !== false &&
-    Array.isArray(delegado.stores) && stores.every((s) => delegado.stores.includes(s));
-  if (!authorized) {
-    console.error(`sendStoreNews: autor ${data.authorUid} sin autorización para [${stores.join(", ")}]. No se envía.`);
+    // try/catch en todo el cuerpo: era la única de las tres funciones de push sin él,
+    // así que un fallo transitorio de Firestore o FCM se propagaba sin ningún log
+    // propio que dijera en qué fase murió.
+    try {
+      // Re-validación de autoría en servidor (defensa en profundidad).
+      const delegadoSnap = await db().collection("delegados").doc(String(data.authorUid || "")).get();
+      const delegado = delegadoSnap.exists ? delegadoSnap.data() : null;
+      const authorized = delegado && delegado.active !== false &&
+        Array.isArray(delegado.stores) && stores.every((s) => delegado.stores.includes(s));
+      if (!authorized) {
+        console.error(`sendStoreNews: autor ${data.authorUid} sin autorización para [${stores.join(", ")}]. No se envía.`);
+        return null;
+      }
+
+      const tokens = await tokensForStores(db, stores);
+      if (tokens.size === 0) {
+        console.log(`sendStoreNews: sin dispositivos con push en [${stores.join(", ")}].`);
+        return null;
+      }
+
+      const { ok, ko, total } = await sendToTokens(tokens, data.title || "Aviso de tu delegado", data.desc || "");
+      console.log(`sendStoreNews → [${stores.join(", ")}]: ${ok} entregados, ${ko} fallos (tokens muertos, ignorables).`);
+      // ok + ko < total ⇒ el envío se quedó a medias (p.ej. timeout). Sin este aviso,
+      // el delegado creería que llegó a toda su plantilla.
+      if (ok + ko < total) {
+        console.error(`sendStoreNews: ENVÍO INCOMPLETO — ${ok + ko} de ${total} tokens procesados.`);
+      }
+    } catch (error) {
+      console.error("sendStoreNews falló:", error);
+    }
     return null;
   }
-
-  const tokens = await tokensForStores(db, stores);
-  if (tokens.size === 0) {
-    console.log(`sendStoreNews: sin dispositivos con push en [${stores.join(", ")}].`);
-    return null;
-  }
-
-  const { ok, ko } = await sendToTokens(tokens, data.title || "Aviso de tu delegado", data.desc || "");
-  console.log(`sendStoreNews → [${stores.join(", ")}]: ${ok} entregados, ${ko} fallos (tokens muertos, ignorables).`);
-  return null;
-});
+);
 
 /**
  * notifyDelegadoNewUser — Al CREARSE una cuenta nueva PENDIENTE de activar, avisa por push
@@ -126,65 +150,71 @@ exports.sendStoreNews = onDocumentCreated({ document: "noticiasTienda/{docId}", 
  *   - hay una tienda concreta (las auto-reparaciones nacen "Centro sin definir" y se ignoran).
  * Coste: 1 query a delegados + 1 query de sus tokens + 1 envío. Los registros son escasos.
  */
-exports.notifyDelegadoNewUser = onDocumentCreated({ document: "users/{uid}", maxInstances: 5 }, async (event) => {
-  const data = event.data && event.data.data();
-  if (!data) return null;
+exports.notifyDelegadoNewUser = onDocumentCreated(
+  { document: "users/{uid}", maxInstances: 5, timeoutSeconds: 120, memory: "256MiB" },
+  async (event) => {
+    const data = event.data && event.data.data();
+    if (!data) return null;
 
-  // Solo cuentas nuevas pendientes de activar.
-  if (!data.membership || data.membership.active !== false) return null;
+    // Solo cuentas nuevas pendientes de activar.
+    if (!data.membership || data.membership.active !== false) return null;
 
-  const profile = data.profile || {};
-  const store = profile.store;
-  // Sin tienda concreta no hay delegado a quien avisar.
-  if (!store || store === "Centro sin definir") return null;
+    const profile = data.profile || {};
+    const store = profile.store;
+    // Sin tienda concreta no hay delegado a quien avisar.
+    if (!store || store === "Centro sin definir") return null;
 
-  const tokens = new Set(); // Set: dedup por si el admin es además delegado de la tienda.
+    try {
+      const tokens = new Set(); // Set: dedup por si el admin es además delegado de la tienda.
 
-  // Delegados ACTIVOS cuya lista de tiendas incluye la del nuevo usuario.
-  const delegadosSnap = await db().collection("delegados")
-    .where("stores", "array-contains", store)
-    .get();
-  const delegadoUids = delegadosSnap.docs
-    .filter((d) => d.data().active !== false)
-    .map((d) => d.id);
+      // Delegados ACTIVOS cuya lista de tiendas incluye la del nuevo usuario.
+      const delegadosSnap = await db().collection("delegados")
+        .where("stores", "array-contains", store)
+        .get();
+      const delegadoUids = delegadosSnap.docs
+        .filter((d) => d.data().active !== false)
+        .map((d) => d.id);
 
-  // Tokens FCM de esos delegados (users/{uid}.profile.fcmToken; "in" admite 30).
-  for (let i = 0; i < delegadoUids.length; i += 30) {
-    const snap = await db().collection("users")
-      .where(admin.firestore.FieldPath.documentId(), "in", delegadoUids.slice(i, i + 30))
-      .select("profile.fcmToken")
-      .get();
-    snap.forEach((d) => {
-      const t = d.data().profile && d.data().profile.fcmToken;
-      if (t) tokens.add(t);
-    });
+      // Tokens FCM de esos delegados (users/{uid}.profile.fcmToken; "in" admite 30).
+      // Los trozos y la consulta del admin son independientes → todo en paralelo.
+      const uidChunks = [];
+      for (let i = 0; i < delegadoUids.length; i += 30) {
+        uidChunks.push(delegadoUids.slice(i, i + 30));
+      }
+      const [delegadoSnaps, adminSnap] = await Promise.all([
+        Promise.all(uidChunks.map((chunk) => db().collection("users")
+          .where(admin.firestore.FieldPath.documentId(), "in", chunk)
+          .select("profile.fcmToken")
+          .get())),
+        // Avisar TAMBIÉN al admin (siempre, por su email fijo), sea delegado o no.
+        db().collection("users")
+          .where("profile.email", "==", ADMIN_EMAIL)
+          .select("profile.fcmToken")
+          .limit(1)
+          .get(),
+      ]);
+
+      const collect = (snap) => snap.forEach((d) => {
+        const t = d.data().profile && d.data().profile.fcmToken;
+        if (t) tokens.add(t);
+      });
+      delegadoSnaps.forEach(collect);
+      collect(adminSnap);
+
+      if (tokens.size === 0) return null;
+
+      const nombre = profile.fullName || "Un compañero/a";
+      const title = "Nueva cuenta por activar";
+      const body = `${nombre} se ha registrado en ${store}. Ábrela para activar su cuenta.`;
+
+      const { ok, ko } = await sendToTokens(tokens, title, body);
+      console.log(`notifyDelegadoNewUser → ${store}: ${ok} avisados, ${ko} fallos.`);
+    } catch (e) {
+      console.error("notifyDelegadoNewUser error:", e);
+    }
+    return null;
   }
-
-  // Avisar TAMBIÉN al admin (siempre, por su email fijo), tenga la tienda delegado o no.
-  const adminSnap = await db().collection("users")
-    .where("profile.email", "==", ADMIN_EMAIL)
-    .select("profile.fcmToken")
-    .limit(1)
-    .get();
-  adminSnap.forEach((d) => {
-    const t = d.data().profile && d.data().profile.fcmToken;
-    if (t) tokens.add(t);
-  });
-
-  if (tokens.size === 0) return null;
-
-  const nombre = profile.fullName || "Un compañero/a";
-  const title = "Nueva cuenta por activar";
-  const body = `${nombre} se ha registrado en ${store}. Ábrela para activar su cuenta.`;
-
-  try {
-    const { ok, ko } = await sendToTokens(tokens, title, body);
-    console.log(`notifyDelegadoNewUser → ${store}: ${ok} avisados, ${ko} fallos.`);
-  } catch (e) {
-    console.error("notifyDelegadoNewUser error:", e);
-  }
-  return null;
-});
+);
 
 /**
  * subscribeToNewsTopic — Suscribe un token FCM al topic de noticias.

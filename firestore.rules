@@ -127,11 +127,11 @@ service cloud.firestore {
           request.resource.data.days is map;
       }
 
-      // Cuota de uso de la IA: la escribe SOLO el backend (Admin SDK ignora
-      // reglas). El cliente puede leer su propia cuota; nadie la escribe desde el cliente.
+      // HEREDADO: era la cuota diaria del asistente de IA, eliminado el 28-jul-2026.
+      // Ya nadie lee ni escribe aquí; `dailyCleanup` está vaciando lo que quedó en
+      // producción. Se deniega todo (el Admin SDK ignora las reglas y sí puede purgar).
       match /usage/{usageId} {
-        allow read: if request.auth != null && request.auth.uid == userId;
-        allow write: if false;
+        allow read, write: if false;
       }
     }
 
@@ -146,10 +146,32 @@ service cloud.firestore {
       );
       // Creación: solo para uno mismo, con cuenta ACTIVADA y con el storeKey REAL
       // de su perfil (impide falsear la sección a la que se enruta la petición).
+      //
+      // El flujo de "pedir día libre" se retiró del cliente el 28-jul-2026, pero las
+      // builds ANTIGUAS que aún no han actualizado siguen creando peticiones: por eso
+      // `create` sigue permitido. La lista de campos es EXACTAMENTE la que escribían
+      // esas builds — no ampliarla sin comprobar el historial (`git show 85eb138`).
+      // Sin este hasOnly, un usuario activo podía escribir campos arbitrarios y
+      // cadenas de hasta 1 MB en su propia petición, inflando coste y almacenamiento.
       allow create: if request.auth != null &&
         request.resource.data.uid == request.auth.uid &&
         isActiveMember() &&
-        request.resource.data.storeKey == myStoreKey();
+        request.resource.data.storeKey == myStoreKey() &&
+        request.resource.data.keys().hasOnly([
+          'uid', 'fullName', 'company', 'store', 'section',
+          'storeKey', 'date', 'status', 'note', 'createdAt'
+        ]) &&
+        request.resource.data.date is string && request.resource.data.date.size() <= 10 &&
+        request.resource.data.status == 'pending' &&
+        // createdAt lo añade addRequest() en el cliente, pero se valida como
+        // OPCIONAL a propósito: exigirlo rechazaría escrituras por lo demás
+        // válidas de builds antiguas que no lo enviaran. Si viene, debe ser número.
+        (!('createdAt' in request.resource.data) ||
+          request.resource.data.createdAt is number) &&
+        (!('note' in request.resource.data) ||
+          (request.resource.data.note is string && request.resource.data.note.size() <= 500)) &&
+        (!('fullName' in request.resource.data) ||
+          (request.resource.data.fullName is string && request.resource.data.fullName.size() <= 100));
       // Actualización: el dueño puede retocar su petición (p.ej. la nota) pero
       // NO su status (nadie se autoaprueba: cuando exista flujo de aprobación,
       // lo cambiará el backend), ni uid/storeKey (inmutables). Para cancelar,
@@ -157,7 +179,13 @@ service cloud.firestore {
       allow update: if request.auth != null && (
         isAdmin() ||
         (resource.data.uid == request.auth.uid &&
-         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['uid', 'storeKey', 'status']))
+         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['uid', 'storeKey', 'status']) &&
+         request.resource.data.keys().hasOnly([
+           'uid', 'fullName', 'company', 'store', 'section',
+           'storeKey', 'date', 'status', 'note', 'createdAt'
+         ]) &&
+         (!('note' in request.resource.data) ||
+           (request.resource.data.note is string && request.resource.data.note.size() <= 500)))
       );
       allow delete: if request.auth != null && (
         resource.data.uid == request.auth.uid ||
@@ -245,7 +273,8 @@ service cloud.firestore {
         request.resource.data.keys().hasOnly(['prospects', 'updatedAt']);
     }
 
-    // ---------- Caché de IA: solo backend ----------
+    // ---------- HEREDADO: caché del asistente de IA (eliminado el 28-jul-2026) ----------
+    // Nada la escribe ya; `dailyCleanup` la está vaciando. Denegada al cliente.
     match /ai_cache/{docId} {
       allow read, write: if false;
     }

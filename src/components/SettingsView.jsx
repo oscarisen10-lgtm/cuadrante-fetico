@@ -15,10 +15,12 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
   const [stats, setStats] = useState(null);
   const [statsLoading, setStatsLoading] = useState(false);
 
-  const loadStats = async () => {
+  // El backend cachea estas cifras unos minutos (recorre la colección entera de
+  // usuarios). La primera carga acepta la caché; "Actualizar" fuerza el recálculo.
+  const loadStats = async ({ refresh = false } = {}) => {
     setStatsLoading(true);
     try {
-      const data = await fetchAdminStats();
+      const data = await fetchAdminStats({ refresh });
       setStats(data);
     } catch (e) {
       toast('No se pudieron cargar las estadísticas: ' + (e?.message || e), 'error');
@@ -339,12 +341,12 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                         {stats.desconocido} sin plataforma aún (apps antiguas; se registrará al actualizar)
                       </p>
                     )}
-                    <button onClick={loadStats} disabled={statsLoading} className="w-full bg-white/10 text-white py-2 rounded-xl text-[9px] font-black uppercase flex items-center justify-center gap-2 mt-1">
+                    <button onClick={() => loadStats({ refresh: true })} disabled={statsLoading} className="w-full bg-white/10 text-white py-2 rounded-xl text-[9px] font-black uppercase flex items-center justify-center gap-2 mt-1">
                       <RefreshCw size={10} /> {statsLoading ? 'Actualizando…' : 'Actualizar'}
                     </button>
                   </div>
                 ) : (
-                  <button onClick={loadStats} disabled={statsLoading} className="w-full bg-emerald-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2">
+                  <button onClick={() => loadStats()} disabled={statsLoading} className="w-full bg-emerald-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2">
                     <BarChart3 size={14} /> {statsLoading ? 'Cargando…' : 'Ver estadísticas'}
                   </button>
                 )}

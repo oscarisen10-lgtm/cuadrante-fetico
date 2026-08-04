@@ -112,6 +112,9 @@ function AppContent({ user, authHook }) {
   const activeCartel = useMemo(() => newsList.find(n => n.imageUrl && !n.isPushRequest) || null, [newsList]);
   const [seenCartelId, setSeenCartelId] = useState(() => { try { return localStorage.getItem('cartelSeenId'); } catch { return null; } });
   const [manualImg, setManualImg] = useState(null); // imagen ampliada manualmente desde Resumen { url, title }
+  // Estable entre renders: si se creara en línea dentro de <DashboardView ...>, esa
+  // vista (envuelta en React.memo) se re-renderizaría en cada render de AppContent.
+  const openImage = useCallback((url, title) => setManualImg({ url, title }), []);
 
   // El cartel salta solo (una vez por cartel nuevo). Ampliar manualmente desde Resumen tiene prioridad.
   const autoCartelOpen = !!activeCartel && String(activeCartel.id) !== String(seenCartelId);
@@ -204,7 +207,7 @@ function AppContent({ user, authHook }) {
           <Suspense fallback={<div className="flex-1 flex items-center justify-center"><LoadingLogo label="Cargando..." /></div>}>
             <Routes>
               <Route path="/dashboard" element={
-                <DashboardView user={user} stats={stats} newsOnly={!isActive || adminMode || delegadoMode} newsList={newsList} addNews={addNews} deleteNews={deleteNews} permissionState={permissionState} requestTokenManually={requestTokenManually} onImageClick={(url, title) => setManualImg({ url, title })} />
+                <DashboardView user={user} stats={stats} newsOnly={!isActive || adminMode || delegadoMode} newsList={newsList} addNews={addNews} deleteNews={deleteNews} permissionState={permissionState} requestTokenManually={requestTokenManually} onImageClick={openImage} />
               } />
               {/* Cuentas PENDIENTES: Fichar totalmente abierto; Agenda y Permisos se
                   VEN y el aviso de activación salta dentro, solo al intentar usar
@@ -220,7 +223,7 @@ function AppContent({ user, authHook }) {
                 <CalendarView shifts={shifts} shiftsMap={shiftsMap} saveToCloud={saveToCloud} user={user} permissionState={permissionState} requestTokenManually={requestTokenManually} isActive={isActive} />
               } />
               <Route path="/licencias" element={
-                <LicenciasView user={user} permissionState={permissionState} requestTokenManually={requestTokenManually} isActive={isActive} />
+                <LicenciasView permissionState={permissionState} requestTokenManually={requestTokenManually} isActive={isActive} />
               } />
               <Route path="/settings" element={
                 <SettingsView user={user} settings={settings} saveToCloud={saveToCloud} stopAlarm={stopAlarm} pushToken={pushToken} pushTokenError={pushTokenError} permissionState={permissionState} requestTokenManually={requestTokenManually} isDelegado={isDelegado} />

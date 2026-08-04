@@ -30,7 +30,7 @@ export JAVA_HOME="$PWD/jdk21/jdk-21.0.3+9" && export PATH="$JAVA_HOME/bin:$PATH"
 src/
   components/     vistas y UI (calendar/ agrupa el calendario)
   hooks/          useAuth, useShifts, useTimer, useNews, useNotifications
-  services/       acceso a Firebase, asistente de IA y bus de avisos
+  services/       acceso a Firebase y bus de avisos
   constants/      reglas de convenio por empresa/puesto, tiendas, licencias
   utils/          fechas, festivos, compresión de imágenes, haptics
 functions/        Cloud Functions, un módulo por dominio (index.js solo reexporta)

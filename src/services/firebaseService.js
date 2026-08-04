@@ -304,10 +304,14 @@ export const markFichado = async (uid) => {
   }
 };
 
-/** Estadísticas agregadas para el admin (recuentos, sin datos personales). */
-export const fetchAdminStats = async () => {
+/**
+ * Estadísticas agregadas para el admin (recuentos, sin datos personales).
+ * El backend cachea el resultado unos minutos porque recorre la colección de
+ * usuarios entera; `refresh: true` fuerza el recálculo (botón de recargar).
+ */
+export const fetchAdminStats = async ({ refresh = false } = {}) => {
   const fn = httpsCallable(functions, 'adminStats');
-  const { data } = await fn();
+  const { data } = await fn({ refresh });
   return data;
 };
 
@@ -387,10 +391,14 @@ export const saveDelegado = async (payload) => {
   return data;
 };
 
-/** SOLO admin: totales (activos, pendientes, push) y delegados con sus recuentos. */
-export const fetchAdminOverview = async () => {
+/**
+ * SOLO admin: totales (activos, pendientes, push) y delegados con sus recuentos.
+ * Cacheado en el backend unos minutos (recorre la colección de usuarios entera);
+ * `refresh: true` fuerza el recálculo desde el botón de recargar del panel.
+ */
+export const fetchAdminOverview = async ({ refresh = false } = {}) => {
   const fn = httpsCallable(functions, 'adminOverview');
-  const { data } = await fn();
+  const { data } = await fn({ refresh });
   return data;
 };
 

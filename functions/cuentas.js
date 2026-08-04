@@ -60,7 +60,14 @@ async function purgeUserData(uid) {
  *   2) No limpiaba huérfanos: la subcolección `usage` ni las `requests` (relevante para RGPD).
  * El Admin SDK ignora "requires-recent-login" y borra todo de forma consistente.
  */
-exports.deleteMyAccount = onCall({ maxInstances: 5, enforceAppCheck: ENFORCE_APP_CHECK }, async (request) => {
+// timeout ampliado: purgeUserData hace un recursiveDelete de las subcolecciones del
+// usuario (turnos mensuales, turnos diarios legacy, peticiones), y con años de
+// historial eso no siempre cabe en los 60 s por defecto.
+exports.deleteMyAccount = onCall({
+  maxInstances: 5,
+  enforceAppCheck: ENFORCE_APP_CHECK,
+  timeoutSeconds: 300,
+}, async (request) => {
   if (!request.auth || !request.auth.uid) {
     throw new HttpsError("unauthenticated", "Debes iniciar sesión.");
   }

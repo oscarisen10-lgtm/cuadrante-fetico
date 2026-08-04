@@ -1,15 +1,12 @@
 import React, { useState } from 'react';
-import { FileText, ChevronDown, ChevronUp, Info, Users, Clock, ClipboardCheck, Sparkles } from 'lucide-react';
+import { FileText, ChevronDown, ChevronUp, Info, Users, Clock, ClipboardCheck } from 'lucide-react';
 import { LICENCIAS_CATEGORIES, GRADOS_CONSANGUINIDAD } from '../constants/licenciasData';
-import { ChatModal } from './ChatModal';
-import { isAdminUser } from '../constants/config';
 import { ActivationGateModal } from './LockedView';
 
-export const LicenciasView = React.memo(function LicenciasView({ user, permissionState, requestTokenManually, isActive = true }) {
+export const LicenciasView = React.memo(function LicenciasView({ permissionState, requestTokenManually, isActive = true }) {
   const [expandedLicencia, setExpandedLicencia] = useState(null);
   const [showGrados, setShowGrados] = useState(false);
   const [showGeneral, setShowGeneral] = useState(true); // abierto por defecto al entrar
-  const [showChat, setShowChat] = useState(false);
   // Cuentas PENDIENTES: la lista de permisos SE VE; este aviso salta solo al
   // intentar ABRIR el detalle de un permiso.
   const [showActivationGate, setShowActivationGate] = useState(false);
@@ -17,8 +14,6 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
     try { return parseFloat(localStorage.getItem('licFontScale')) || 1; } catch { return 1; }
   });
 
-  // Mientras la IA está en pruebas, el asistente solo lo ve el admin.
-  const isAdmin = isAdminUser(user);
   const changeScale = (delta) => setFontScale((s) => {
     const n = Math.min(1.5, Math.max(0.8, Math.round((s + delta) * 100) / 100));
     try { localStorage.setItem('licFontScale', String(n)); } catch { /* almacenamiento no disponible */ }
@@ -69,51 +64,6 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
       </div>
 
       <div style={{ zoom: fontScale }} className="flex flex-col animate-in fade-in duration-500 gap-6 pb-24 flex-1">
-
-        {/* Tarjeta de Acceso al Asistente IA — solo visible para el admin (en pruebas) */}
-        {isAdmin && (
-        <button
-          onClick={() => setShowChat(true)}
-          className="w-full relative overflow-hidden group bg-gradient-to-br from-emerald-600 to-emerald-800 rounded-[2rem] p-5 shadow-lg shadow-emerald-600/20 active:scale-[0.98] transition-all flex flex-col text-left"
-        >
-          {/* Fondo Animado */}
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-          <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
-          
-          <div className="relative flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 bg-white/90 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0 border border-white/40 shadow-inner">
-              {/* Logo Antigravity renderizado con CSS puro */}
-              <div 
-                className="drop-shadow-sm"
-                style={{
-                  width: '24px',
-                  height: '24px',
-                  background: 'conic-gradient(from 0deg, #EA4335 0%, #4285F4 25%, #34A853 50%, #FBBC04 75%, #EA4335 100%)',
-                  clipPath: 'path("M12 0 C12 6.6 17.4 12 24 12 C17.4 12 12 17.4 12 24 C12 17.4 6.6 12 0 12 C6.6 12 12 6.6 12 0 Z")',
-                  transform: 'scale(1.2)'
-                }}
-              />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="text-white font-black uppercase tracking-widest text-[13px] leading-none">Asistente IA</h3>
-                <Sparkles size={12} className="text-amber-300 animate-pulse" />
-              </div>
-              <p className="text-emerald-100 text-[10px] font-bold uppercase tracking-wider leading-tight">
-                Resuelve tus dudas del convenio en segundos
-              </p>
-            </div>
-          </div>
-
-          {/* Fake Input */}
-          <div className="relative w-full bg-white rounded-xl p-3 flex items-center justify-between shadow-inner group-hover:bg-slate-50 transition-colors">
-            <span className="text-slate-400 text-[11px] font-bold tracking-wide">Escribe tu consulta laboral aquí...</span>
-            <div className="bg-emerald-600 p-1.5 rounded-lg text-white shrink-0 shadow-sm">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-            </div>
-          </div>
-        </button>
-        )}
 
         {/* Botón Principal Desplegable: Licencias y Grados */}
         <button 
@@ -261,7 +211,6 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
         )}
       </div>
 
-      {showChat && <ChatModal onClose={() => setShowChat(false)} permissionState={permissionState} requestTokenManually={requestTokenManually} />}
       {showActivationGate && <ActivationGateModal onClose={() => setShowActivationGate(false)} />}
     </div>
   );

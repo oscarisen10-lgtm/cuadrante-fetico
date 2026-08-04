@@ -23,6 +23,41 @@ const requireAdmin = (request, mensaje) => {
   }
 };
 
+// ── Caché de los paneles agregados (adminStats / adminOverview) ───────────────
+// Ambos recorren la colección `users` ENTERA para devolver cifras. Con cientos de
+// usuarios es instantáneo; a decenas de miles, cada apertura del panel costaría una
+// lectura por usuario, y abrirlo tres veces seguidas costaría el triple sin que los
+// números hubieran cambiado apenas.
+//
+// Se guarda el resultado en `system/{docId}` durante unos minutos. El panel tiene su
+// propio botón de recargar, que envía { refresh: true } y fuerza el recálculo — así
+// la caché nunca impide ver el dato recién actualizado cuando de verdad hace falta.
+const PANEL_CACHE_TTL_MS = 5 * 60 * 1000;
+
+async function withPanelCache(docId, wantsFresh, compute) {
+  const ref = db().collection("system").doc(docId);
+
+  if (!wantsFresh) {
+    try {
+      const snap = await ref.get();
+      const cached = snap.exists ? snap.data() : null;
+      if (cached && typeof cached.computedAt === "number" &&
+          Date.now() - cached.computedAt < PANEL_CACHE_TTL_MS) {
+        return { ...cached.payload, cachedAt: cached.computedAt };
+      }
+    } catch (e) {
+      // La caché es una optimización, no una dependencia: si falla, se recalcula.
+      console.warn(`Caché de ${docId} no disponible, se recalcula:`, e.message);
+    }
+  }
+
+  const payload = await compute();
+  // Mejor esfuerzo: no dejar sin respuesta al admin porque no se pudiera cachear.
+  ref.set({ payload, computedAt: Date.now() })
+    .catch((e) => console.warn(`No se pudo guardar la caché de ${docId}:`, e.message));
+  return payload;
+}
+
 /**
  * adminStats — Recuentos agregados para el panel de administración (SOLO admin).
  * Devuelve cuántos usuarios hay en total y por plataforma (iOS / Android / web / sin
@@ -30,27 +65,37 @@ const requireAdmin = (request, mensaje) => {
  * dato personal, solo cifras. Los campos profile.platform y profile.hasFichado los escribe
  * el cliente (ver recordDeviceMeta / markFichado).
  */
-exports.adminStats = onCall({ maxInstances: 5, enforceAppCheck: ENFORCE_APP_CHECK }, async (request) => {
+exports.adminStats = onCall({
+  maxInstances: 5,
+  enforceAppCheck: ENFORCE_APP_CHECK,
+  timeoutSeconds: 120,
+  memory: "512MiB",
+}, async (request) => {
   requireAdmin(request, "Solo el administrador puede ver las estadísticas.");
 
-  // .select() proyecta solo los campos necesarios (menos ancho de banda al crecer).
-  const snap = await db().collection("users")
-    .select("profile.platform", "profile.hasFichado", "profile.fcmToken")
-    .get();
+  return withPanelCache("panelAdminStats", request.data?.refresh === true, async () => {
+    // .select() proyecta solo los campos necesarios (menos ancho de banda al crecer).
+    // .stream() en vez de .get(): no materializa la colección entera en memoria de
+    // una vez, así el consumo no crece con el nº de usuarios.
+    let total = 0, ios = 0, android = 0, web = 0, desconocido = 0, fichadores = 0, conPush = 0;
 
-  let total = 0, ios = 0, android = 0, web = 0, desconocido = 0, fichadores = 0, conPush = 0;
-  snap.forEach((d) => {
-    total += 1;
-    const p = d.data().profile || {};
-    if (p.platform === "ios") ios += 1;
-    else if (p.platform === "android") android += 1;
-    else if (p.platform === "web") web += 1;
-    else desconocido += 1;
-    if (p.hasFichado) fichadores += 1;
-    if (p.fcmToken) conPush += 1;
+    const stream = db().collection("users")
+      .select("profile.platform", "profile.hasFichado", "profile.fcmToken")
+      .stream();
+
+    for await (const d of stream) {
+      total += 1;
+      const p = d.data().profile || {};
+      if (p.platform === "ios") ios += 1;
+      else if (p.platform === "android") android += 1;
+      else if (p.platform === "web") web += 1;
+      else desconocido += 1;
+      if (p.hasFichado) fichadores += 1;
+      if (p.fcmToken) conPush += 1;
+    }
+
+    return { total, ios, android, web, desconocido, fichadores, conPush };
   });
-
-  return { total, ios, android, web, desconocido, fichadores, conPush };
 });
 
 /**
@@ -68,7 +113,14 @@ const LIST_USERS_FIELDS = [
   "profile.store", "profile.fcmToken", "profile.platform", "membership",
 ];
 
-exports.delegadoListUsers = onCall({ maxInstances: 10, enforceAppCheck: ENFORCE_APP_CHECK }, async (request) => {
+// timeout/memoria por encima del global: la opción "Total" del admin recorre todos
+// los usuarios en una sola llamada y devuelve la lista completa.
+exports.delegadoListUsers = onCall({
+  maxInstances: 10,
+  enforceAppCheck: ENFORCE_APP_CHECK,
+  timeoutSeconds: 120,
+  memory: "512MiB",
+}, async (request) => {
   const uid = requireAuth(request, HttpsError);
   const store = request.data?.store;
   if (typeof store !== "string" || !store.trim() || store.length > 80) {
@@ -314,29 +366,37 @@ exports.adminSetDelegado = onCall({ maxInstances: 5, enforceAppCheck: ENFORCE_AP
  * pendientes, con push) y la lista de delegados con cuántos usuarios/afiliados
  * activos tiene cada uno en sus tiendas (desglose por tienda incluido).
  */
-exports.adminOverview = onCall({ maxInstances: 5, enforceAppCheck: ENFORCE_APP_CHECK }, async (request) => {
+exports.adminOverview = onCall({
+  maxInstances: 5,
+  enforceAppCheck: ENFORCE_APP_CHECK,
+  timeoutSeconds: 120,
+  memory: "512MiB",
+}, async (request) => {
   requireAdmin(request, "Solo el administrador puede ver el panel de gestión.");
 
-  const usersSnap = await db().collection("users")
-    .select("profile.store", "profile.fcmToken", "membership")
-    .get();
-
+  return withPanelCache("panelAdminOverview", request.data?.refresh === true, async () => {
   let total = 0, activos = 0, conPush = 0, expulsados = 0;
   const byStore = {}; // { tienda: { total, activos } } — sin expulsados (no cuentan para los delegados)
-  usersSnap.forEach((d) => {
+
+  // .stream(): recuento incremental, memoria acotada aunque la colección crezca.
+  const usersStream = db().collection("users")
+    .select("profile.store", "profile.fcmToken", "membership")
+    .stream();
+
+  for await (const d of usersStream) {
     const data = d.data();
     const p = data.profile || {};
     total += 1;
     if (p.fcmToken) conPush += 1;
     const expelled = !!(data.membership && data.membership.expelled);
-    if (expelled) { expulsados += 1; return; }
+    if (expelled) { expulsados += 1; continue; }
     const active = isUserActive(data);
     if (active) activos += 1;
     const store = p.store || "Sin tienda";
     if (!byStore[store]) byStore[store] = { total: 0, activos: 0 };
     byStore[store].total += 1;
     if (active) byStore[store].activos += 1;
-  });
+  }
 
   const delegadosSnap = await db().collection("delegados").get();
   const delegados = delegadosSnap.docs.map((d) => {
@@ -363,4 +423,5 @@ exports.adminOverview = onCall({ maxInstances: 5, enforceAppCheck: ENFORCE_APP_C
     totals: { total, activos, pendientes: total - activos - expulsados, expulsados, conPush },
     delegados,
   };
+  });
 });

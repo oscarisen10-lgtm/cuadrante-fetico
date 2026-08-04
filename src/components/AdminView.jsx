@@ -59,15 +59,19 @@ export const AdminView = React.memo(function AdminView() {
   const [modal, setModal] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  const load = useCallback(async () => {
+  // `refresh` distingue la carga automática al entrar (puede servirse de la caché
+  // del backend) de una recarga pedida a mano (recalcula siempre).
+  const load = useCallback(async ({ refresh = false } = {}) => {
     setLoading(true);
     try {
-      setOverview(await fetchAdminOverview());
+      setOverview(await fetchAdminOverview({ refresh }));
     } catch (e) {
       toast("No se pudo cargar el panel: " + (e?.message || e), "error");
     }
     setLoading(false);
   }, []);
+
+  const reload = useCallback(() => load({ refresh: true }), [load]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -81,7 +85,7 @@ export const AdminView = React.memo(function AdminView() {
       const res = await saveDelegado({ email, stores: modal.stores });
       toast(`${res.fullName || email} es delegado de ${modal.stores.length} tienda(s).`, "success");
       setModal(null);
-      load();
+      reload(); // acaba de cambiar el dato: hay que saltarse la caché
     } catch (err) {
       toast("Error: " + (err?.message || err), "error");
     }
@@ -94,7 +98,7 @@ export const AdminView = React.memo(function AdminView() {
     try {
       await saveDelegado({ email: d.email, remove: true });
       toast("Delegado retirado.", "success");
-      load();
+      reload(); // acaba de cambiar el dato: hay que saltarse la caché
     } catch (err) {
       toast("Error: " + (err?.message || err), "error");
     }
@@ -124,7 +128,7 @@ export const AdminView = React.memo(function AdminView() {
             <span className="grid place-items-center w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 shrink-0"><ShieldCheck size={16} /></span>
             Gestión
           </h2>
-          <button onClick={load} disabled={loading} className="bg-white/10 text-white px-3 py-1.5 rounded-xl text-[9px] font-black uppercase flex items-center gap-1.5 active:scale-95 transition-all">
+          <button onClick={reload} disabled={loading} className="bg-white/10 text-white px-3 py-1.5 rounded-xl text-[9px] font-black uppercase flex items-center gap-1.5 active:scale-95 transition-all">
             <RefreshCw size={11} className={loading ? 'animate-spin' : ''} /> Actualizar
           </button>
         </div>

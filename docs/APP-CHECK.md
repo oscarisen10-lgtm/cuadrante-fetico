@@ -13,8 +13,8 @@ válida puede llamar a las Cloud Functions con un script en vez de con la app.
 Conviene entender el alcance real: **las funciones ya comprueban permisos** (admin
 por custom-claim, delegado por tienda autorizada), así que sin App Check nadie
 consigue datos que no le correspondan. Lo que App Check añade es evitar el *abuso*
-—por ejemplo, quemar la cuota de Gemini o hacer scraping con una cuenta legítima—,
-no un agujero de autorización.
+—hacer scraping con una cuenta legítima, o automatizar llamadas—, no un agujero de
+autorización.
 
 ## ⚠️ El problema con las apps nativas (léelo antes de nada)
 
@@ -66,9 +66,14 @@ compatible con Capacitor 8, que es la versión de este proyecto.
 - `src/firebase.js` importa `firebase/app-check` de forma **dinámica** y solo si
   hay clave: mientras no se configure, no engorda el bundle ni se ejecuta.
 
-## Si se decide no activarlo
+## Estado actual (28-jul-2026): pendiente, y no urgente
 
-Es una decisión legítima para una app interna de plantilla conocida, con
-autorización ya resuelta en reglas y backend. En ese caso conviene, como mínimo,
-vigilar la factura de Gemini: la cuota de 10 preguntas/día por usuario
-(`functions/asistente.js`) es hoy la protección real contra el abuso de la IA.
+**No se puede activar todavía**: forzar App Check dejaría fuera a los usuarios que
+aún no han actualizado a la build que lo incluye. Se activará cuando la migración
+esté completa (misma condición que para apagar el dual-write de turnos).
+
+Mientras tanto, el motivo principal por el que corría prisa —el coste por llamada a
+Gemini— **ha desaparecido**: el asistente de IA se eliminó del proyecto el
+28-jul-2026. Ya no queda ningún endpoint con coste económico por invocación, así que
+lo que queda expuesto sin App Check son solo operaciones cuya autorización ya
+resuelven las reglas de Firestore y los checks de rol del backend.

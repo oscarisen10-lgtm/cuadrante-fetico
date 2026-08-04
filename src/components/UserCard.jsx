@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Phone, Mail, Bell, BellOff, UserCheck, UserX, ChevronDown, ChevronUp } from 'lucide-react';
 
 /**
@@ -9,8 +9,12 @@ import { Phone, Mail, Bell, BellOff, UserCheck, UserX, ChevronDown, ChevronUp } 
  * `collapsible`: empieza plegada (solo nombre, estado y el interruptor) y se
  * abre al tocar el nombre — así el Censo puede listar tiendas enteras sin
  * ocupar media pantalla por usuario. En "Usuarios" va siempre abierta.
+ *
+ * React.memo: se pinta en listas de tienda entera bajo un buscador con estado
+ * local (StoreUserManager). Sin memo, cada pulsación en ese buscador volvía a
+ * renderizar TODAS las fichas, aunque sus props no hubieran cambiado.
  */
-export function UserCard({ u, collapsible = false, busy = false, onToggleActive, onExpel }) {
+export const UserCard = React.memo(function UserCard({ u, collapsible = false, busy = false, onToggleActive, onExpel }) {
   const [open, setOpen] = useState(!collapsible);
 
   const meta = (
@@ -103,4 +107,4 @@ export function UserCard({ u, collapsible = false, busy = false, onToggleActive,
       )}
     </div>
   );
-}
+});

@@ -180,15 +180,24 @@ export const CensoView = React.memo(function CensoView({ user, delegado }) {
     await persist(next, prospects);
   };
 
-  // Totales
-  const perStore = stores.map((s) => {
-    const activos = counts?.[s]?.activos ?? 0;
-    const futuros = (prospects[s] || []).length;
-    return { store: s, activos, futuros, pct: counts ? calcPct(activos, futuros) : null };
-  });
-  const totalActivos = perStore.reduce((acc, s) => acc + s.activos, 0);
-  const totalFuturos = perStore.reduce((acc, s) => acc + s.futuros, 0);
-  const totalPct = counts ? calcPct(totalActivos, totalFuturos) : null;
+  // Totales. Memoizados como el resto de derivados de este archivo: se recalculan
+  // solo cuando cambian las tiendas, los recuentos o los futuros usuarios — no en
+  // cada pulsación de los estados locales de la vista (expandir tienda, formulario).
+  const { perStore, totalActivos, totalFuturos, totalPct } = useMemo(() => {
+    const rows = stores.map((s) => {
+      const activos = counts?.[s]?.activos ?? 0;
+      const futuros = (prospects[s] || []).length;
+      return { store: s, activos, futuros, pct: counts ? calcPct(activos, futuros) : null };
+    });
+    const tActivos = rows.reduce((acc, s) => acc + s.activos, 0);
+    const tFuturos = rows.reduce((acc, s) => acc + s.futuros, 0);
+    return {
+      perStore: rows,
+      totalActivos: tActivos,
+      totalFuturos: tFuturos,
+      totalPct: counts ? calcPct(tActivos, tFuturos) : null,
+    };
+  }, [stores, counts, prospects]);
 
   return (
     <div className="flex flex-col gap-5 animate-in fade-in duration-300 pb-20">

@@ -58,7 +58,10 @@ export function StoreUserManager({ stores, showTotal = false, admin = false }) {
 
   useEffect(() => { loadUsers(selectedStore); }, [selectedStore, loadUsers]);
 
-  const handleToggle = async (u) => {
+  // useCallback en los dos handlers: viajan como props a UserCard (memoizada) por
+  // cada usuario de la lista. Recrearlos en cada render anularía ese memo justo
+  // donde más importa — al teclear en el buscador de aquí arriba.
+  const handleToggle = useCallback(async (u) => {
     const ok = await confirm(
       u.active
         ? `¿Desactivar la cuenta de ${u.fullName}? Solo podrá ver las noticias. No se borra ningún dato.`
@@ -74,9 +77,9 @@ export function StoreUserManager({ stores, showTotal = false, admin = false }) {
       toast("Error: " + (e?.message || e), "error");
     }
     setTogglingUid(null);
-  };
+  }, []);
 
-  const handleExpel = async (u) => {
+  const handleExpel = useCallback(async (u) => {
     const ok = await confirm(
       u.expelled
         ? `¿Readmitir a ${u.fullName}? Volverá a aparecer en las listas y el censo del delegado.`
@@ -97,7 +100,7 @@ export function StoreUserManager({ stores, showTotal = false, admin = false }) {
       toast("Error: " + (e?.message || e), "error");
     }
     setTogglingUid(null);
-  };
+  }, [admin]);
 
   const q = search.trim().toLowerCase();
   const filtered = q

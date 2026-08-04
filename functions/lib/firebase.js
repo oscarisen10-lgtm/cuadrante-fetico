@@ -13,7 +13,17 @@ const admin = require("firebase-admin");
 // Antes todo corría en us-central1: cada llamada cruzaba el Atlántico dos veces y las
 // consultas a Firestore pagaban latencia cross-region (cara en el recursiveDelete de
 // deleteMyAccount, por ejemplo).
-setGlobalOptions({ region: "europe-west1" });
+//
+// RECURSOS POR DEFECTO: antes ninguna función declaraba `memory` ni `timeoutSeconds`,
+// así que todas heredaban los valores por defecto de 2ª gen (256 MiB / 60 s) sin que
+// eso fuera una decisión de nadie. Fijarlos aquí los hace explícitos y revisables; las
+// funciones que necesitan más (paneles agregados, envíos masivos, limpieza programada)
+// lo declaran en su propia definición y ese valor manda sobre este.
+setGlobalOptions({
+  region: "europe-west1",
+  memory: "256MiB",
+  timeoutSeconds: 60,
+});
 
 admin.initializeApp();
 
