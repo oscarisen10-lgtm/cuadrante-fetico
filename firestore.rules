@@ -128,8 +128,10 @@ service cloud.firestore {
       }
 
       // HEREDADO: era la cuota diaria del asistente de IA, eliminado el 28-jul-2026.
-      // Ya nadie lee ni escribe aquí; `dailyCleanup` está vaciando lo que quedó en
-      // producción. Se deniega todo (el Admin SDK ignora las reglas y sí puede purgar).
+      // Ya nadie lee ni escribe aquí. `dailyCleanup` (la function que lo purgaba) se
+      // retiró el 05-ago-2026 antes de confirmar que esta colección quedara a cero:
+      // si queda algún doc suelto, hay que purgarlo a mano con el Admin SDK. Mientras
+      // tanto se deniega todo acceso desde el cliente (el Admin SDK ignora las reglas).
       match /usage/{usageId} {
         allow read, write: if false;
       }
@@ -274,7 +276,8 @@ service cloud.firestore {
     }
 
     // ---------- HEREDADO: caché del asistente de IA (eliminado el 28-jul-2026) ----------
-    // Nada la escribe ya; `dailyCleanup` la está vaciando. Denegada al cliente.
+    // Nada la escribe ya. Confirmada vacía (8 días seguidos en 0 antes de retirar
+    // `dailyCleanup`, la function que la purgaba, el 05-ago-2026). Denegada al cliente.
     match /ai_cache/{docId} {
       allow read, write: if false;
     }

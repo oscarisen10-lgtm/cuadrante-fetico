@@ -16,12 +16,10 @@
  *   noticias.js         push de noticias globales, de tienda y altas pendientes
  *   delegados.js        gestión de usuarios/afiliación y paneles de admin
  *   cuentas.js          borrado de cuenta y limpieza de huérfanos
- *   mantenimiento.js    tareas programadas
  */
 const noticias = require("./noticias");
 const delegados = require("./delegados");
 const cuentas = require("./cuentas");
-const mantenimiento = require("./mantenimiento");
 
 // --- Noticias y push ---
 exports.sendPushNotification = noticias.sendPushNotification;
@@ -42,13 +40,16 @@ exports.delegadoCensusCounts = delegados.delegadoCensusCounts;
 exports.deleteMyAccount = cuentas.deleteMyAccount;
 exports.cleanupOnAuthDelete = cuentas.cleanupOnAuthDelete;
 
-// --- Mantenimiento ---
-exports.dailyCleanup = mantenimiento.dailyCleanup;
-
 // La Arena/Competición (submitArenaScore + leaderboards) se ELIMINÓ el 17-jul-2026.
 // El flujo de "pedir día libre" y la callable teamStatus se eliminaron el 28-jul-2026.
 // El asistente de IA (askFeticoAssistant + Gemini) se eliminó el 28-jul-2026: se
 // retomará más adelante desde cero. Ver historial git para el código anterior.
+//
+// dailyCleanup (mantenimiento.js) se ELIMINÓ el 05-ago-2026: purgaba los restos de
+// `ai_cache` (confirmado vacío, 8 días seguidos en 0) y de `usage`, pero se borró
+// justo tras desplegar el chequeo de `usage` — antes de que llegara a ejecutarse ni
+// una vez. Si queda algún doc suelto en `users/{uid}/usage/chat_YYYY-MM-DD`, hay que
+// purgarlo a mano (Admin SDK; las reglas deniegan el acceso desde el cliente).
 //
 // ⚠️ Al desplegar, `firebase deploy --only functions` NO borra una función que ya
 // no se exporta: hay que retirarla explícitamente una vez:
