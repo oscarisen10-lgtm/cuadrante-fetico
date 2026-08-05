@@ -10,5 +10,13 @@
   "server": {
     "iosScheme": "capacitor",
     "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false,
+      "backgroundColor": "#ffffff",
+      "androidSplashResourceName": "splash",
+      "showSpinner": false
+    }
   }
 }

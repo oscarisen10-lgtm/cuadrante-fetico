@@ -325,10 +325,31 @@ export default function App() {
     }
   }, []);
 
+  // Retirada del splash nativo. Depende SOLO de que la sesión esté resuelta, y
+  // va en su propio efecto para que los cambios de biometría no lo re-disparen.
+  //
+  // Doble requestAnimationFrame: `useEffect` corre tras el commit de React, pero
+  // el navegador puede no haber PINTADO todavía. Si se ocultara ahí, el splash
+  // se retiraría un instante antes de que haya contenido en pantalla y se vería
+  // un fogonazo vacío — justo lo que hace que el arranque parezca "varias
+  // pantallas". Con dos frames encadenados, cuando el logo desaparece la app ya
+  // está dibujada debajo.
+  useEffect(() => {
+    if (loading) return;
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => {
+        SplashScreen.hide().catch(() => {});
+      });
+    });
+    return () => {
+      cancelAnimationFrame(outer);
+      if (inner) cancelAnimationFrame(inner);
+    };
+  }, [loading]);
+
   useEffect(() => {
     if (!loading) {
-      SplashScreen.hide().catch(() => {});
-      
       if (user && settings?.useBiometric && !isUnlocked) {
         verifyBiometric();
       } else if (user && !settings?.useBiometric) {
