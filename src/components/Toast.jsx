@@ -35,8 +35,11 @@ export function ToastContainer() {
     }
   }, [toasts, remove]);
 
+  // El avisador va suelto sobre el viewport, fuera del flujo de la cabecera, así que se
+  // descuenta él mismo el safe area superior: si no, en iPhone caería debajo de la hora
+  // y la señal.
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] flex flex-col gap-2 w-full max-w-sm px-4 pointer-events-none">
+    <div className="fixed left-1/2 -translate-x-1/2 z-[200] flex flex-col gap-2 w-full max-w-sm px-4 pointer-events-none" style={{ top: 'calc(env(safe-area-inset-top) + 1rem)' }}>
       {toasts.map(t => {
         const a = ACCENT[t.type] || ACCENT.info;
         return (

@@ -59,8 +59,11 @@ function NavigationBar({ adminMode, delegadoMode }) {
 
   return (
     <nav
-      className="h-20 flex justify-around items-center px-3 shrink-0"
-      style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,249,0.96))', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', boxShadow: '0 -1px 0 rgba(255,255,255,0.9) inset, 0 -8px 22px rgba(15,40,30,0.07)' }}
+      className="flex justify-around items-center px-3 shrink-0"
+      /* La barra se come el safe area inferior (indicador de inicio del iPhone): crece
+         esa altura de más y la reserva como padding, así el blanco llega al borde de la
+         pantalla y los iconos siguen centrados en sus 5rem, por encima del indicador. */
+      style={{ height: 'calc(5rem + env(safe-area-inset-bottom))', paddingBottom: 'env(safe-area-inset-bottom)', background: 'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,249,0.96))', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', boxShadow: '0 -1px 0 rgba(255,255,255,0.9) inset, 0 -8px 22px rgba(15,40,30,0.07)' }}
       role="tablist"
       aria-label="Navegación principal"
     >
@@ -182,8 +185,14 @@ function AppContent({ user, authHook }) {
   }, [logoutUser]);
 
   return (
-    <div className="h-full bg-slate-50 flex justify-center font-sans overflow-hidden text-slate-800 relative">
-      <div className="w-full max-w-md bg-white h-full flex flex-col relative overflow-hidden">
+    /* Armazón de la app. En móvil la columna ocupa el 100% y el degradado de detrás no
+       se llega a ver nunca; a partir de 640px (tablets, y el móvil en horizontal) la
+       columna se ensancha por tramos en vez de quedarse clavada en el ancho de un
+       teléfono, y lo que asoma a los lados es el mismo verde del arranque, no un gris
+       vacío. No se estira sin límite a propósito: la tipografía de la app es de 8-10px
+       y a lo ancho de un iPad de 13" las tarjetas quedarían desparramadas. */
+    <div className="h-full flex justify-center font-sans overflow-hidden text-slate-800 relative" style={{ background: 'radial-gradient(circle at 50% 35%, #ecfdf5, #d1fae5 60%, #a7f3d0)' }}>
+      <div className="w-full max-w-md sm:max-w-2xl lg:max-w-3xl bg-white h-full flex flex-col relative overflow-hidden sm:shadow-[0_0_60px_rgba(6,78,59,0.22)]">
         
         <header className="text-white pb-3 px-4 rounded-b-[1.5rem] shrink-0 z-10 relative overflow-hidden" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.6rem)', background: 'linear-gradient(160deg, #10b981 0%, #059669 55%, #047857 100%)', boxShadow: '0 8px 22px rgba(5,120,87,0.35), inset 0 2px 2px rgba(255,255,255,0.3)' }} role="banner">
           <div className="pointer-events-none absolute -top-10 -right-4 w-40 h-40 rounded-full" style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.18), transparent 70%)' }} />

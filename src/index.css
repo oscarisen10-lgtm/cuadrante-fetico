@@ -22,10 +22,16 @@ html, body {
   overscroll-behavior-y: contain;
 }
 
-/* Safe area: el inset SUPERIOR lo gestiona la cabecera verde (para que el verde
-   llegue hasta el borde en iPhone). Aquí solo dejamos abajo y laterales. */
+/* Safe area: la gestiona ENTERA el CSS, nunca el WebView. En capacitor.config.json
+   iOS va con contentInset "never" a propósito: con "always" el WKWebView aplicaba
+   los insets por su cuenta y se sumaban a estos, dejando un hueco del doble arriba
+   y otro abajo (en Android no pasaba, ese ajuste es solo de iOS).
+
+   El reparto: el inset SUPERIOR lo pone la cabecera verde y el INFERIOR la barra de
+   navegación (ver App.jsx), para que ambas lleguen pintadas hasta el borde físico de
+   la pantalla en vez de dejar una franja del fondo. Aquí solo quedan los laterales,
+   que no pertenecen a ningún componente concreto (iPhone en horizontal). */
 body {
-  padding-bottom: env(safe-area-inset-bottom);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
 }
