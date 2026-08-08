@@ -67,3 +67,12 @@ temp/
 # JDK local (~327 MB) que usa el emulador de Firestore en los tests de reglas.
 # Es una herramienta de la máquina, no del proyecto: NUNCA versionarla.
 jdk21/
+
+# Scaffolding de "ruflo" (swarm/agentes MCP): herramienta de la máquina/sesión,
+# no del proyecto. .swarm/ y ruvector.db son bases de datos SQLite locales que
+# no aportan nada versionadas y solo crecen (WAL/SHM). Ver memoria "ruflo-scaffolding".
+.claude-flow/
+.swarm/
+ruvector.db
+.mcp.json
+/CLAUDE.md

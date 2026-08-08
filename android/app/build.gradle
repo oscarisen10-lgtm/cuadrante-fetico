@@ -20,7 +20,7 @@ android {
         applicationId "app.netlify.guileless_malabi_40bf81.twa"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 176
+        versionCode 38
         versionName "3.6.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
