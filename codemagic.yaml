@@ -173,7 +173,9 @@ workflows:
           echo "Marketing version -> $NEW_VERSION"
           grep -m2 "MARKETING_VERSION" "$XCODE_PROJECT/project.pbxproj"
           # Build number interno (incrementa en cada subida a App Store Connect)
-          NEW_BUILD=174
+          # El 174 ya está subido y procesado en App Store Connect: un número de build
+          # no se puede reutilizar, así que el siguiente build arranca en 175.
+          NEW_BUILD=175
           echo "Build number -> $NEW_BUILD"
           cd ios/App
           agvtool new-version -all "$NEW_BUILD"
@@ -197,4 +199,13 @@ workflows:
         api_key: $APP_STORE_APPLE_PRIVATE_KEY
         key_id: $APP_STORE_APPLE_KEY_ID
         issuer_id: $APP_STORE_APPLE_ISSUER_ID
-        submit_to_testflight: true
+        # La build SIGUE subiendo a App Store Connect y aparece en TestFlight al
+        # instante para los testers INTERNOS; lo que ya no se hace solo es enviarla a
+        # la revisión beta, que únicamente hace falta para testers EXTERNOS.
+        #
+        # Estaba en true y por eso el build 174 murió con un 422 de Apple: solo admite
+        # UNA build en revisión beta por "train" (= marketing version), y el 173 de la
+        # misma 3.6.0 seguía en revisión. Reconstruir la misma versión chocaba siempre.
+        # Enviar a revisión externa se hace ahora a mano desde App Store Connect, que
+        # además es cuando de verdad se quiere.
+        submit_to_testflight: false
