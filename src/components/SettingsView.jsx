@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, BarChart3, ShieldCheck, Users } from 'lucide-react';
+import { Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, ShieldCheck, Users } from 'lucide-react';
 import { COMPANY_RULES, isAdminUser } from '../constants/config';
-import { STORES, S_ROMERO_STORES, ECI_STORES } from '../constants/stores';
-import { deleteUserAccount, fetchAdminStats } from '../services/firebaseService';
+import { STORES, S_ROMERO_STORES, ECI_STORES, formatStoreName } from '../constants/stores';
+import { deleteUserAccount } from '../services/firebaseService';
 import { firestoreCacheMode } from '../firebase';
 import { toast } from '../services/toastBus';
 import { setHapticsEnabled, isHapticsEnabled, hapticLight } from '../utils/haptics';
@@ -12,21 +12,6 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [haptics, setHaptics] = useState(isHapticsEnabled());
-  const [stats, setStats] = useState(null);
-  const [statsLoading, setStatsLoading] = useState(false);
-
-  // El backend cachea estas cifras unos minutos (recorre la colección entera de
-  // usuarios). La primera carga acepta la caché; "Actualizar" fuerza el recálculo.
-  const loadStats = async ({ refresh = false } = {}) => {
-    setStatsLoading(true);
-    try {
-      const data = await fetchAdminStats({ refresh });
-      setStats(data);
-    } catch (e) {
-      toast('No se pudieron cargar las estadísticas: ' + (e?.message || e), 'error');
-    }
-    setStatsLoading(false);
-  };
 
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
@@ -115,7 +100,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                     >
                       <option value="" disabled className="text-slate-800">Selecciona tu tienda...</option>
                       {sortedStores.map(s => (
-                        <option key={s.name} value={s.name} className="text-slate-800">{s.name}</option>
+                        <option key={s.name} value={s.name} className="text-slate-800">{formatStoreName(s.name)}</option>
                       ))}
                     </select>
                     <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-white/30">
@@ -302,55 +287,8 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                     </button>
                  </div>
               </div>
-              {/* Estadísticas de instalación y uso (solo admin) */}
-              <div className="bg-black/30 rounded-2xl p-4 border border-white/10 mt-2">
-                <div className="flex items-center gap-2 mb-3">
-                  <BarChart3 size={14} className="text-emerald-400" />
-                  <span className="text-[10px] font-black text-white uppercase italic">Estadísticas de uso</span>
-                </div>
-                {stats ? (
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center bg-white/5 p-2.5 rounded-xl">
-                      <span className="text-[9px] text-white/50 uppercase font-bold">Usuarios totales</span>
-                      <span className="text-[11px] text-white font-black">{stats.total}</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="bg-white/5 p-2.5 rounded-xl text-center">
-                        <div className="text-[8px] text-white/50 uppercase font-bold"> iOS</div>
-                        <div className="text-sm text-white font-black">{stats.ios}</div>
-                      </div>
-                      <div className="bg-white/5 p-2.5 rounded-xl text-center">
-                        <div className="text-[8px] text-white/50 uppercase font-bold">Android</div>
-                        <div className="text-sm text-white font-black">{stats.android}</div>
-                      </div>
-                      <div className="bg-white/5 p-2.5 rounded-xl text-center">
-                        <div className="text-[8px] text-white/50 uppercase font-bold">Web</div>
-                        <div className="text-sm text-white font-black">{stats.web}</div>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center bg-white/5 p-2.5 rounded-xl">
-                      <span className="text-[9px] text-white/50 uppercase font-bold">Usan «Fichar»</span>
-                      <span className="text-[11px] text-emerald-400 font-black">{stats.fichadores} <span className="text-white/30">/ {stats.total}</span></span>
-                    </div>
-                    <div className="flex justify-between items-center bg-white/5 p-2.5 rounded-xl">
-                      <span className="text-[9px] text-white/50 uppercase font-bold">Con push activo</span>
-                      <span className="text-[11px] text-white font-black">{stats.conPush}</span>
-                    </div>
-                    {stats.desconocido > 0 && (
-                      <p className="text-[8px] text-white/30 uppercase font-bold text-center pt-1">
-                        {stats.desconocido} sin plataforma aún (apps antiguas; se registrará al actualizar)
-                      </p>
-                    )}
-                    <button onClick={() => loadStats({ refresh: true })} disabled={statsLoading} className="w-full bg-white/10 text-white py-2 rounded-xl text-[9px] font-black uppercase flex items-center justify-center gap-2 mt-1">
-                      <RefreshCw size={10} /> {statsLoading ? 'Actualizando…' : 'Actualizar'}
-                    </button>
-                  </div>
-                ) : (
-                  <button onClick={() => loadStats()} disabled={statsLoading} className="w-full bg-emerald-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2">
-                    <BarChart3 size={14} /> {statsLoading ? 'Cargando…' : 'Ver estadísticas'}
-                  </button>
-                )}
-              </div>
+              {/* Las estadísticas de uso vivían aquí; ahora tienen su propia pestaña
+                  ("Estadísticas", en el hueco de Fichar cuando el Modo Admin está activo). */}
 
             </>
           )}

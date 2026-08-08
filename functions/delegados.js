@@ -58,12 +58,67 @@ async function withPanelCache(docId, wantsFresh, compute) {
   return payload;
 }
 
+// Ventana de "usuarios activos": días hacia atrás desde hoy. La app sella
+// profile.lastActiveAt al arrancar (ver recordActivity en el cliente).
+const ACTIVOS_VENTANA_DIAS = 7;
+
+/**
+ * Actividad de cada delegado: cuántas noticias ha publicado y cuántos push ha
+ * lanzado. Ambos viven en `noticiasTienda`; los push son los docs con
+ * sendPush == true (y van marcados isPushRequest, por eso no salen en el feed).
+ * Se recorre la colección entera, pero solo la escriben los delegados, así que
+ * es de un orden mucho menor que `users`.
+ *
+ * Se cruza con los delegados VIGENTES: retirar a un delegado (adminSetDelegado
+ * con remove:true) borra su doc en `delegados` pero no sus noticias antiguas, así
+ * que sin este cruce un ex-delegado seguiría contando aquí para siempre (y podía
+ * salir "más delegados con noticia que delegados totales").
+ */
+async function contarDelegadosConActividad() {
+  const delegadosSnap = await db().collection("delegados").select("fullName", "email").get();
+  const delegadosVigentes = new Map(
+    delegadosSnap.docs.map((d) => [d.id, d.data().fullName || d.data().email || "Delegado/a"])
+  );
+
+  const porDelegado = new Map();
+
+  const stream = db().collection("noticiasTienda")
+    .select("authorUid", "sendPush")
+    .stream();
+
+  for await (const d of stream) {
+    const n = d.data();
+    const uid = typeof n.authorUid === "string" ? n.authorUid : null;
+    // Ignora noticias de quien ya no es delegado: sus cifras históricas ya no
+    // representan a nadie actual del panel.
+    if (!uid || !delegadosVigentes.has(uid)) continue;
+    const acc = porDelegado.get(uid) || { uid, nombre: delegadosVigentes.get(uid), noticias: 0, pushes: 0 };
+    if (n.sendPush === true) acc.pushes += 1;
+    else acc.noticias += 1;
+    porDelegado.set(uid, acc);
+  }
+
+  const actividad = [...porDelegado.values()]
+    .sort((a, b) => (b.noticias + b.pushes) - (a.noticias + a.pushes));
+
+  return {
+    totalDelegados: delegadosVigentes.size,
+    delegadosConNoticia: actividad.filter((d) => d.noticias > 0).length,
+    delegadosConPush: actividad.filter((d) => d.pushes > 0).length,
+    // El panel solo lista un puñado: con muchos delegados, la respuesta entera
+    // no aporta nada frente a los que más publican.
+    delegadosActividad: actividad.slice(0, 25),
+  };
+}
+
 /**
  * adminStats — Recuentos agregados para el panel de administración (SOLO admin).
  * Devuelve cuántos usuarios hay en total y por plataforma (iOS / Android / web / sin
- * determinar), cuántos han usado "Fichar" y cuántos tienen push activo. No expone ningún
- * dato personal, solo cifras. Los campos profile.platform y profile.hasFichado los escribe
- * el cliente (ver recordDeviceMeta / markFichado).
+ * determinar), cuántos han usado "Fichar", cuántos tienen push activo, cuántos han
+ * abierto la app en los últimos días y la actividad de publicación de los delegados.
+ * Salvo el nombre del delegado (que ya firma sus propias noticias) no expone datos
+ * personales. profile.platform, profile.hasFichado y profile.lastActiveAt los escribe
+ * el cliente (ver recordAppOpen / markFichado).
  */
 exports.adminStats = onCall({
   maxInstances: 5,
@@ -78,9 +133,15 @@ exports.adminStats = onCall({
     // .stream() en vez de .get(): no materializa la colección entera en memoria de
     // una vez, así el consumo no crece con el nº de usuarios.
     let total = 0, ios = 0, android = 0, web = 0, desconocido = 0, fichadores = 0, conPush = 0;
+    // Desglose de push por plataforma: saber que hay 300 con push no dice si el
+    // problema de entrega está en iOS o en Android.
+    let pushIos = 0, pushAndroid = 0;
+    let activos7d = 0, activos7dIos = 0, activos7dAndroid = 0;
+
+    const desde7d = Date.now() - ACTIVOS_VENTANA_DIAS * 24 * 60 * 60 * 1000;
 
     const stream = db().collection("users")
-      .select("profile.platform", "profile.hasFichado", "profile.fcmToken")
+      .select("profile.platform", "profile.hasFichado", "profile.fcmToken", "profile.lastActiveAt")
       .stream();
 
     for await (const d of stream) {
@@ -91,10 +152,29 @@ exports.adminStats = onCall({
       else if (p.platform === "web") web += 1;
       else desconocido += 1;
       if (p.hasFichado) fichadores += 1;
-      if (p.fcmToken) conPush += 1;
+      if (p.fcmToken) {
+        conPush += 1;
+        if (p.platform === "ios") pushIos += 1;
+        else if (p.platform === "android") pushAndroid += 1;
+      }
+      // lastActiveAt lo empezó a escribir la app el 05-ago-2026: las builds
+      // anteriores no lo tienen y cuentan como inactivas hasta que se actualicen.
+      if (typeof p.lastActiveAt === "number" && p.lastActiveAt >= desde7d) {
+        activos7d += 1;
+        if (p.platform === "ios") activos7dIos += 1;
+        else if (p.platform === "android") activos7dAndroid += 1;
+      }
     }
 
-    return { total, ios, android, web, desconocido, fichadores, conPush };
+    const delegados = await contarDelegadosConActividad();
+
+    return {
+      total, ios, android, web, desconocido, fichadores,
+      conPush, pushIos, pushAndroid,
+      activos7d, activos7dIos, activos7dAndroid,
+      ventanaDias: ACTIVOS_VENTANA_DIAS,
+      ...delegados,
+    };
   });
 });
 

@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, CalendarDays, ChevronDown, ChevronUp, Lock } from 'lucide-react';
 import { CONFIG } from '../constants/config';
-import { STORES, MUNICIPAL_HOLIDAYS } from '../constants/stores';
+import { STORES, MUNICIPAL_HOLIDAYS, formatStoreName } from '../constants/stores';
 import { MonthGrid, WeekdayHeader } from './calendar/CalendarGrid';
 import { DateDetailPanel } from './calendar/DateDetailPanel';
 import { HoursEditor } from './calendar/HoursEditor';
@@ -274,7 +274,7 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
             <div className="p-4 bg-slate-50 border-b border-slate-100">
               <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">
                 Festivos Nacionales, Regionales y Locales
-                {userStore && <span className="text-emerald-600 ml-1">· {userStore}</span>}
+                {userStore && <span className="text-emerald-600 ml-1">· {formatStoreName(userStore)}</span>}
               </p>
             </div>
             <div className="divide-y divide-slate-100">

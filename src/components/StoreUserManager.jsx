@@ -4,6 +4,7 @@ import { fetchStoreUsers, setUserActiveStatus, setUserExpelled } from '../servic
 import { toast, confirm } from '../services/toastBus';
 import { LoadingLogo } from './UIComponents';
 import { UserCard } from './UserCard';
+import { formatStoreName } from '../constants/stores';
 
 // Opción especial del selector: ver juntos TODOS los usuarios (los de todas las
 // tiendas del delegado, o todos los de la app si es el admin). El backend la
@@ -123,7 +124,7 @@ export function StoreUserManager({ stores, showTotal = false, admin = false }) {
             onChange={(e) => setSelectedStore(e.target.value)}
             className="w-full bg-white border-none p-3 pl-9 pr-8 rounded-2xl text-sm outline-none ring-1 ring-slate-200 appearance-none font-bold text-slate-700 shadow-sm"
           >
-            {options.map((s) => <option key={s} value={s}>{s === TOTAL ? 'Total (todas las tiendas)' : s}</option>)}
+            {options.map((s) => <option key={s} value={s}>{s === TOTAL ? 'Total (todas las tiendas)' : formatStoreName(s)}</option>)}
           </select>
           <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
             <ChevronDown size={14} />
@@ -141,7 +142,7 @@ export function StoreUserManager({ stores, showTotal = false, admin = false }) {
               style={selectedStore === s ? { background: 'linear-gradient(180deg,#34d399,#059669)', boxShadow: '0 5px 12px rgba(5,150,105,0.4), inset 0 1px 1px rgba(255,255,255,0.5)' } : {}}
             >
               <span className="flex items-center gap-1.5">
-                {s === TOTAL ? <><Users size={12} /> Total</> : <><StoreIcon size={12} /> {s}</>}
+                {s === TOTAL ? <><Users size={12} /> Total</> : <><StoreIcon size={12} /> {formatStoreName(s)}</>}
               </span>
             </button>
           ))}

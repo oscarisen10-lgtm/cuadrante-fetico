@@ -4,6 +4,7 @@ import { fetchCensusCounts, getCenso, saveCenso, fetchStoreUsers, setUserActiveS
 import { toast, confirm } from '../services/toastBus';
 import { LoadingLogo } from './UIComponents';
 import { UserCard } from './UserCard';
+import { formatStoreName } from '../constants/stores';
 
 // Objetivo de afiliación: con este % o más, el indicador se pone en verde.
 const OBJETIVO_PCT = 30;
@@ -174,7 +175,7 @@ export const CensoView = React.memo(function CensoView({ user, delegado }) {
   };
 
   const removeProspect = async (store, name) => {
-    const ok = await confirm(`¿Quitar a ${name} de los futuros usuarios de ${store}?`);
+    const ok = await confirm(`¿Quitar a ${name} de los futuros usuarios de ${formatStoreName(store)}?`);
     if (!ok) return;
     const next = { ...prospects, [store]: (prospects[store] || []).filter((x) => x.name !== name) };
     await persist(next, prospects);
@@ -274,7 +275,7 @@ export const CensoView = React.memo(function CensoView({ user, delegado }) {
                   <div className="flex justify-between items-center gap-3">
                     <div className="flex-1 min-w-0">
                       <h4 className="text-xs font-black text-slate-800 uppercase tracking-tight flex items-center gap-1.5">
-                        <StoreIcon size={12} className="text-emerald-600 shrink-0" /> {store}
+                        <StoreIcon size={12} className="text-emerald-600 shrink-0" /> {formatStoreName(store)}
                       </h4>
                       <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mt-1">
                         {activos} usuarios · {futuros} futuros

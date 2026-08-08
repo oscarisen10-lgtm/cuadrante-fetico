@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ShieldCheck, Users, Bell, UserCheck, UserX, Plus, Trash2, RefreshCw, X, Mail, Store as StoreIcon, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
 import { fetchAdminOverview, saveDelegado } from '../services/firebaseService';
-import { STORES, S_ROMERO_STORES, ECI_STORES } from '../constants/stores';
+import { STORES, S_ROMERO_STORES, ECI_STORES, formatStoreName } from '../constants/stores';
 import { COMPANY_RULES } from '../constants/config';
 import { toast, confirm } from '../services/toastBus';
 import { LoadingLogo } from './UIComponents';
@@ -181,7 +181,7 @@ export const AdminView = React.memo(function AdminView() {
                   </div>
                   <div className="flex flex-wrap gap-1 mt-2">
                     {d.stores.map((s) => (
-                      <span key={s} className="text-[8px] font-black uppercase text-emerald-700 bg-emerald-500/10 px-2 py-0.5 rounded-md tracking-tight">{s}</span>
+                      <span key={s} className="text-[8px] font-black uppercase text-emerald-700 bg-emerald-500/10 px-2 py-0.5 rounded-md tracking-tight">{formatStoreName(s)}</span>
                     ))}
                   </div>
                 </button>
@@ -191,7 +191,7 @@ export const AdminView = React.memo(function AdminView() {
                     <div className="space-y-1.5 bg-slate-50 rounded-xl p-3">
                       {d.perStore.map((s) => (
                         <div key={s.store} className="flex justify-between items-center">
-                          <span className="text-[9px] font-bold text-slate-500 uppercase flex items-center gap-1.5"><StoreIcon size={10} className="text-emerald-600" /> {s.store}</span>
+                          <span className="text-[9px] font-bold text-slate-500 uppercase flex items-center gap-1.5"><StoreIcon size={10} className="text-emerald-600" /> {formatStoreName(s.store)}</span>
                           <span className="text-[10px] font-black text-slate-700">{s.activos} activos <span className="text-slate-300">/ {s.users}</span></span>
                         </div>
                       ))}
@@ -278,7 +278,7 @@ export const AdminView = React.memo(function AdminView() {
                         aria-label="Centro / Tienda"
                       >
                         <option value="" disabled>Centro / Tienda...</option>
-                        {storesForCompany(modal.company).map((s) => <option key={s} value={s}>{s}</option>)}
+                        {storesForCompany(modal.company).map((s) => <option key={s} value={s}>{formatStoreName(s)}</option>)}
                       </select>
                       <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"><ChevronDown size={13} /></div>
                     </div>
@@ -305,12 +305,12 @@ export const AdminView = React.memo(function AdminView() {
                     <div className="flex flex-wrap gap-1.5 p-2 bg-slate-50 rounded-2xl ring-1 ring-slate-200">
                       {modal.stores.map((s) => (
                         <span key={s} className="flex items-center gap-1.5 bg-emerald-600 text-white pl-2.5 pr-1.5 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-tight shadow-sm">
-                          {s}
+                          {formatStoreName(s)}
                           <button
                             type="button"
                             onClick={() => removeStoreFromModal(s)}
                             className="bg-white/20 rounded-full p-0.5 active:scale-90 transition-all"
-                            aria-label={`Quitar ${s}`}
+                            aria-label={`Quitar ${formatStoreName(s)}`}
                           >
                             <X size={10} />
                           </button>

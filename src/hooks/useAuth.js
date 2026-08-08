@@ -12,9 +12,14 @@ import {
   migrateShiftsToMonths,
   logoutUser,
   ensureUserDoc,
-  recordDeviceMeta
+  recordAppOpen
 } from '../services/firebaseService';
 import { toast } from '../services/toastBus';
+
+// Cada cuánto se refresca el sello de "última actividad". Con 12h, el contador de
+// usuarios activos de los últimos 7 días es exacto a nivel de día y cada usuario
+// escribe como mucho dos veces al día, no una por cada apertura de la app.
+const ACTIVITY_STAMP_TTL_MS = 12 * 60 * 60 * 1000;
 
 // Compara dos objetos "user" a nivel superficial. Evita crear una referencia
 // nueva (y disparar re-renders en cascada en vistas memoizadas y en useShifts)
@@ -94,12 +99,22 @@ export const useAuth = () => {
           markFirestoreAlive();
           if (docSnap.exists()) {
             const data = docSnap.data();
-            // Analítica (admin): registrar plataforma + versión SOLO si cambió respecto a lo
-            // guardado. Al escribir, el propio onSnapshot vuelve a disparar ya con los valores
-            // nuevos → la condición se vuelve falsa y no hay bucle de escrituras.
+            // Analítica (admin): plataforma + versión, y/o sello de actividad, cada uno
+            // SOLO si hace falta respecto a lo guardado — y las dos en la MISMA escritura
+            // si ambas hacen falta a la vez (típico el día que sale una versión nueva).
+            // Al escribir, el propio onSnapshot vuelve a disparar ya con los valores
+            // nuevos → las condiciones se vuelven falsas y no hay bucle de escrituras.
             const currentPlatform = Capacitor.getPlatform();
+            const analyticsFields = {};
             if (data.profile && (data.profile.platform !== currentPlatform || data.profile.appVersion !== __APP_VERSION__)) {
-              recordDeviceMeta(firebaseUser.uid, currentPlatform, __APP_VERSION__);
+              analyticsFields["profile.platform"] = currentPlatform;
+              analyticsFields["profile.appVersion"] = __APP_VERSION__;
+            }
+            if (data.profile && Date.now() - (data.profile.lastActiveAt || 0) > ACTIVITY_STAMP_TTL_MS) {
+              analyticsFields["profile.lastActiveAt"] = Date.now();
+            }
+            if (Object.keys(analyticsFields).length > 0) {
+              recordAppOpen(firebaseUser.uid, analyticsFields);
             }
             // Migración única al modelo mensual de turnos (usuarios con datos del
             // modelo diario). Al terminar escribe el marcador en el perfil, y la

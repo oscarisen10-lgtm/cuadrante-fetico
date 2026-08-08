@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PieChart, Newspaper, Plus, Trash2, Link, X, Upload } from 'lucide-react';
+import { PieChart, Newspaper, Plus, Trash2, Link, X, Upload, HardHat } from 'lucide-react';
 import { StatBar, InputGroup } from './UIComponents';
 import { formatTotalTime } from '../utils/dateUtils';
 import { isAdminUser, tieneFindeLargoDe4Dias } from '../constants/config';
@@ -12,6 +12,8 @@ import { compressImage } from '../utils/imageUtils';
 // muestra SOLO la sección de Noticias, sin las estadísticas personales.
 export const DashboardView = React.memo(function DashboardView({ user, stats, newsList, addNews, deleteNews, permissionState, requestTokenManually, onImageClick, newsOnly = false }) {
   const isAdmin = isAdminUser(user);
+  // El cuadrante de ECI aún no está modelado, así que sus cifras no significarían nada.
+  const esECI = user?.company === "ECI";
 
   // Desglose de findes de calidad según el puesto. Algunos puestos (coordinadores de
   // frescos, jefes) tienen finde largo de 4 días (sáb-dom-lun-mar) con reparto
@@ -158,7 +160,17 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
           )}
         </div>
       )}
-      {!newsOnly && (
+      {!newsOnly && esECI && (
+      <div className="rounded-[2rem] p-6 flex flex-col items-center justify-center min-h-[300px] text-center" style={{ background: 'linear-gradient(180deg,#ffffff,#f8f9fb)', boxShadow: '0 14px 34px -16px rgba(30,41,59,0.25), inset 0 1.5px 1px rgba(255,255,255,0.9)', border: '1px solid rgba(15,23,42,0.05)' }}>
+        <span className="grid place-items-center w-14 h-14 rounded-2xl text-white mb-4" style={{ background: 'linear-gradient(180deg,#fbbf24,#d97706)', boxShadow: '0 6px 14px rgba(217,119,6,0.35), inset 0 1px 1px rgba(255,255,255,0.5)' }}><HardHat size={26} /></span>
+        <h2 className="text-sm font-black text-slate-800 uppercase italic tracking-widest">En construcción</h2>
+        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2 max-w-[15rem]">
+          El resumen del calendario para El Corte Inglés estará disponible próximamente
+        </p>
+      </div>
+      )}
+
+      {!newsOnly && !esECI && (
       <div className="rounded-[2rem] p-6 flex flex-col min-h-[300px]" style={{ background: 'linear-gradient(180deg,#ffffff,#f8f9fb)', boxShadow: '0 14px 34px -16px rgba(30,41,59,0.25), inset 0 1.5px 1px rgba(255,255,255,0.9)', border: '1px solid rgba(15,23,42,0.05)' }}>
         <h2 className="text-sm font-black text-slate-800 uppercase italic tracking-widest border-b border-slate-100 pb-3 flex items-center gap-2.5 mb-6 shrink-0">
           <span className="grid place-items-center w-8 h-8 rounded-xl text-white shrink-0" style={{ background: 'linear-gradient(180deg,#34d399,#059669)', boxShadow: '0 4px 10px rgba(5,150,105,0.4), inset 0 1px 1px rgba(255,255,255,0.5)' }}><PieChart size={16} /></span> Resumen Calendario

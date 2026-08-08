@@ -75,7 +75,7 @@ export const useNotifications = (user) => {
       if (currentToken) {
         setToken(currentToken);
         // Escribe el token SOLO si cambió respecto al guardado (mismo criterio que
-        // recordDeviceMeta): evita una escritura por cada apertura de la app.
+        // recordAppOpen en useAuth): evita una escritura por cada apertura de la app.
         if (auth.currentUser && currentToken !== user?.fcmToken) {
           await updateDoc(doc(db, 'users', auth.currentUser.uid), {
             'profile.fcmToken': currentToken

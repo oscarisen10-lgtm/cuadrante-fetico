@@ -3,7 +3,7 @@ import { User, Lock, Mail, Store, ShieldCheck, KeyRound, X, ChevronDown } from '
 import { loginUser, registerUser, resetPassword } from '../services/firebaseService';
 import { InputGroup } from './UIComponents';
 import { COMPANY_RULES } from '../constants/config';
-import { STORES, S_ROMERO_STORES, ECI_STORES } from '../constants/stores';
+import { STORES, S_ROMERO_STORES, ECI_STORES, formatStoreName } from '../constants/stores';
 import appLogo from '../../icons/icon-192.webp';
 
 // ⚠️ MODO TESTERS: Cambiar a `true` para reactivar el registro público
@@ -174,7 +174,7 @@ export default function AuthView() {
                       >
                         <option value="" disabled>Selecciona tu tienda...</option>
                         {sortedStores.map(s => (
-                          <option key={s.name} value={s.name}>{s.name}</option>
+                          <option key={s.name} value={s.name}>{formatStoreName(s.name)}</option>
                         ))}
                       </select>
                       <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">

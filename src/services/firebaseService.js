@@ -274,18 +274,18 @@ export const saveUserData = async (updates) => {
 // --- ANALÍTICA (admin) ---
 
 /**
- * Registra la plataforma (ios/android/web) y la versión de la app en el perfil, para que
- * el admin sepa cuántos dispositivos hay de cada tipo. Se llama solo si cambió respecto a
- * lo guardado (evita escrituras repetidas). Mejor esfuerzo: si falla, no molesta al usuario.
+ * Registra en el perfil, en UNA sola escritura, lo que haya cambiado desde el último
+ * snapshot: plataforma (ios/android/web) + versión de la app, y/o el sello de "última
+ * actividad" (para contar usuarios activos en los últimos días). Quien llama decide qué
+ * incluir en `fields` — así el día que sale una versión nueva, cuando casi todo el mundo
+ * dispara a la vez el cambio de versión Y el sello de actividad caducado, es una escritura
+ * y no dos. Mejor esfuerzo: si falla, no molesta al usuario.
  */
-export const recordDeviceMeta = async (uid, platform, appVersion) => {
+export const recordAppOpen = async (uid, fields) => {
   try {
-    await updateDoc(doc(db, "users", uid), {
-      "profile.platform": platform,
-      "profile.appVersion": appVersion,
-    });
+    await updateDoc(doc(db, "users", uid), fields);
   } catch (e) {
-    console.warn("recordDeviceMeta:", e?.message);
+    console.warn("recordAppOpen:", e?.message);
   }
 };
 

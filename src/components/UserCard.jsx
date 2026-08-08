@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Phone, Mail, Bell, BellOff, UserCheck, UserX, ChevronDown, ChevronUp } from 'lucide-react';
+import { formatStoreName } from '../constants/stores';
 
 /**
  * UserCard — Ficha de usuario compartida por la pestaña "Usuarios" (delegado y
@@ -26,7 +27,7 @@ export const UserCard = React.memo(function UserCard({ u, collapsible = false, b
         </span>
       </div>
       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-1">
-        {u.store} · {u.section}
+        {formatStoreName(u.store)} · {u.section}
       </p>
     </>
   );

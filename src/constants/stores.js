@@ -99,6 +99,13 @@ export const ECI_STORES = [
   "El Corte Inglés Alcalá de Henares"
 ];
 
+// Transforma el nombre de un centro para mostrarlo en pantalla: los centros de
+// El Corte Inglés se guardan como "El Corte Inglés X" (así están en Firestore
+// para los usuarios ya registrados), pero se muestran como "ECI X". Solo
+// afecta a la vista, nunca al dato guardado.
+export const formatStoreName = (name) =>
+  typeof name === "string" ? name.replace(/^El Corte Inglés\s*/i, "ECI ").trim() : name;
+
 export const S_ROMERO_STORES = [
   "ARTURO SORIA",
   "CASTELLANA",

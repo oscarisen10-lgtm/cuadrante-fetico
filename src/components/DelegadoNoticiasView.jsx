@@ -6,6 +6,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { compressImage } from '../utils/imageUtils';
 import { toast, confirm } from '../services/toastBus';
 import { LoadingLogo } from './UIComponents';
+import { formatStoreName } from '../constants/stores';
 
 /**
  * DelegadoNoticiasView — Pestaña "Noticias" del delegado (sustituye a la
@@ -244,7 +245,7 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
                         className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-tight transition-all active:scale-95 ${on ? 'text-white' : 'bg-white text-slate-400 ring-1 ring-slate-200'}`}
                         style={on ? { background: 'linear-gradient(180deg,#34d399,#059669)', boxShadow: '0 4px 10px rgba(5,150,105,0.35), inset 0 1px 1px rgba(255,255,255,0.5)' } : {}}
                       >
-                        {s}
+                        {formatStoreName(s)}
                       </button>
                     );
                   })}
@@ -298,7 +299,7 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
                   <div className="flex justify-between items-center mb-2.5">
                     <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                       {(n.stores || []).map((s) => (
-                        <span key={s} className="text-[8px] font-black text-emerald-700 uppercase tracking-tighter bg-emerald-500/10 px-2 py-0.5 rounded-md">{s}</span>
+                        <span key={s} className="text-[8px] font-black text-emerald-700 uppercase tracking-tighter bg-emerald-500/10 px-2 py-0.5 rounded-md">{formatStoreName(s)}</span>
                       ))}
                       <span className="text-[8px] text-slate-400 font-bold">{n.date}</span>
                     </div>
@@ -369,7 +370,7 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
                         aria-pressed={on}
                         className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-tight transition-all active:scale-95 ${on ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-slate-400 ring-1 ring-slate-200'}`}
                       >
-                        {s}
+                        {formatStoreName(s)}
                       </button>
                     );
                   })}

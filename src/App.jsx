@@ -8,7 +8,7 @@ import { useNews } from './hooks/useNews';
 import { useTimer } from './hooks/useTimer';
 import { useShifts } from './hooks/useShifts';
 import { useNotifications } from './hooks/useNotifications';
-import { Clock, Calendar as CalendarIcon, PieChart, FileText, Settings, LogOut, WifiOff, Fingerprint, X, Newspaper, ShieldCheck, ClipboardList } from 'lucide-react';
+import { Clock, Calendar as CalendarIcon, PieChart, FileText, Settings, LogOut, WifiOff, Fingerprint, X, Newspaper, ShieldCheck, ClipboardList, BarChart3 } from 'lucide-react';
 import { getFormattedDate } from './utils/dateUtils';
 import { isAdminUser } from './constants/config';
 import { markFichado } from './services/firebaseService';
@@ -24,16 +24,17 @@ const SettingsView = lazy(() => import('./components/SettingsView').then(m => ({
 const DelegadoNoticiasView = lazy(() => import('./components/DelegadoNoticiasView').then(m => ({ default: m.DelegadoNoticiasView })));
 const AdminView = lazy(() => import('./components/AdminView').then(m => ({ default: m.AdminView })));
 const CensoView = lazy(() => import('./components/CensoView').then(m => ({ default: m.CensoView })));
+const EstadisticasView = lazy(() => import('./components/EstadisticasView').then(m => ({ default: m.EstadisticasView })));
 
 /**
  * NavigationBar — Bottom tab bar with React Router integration.
  * Each tab navigates to a route, and the browser back button works correctly.
  *
  * El hueco de "Fichar" es por rol: delegado (en Modo Delegado) → Noticias;
- * resto (incluido el admin) → Fichar. En Modo Admin, "Agenda" pasa a ser el
- * panel "Gestión". Las cuentas PENDIENTES navegan con normalidad (Fichar
- * abierto; Agenda y Permisos se ven, y el aviso de activación salta solo al
- * intentar registrar o abrir un permiso).
+ * admin (en Modo Admin) → Estadísticas; resto → Fichar. En Modo Admin, "Agenda"
+ * pasa a ser el panel "Gestión". Las cuentas PENDIENTES navegan con normalidad
+ * (Fichar abierto; Agenda y Permisos se ven, y el aviso de activación salta solo
+ * al intentar registrar o abrir un permiso).
  */
 function NavigationBar({ adminMode, delegadoMode }) {
   const navigate = useNavigate();
@@ -44,7 +45,9 @@ function NavigationBar({ adminMode, delegadoMode }) {
     { path: '/dashboard', icon: <PieChart />, label: 'Resumen' },
     delegadoMode
       ? { path: '/delegados', icon: <Newspaper />, label: 'Noticias' }
-      : { path: '/track', icon: <Clock />, label: 'Fichar' },
+      : adminMode
+        ? { path: '/estadisticas', icon: <BarChart3 />, label: 'Estadísticas' }
+        : { path: '/track', icon: <Clock />, label: 'Fichar' },
     adminMode
       ? { path: '/gestion', icon: <ShieldCheck />, label: 'Gestión' }
       : delegadoMode
@@ -236,6 +239,9 @@ function AppContent({ user, authHook }) {
               } />
               <Route path="/censo" element={
                 isDelegado ? <CensoView user={user} delegado={delegado} /> : <Navigate to="/dashboard" replace />
+              } />
+              <Route path="/estadisticas" element={
+                isAdmin ? <EstadisticasView /> : <Navigate to="/dashboard" replace />
               } />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
