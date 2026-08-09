@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Cuadrante — Registro horario y gestión de turnos</title>
+    <meta name="description" content="Mi Cuadrante: registra tu jornada, consulta tu cuadrante y recibe noticias, todo desde el móvil.">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; color: #1f2937; margin: 0; background: #f8faf9;
+        }
+        .hero {
+            background: linear-gradient(160deg, #10b981 0%, #059669 55%, #047857 100%);
+            color: #fff; padding: 64px 20px 80px; text-align: center;
+        }
+        .hero img { width: 96px; height: 96px; border-radius: 22px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); }
+        .hero h1 { font-size: 1.9rem; font-weight: 900; margin: 20px 0 8px; letter-spacing: -0.02em; }
+        .hero p { font-size: 1.05rem; color: #d1fae5; max-width: 480px; margin: 0 auto; }
+        .wrap { max-width: 880px; margin: -48px auto 0; padding: 0 20px 60px; }
+        .card {
+            background: #fff; border-radius: 20px; padding: 28px;
+            box-shadow: 0 14px 34px -16px rgba(30,41,59,0.2); border: 1px solid rgba(15,23,42,0.05);
+        }
+        .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 16px; }
+        .feature { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 14px; padding: 18px; }
+        .feature .icon { font-size: 1.6rem; }
+        .feature h3 { margin: 8px 0 4px; font-size: 0.95rem; color: #065f46; }
+        .feature p { margin: 0; font-size: 0.85rem; color: #4b5563; }
+        h2 { color: #111827; font-size: 1.15rem; margin: 0 0 4px; }
+        .lead { color: #4b5563; font-size: 0.95rem; margin-top: 0; }
+        .links { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+        .links a {
+            display: inline-block; text-decoration: none; font-weight: 700; font-size: 0.9rem;
+            padding: 10px 18px; border-radius: 10px; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0;
+        }
+        .links a:hover { background: #d1fae5; }
+        footer { text-align: center; padding: 30px 20px; font-size: 0.8rem; color: #9ca3af; }
+        footer a { color: #9ca3af; }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <img src="/icons/icon-192.webp" alt="Mi Cuadrante">
+        <h1>Mi Cuadrante</h1>
+        <p>Registro horario, gestión de turnos y noticias, en una sola app.</p>
+    </div>
+
+    <div class="wrap">
+        <div class="card">
+            <h2>Qué puedes hacer con la app</h2>
+            <p class="lead">Pensada para el día a día en tienda: fichar, consultar tu cuadrante y estar al tanto de las últimas noticias, todo desde el móvil.</p>
+            <div class="features">
+                <div class="feature">
+                    <div class="icon">⏱️</div>
+                    <h3>Fichar</h3>
+                    <p>Registra el inicio y fin de tu jornada y tus descansos con un toque.</p>
+                </div>
+                <div class="feature">
+                    <div class="icon">📅</div>
+                    <h3>Agenda y cuadrante</h3>
+                    <p>Consulta tu calendario de turnos, findes de calidad y festivos de tu centro.</p>
+                </div>
+                <div class="feature">
+                    <div class="icon">📄</div>
+                    <h3>Permisos</h3>
+                    <p>Lleva el control de tus licencias y ausencias desde la misma app.</p>
+                </div>
+                <div class="feature">
+                    <div class="icon">📰</div>
+                    <h3>Noticias</h3>
+                    <p>Recibe avisos y comunicados al instante.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="links">
+            <a href="/soporte.html">Soporte y preguntas frecuentes</a>
+            <a href="/privacidad.html">Política de privacidad</a>
+            <a href="mailto:oscargarcia@fetico.es">Contactar</a>
+        </div>
+    </div>
+
+    <footer>
+        Mi Cuadrante © 2026 — FETICO
+    </footer>
+</body>
+</html>
