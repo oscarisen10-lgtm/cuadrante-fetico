@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, ShieldCheck, Users } from 'lucide-react';
+import { Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, ShieldCheck, Users, HelpCircle } from 'lucide-react';
 import { COMPANY_RULES, isAdminUser } from '../constants/config';
 import { STORES, S_ROMERO_STORES, ECI_STORES, formatStoreName } from '../constants/stores';
 import { deleteUserAccount } from '../services/firebaseService';
@@ -7,7 +7,7 @@ import { firestoreCacheMode } from '../firebase';
 import { toast } from '../services/toastBus';
 import { setHapticsEnabled, isHapticsEnabled, hapticLight } from '../utils/haptics';
 
-export const SettingsView = React.memo(function SettingsView({ user, settings, saveToCloud, stopAlarm, pushToken, pushTokenError, permissionState, requestTokenManually, isDelegado = false }) {
+export const SettingsView = React.memo(function SettingsView({ user, settings, saveToCloud, stopAlarm, pushToken, pushTokenError, permissionState, requestTokenManually, isDelegado = false, onOpenGuide }) {
   const isAdmin = isAdminUser(user);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -55,7 +55,8 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
       <div className="rounded-[2rem] p-6 flex flex-col" style={{ background: 'linear-gradient(180deg,#1e293b,#0f172a)', boxShadow: '0 16px 38px -14px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.06)' }}>
         <h3 className="text-xs font-black text-white/50 uppercase tracking-widest mb-6 flex items-center gap-2 border-b border-white/5 pb-3"><Settings size={16}/> Preferencias</h3>
         <div className="space-y-6">
-          <div className="flex flex-col gap-4 bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
+          {/* data-tour: puntos que ilumina el tutorial (ver constants/screenTips) */}
+          <div data-tour="set-puesto" className="flex flex-col gap-4 bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
              <div className="flex items-center gap-2 mb-1">
                 <Building2 size={14} className="text-emerald-500" />
                 <span className="text-xs font-bold text-white uppercase leading-none">Mi Puesto</span>
@@ -134,7 +135,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                 </div>
           </div>
 
-          <div className="flex justify-between items-center bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
+          <div data-tour="set-sync" className="flex justify-between items-center bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
              <div className="flex flex-col">
                 <span className="text-xs font-bold text-white uppercase leading-none flex items-center gap-1.5"><RefreshCw size={14} className="text-emerald-500"/> Sincronización</span>
                 <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Sincroniza las noticias y avisos</span>
@@ -177,7 +178,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
             </button>
           </div>
 
-          <div className="flex justify-between items-center bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
+          <div data-tour="set-biometrico" className="flex justify-between items-center bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
             <div className="flex flex-col">
                 <span className="text-xs font-bold text-white uppercase leading-none flex items-center gap-1.5"><Fingerprint size={14} className="text-emerald-500"/> Bloqueo Biométrico</span>
                 <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Exigir FaceID/Huella al abrir app</span>
@@ -190,7 +191,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
             </button>
           </div>
 
-          <div className="space-y-4 flex flex-col">
+          <div data-tour="set-descanso" className="space-y-4 flex flex-col">
             <span className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Minutos de Descanso</span>
             <div className="grid grid-cols-5 gap-2">
               {[15, 20, 30, 45, 60].map(m => (
@@ -202,6 +203,22 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
               ))}
             </div>
           </div>
+
+          {/* Tutorial — vuelve a empezar desde la bienvenida. Siempre disponible,
+              también para cuentas pendientes (Ajustes nunca está bloqueado). */}
+          <button
+            data-tour="set-tutorial"
+            onClick={() => { hapticLight(); onOpenGuide?.(); }}
+            className="w-full flex justify-between items-center bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)] active:scale-[0.98] transition-transform text-left"
+          >
+             <div className="flex flex-col">
+                <span className="text-xs font-bold text-white uppercase leading-none flex items-center gap-1.5">
+                  <HelpCircle size={14} className="text-emerald-500"/> Tutorial
+                </span>
+                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Verlo otra vez desde el principio</span>
+             </div>
+             <span className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-md shrink-0">Ver</span>
+          </button>
 
           <div className="flex justify-between items-center bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20">
              <div className="flex flex-col">

@@ -40,6 +40,24 @@ function getAllYearHolidays(userStoreName) {
 
 const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
+// Relieve de la casa (el mismo de los botones de Fichar y del panel del día):
+// degradado vertical + sombra proyectada + brillo interior arriba. Al abrirse, el
+// botón se hunde: se le quita la sombra de fuera y se le mete sombra dentro.
+const BOTON_RELIEVE = {
+  background: 'linear-gradient(180deg,#34d399,#059669 58%,#047857)',
+  boxShadow: '0 8px 18px rgba(5,150,105,0.4), inset 0 1.5px 1px rgba(255,255,255,0.45)',
+};
+const BOTON_HUNDIDO = {
+  background: 'linear-gradient(180deg,#047857,#065f46)',
+  boxShadow: '0 2px 5px rgba(4,120,87,0.28), inset 0 3px 7px rgba(0,0,0,0.32)',
+};
+// Panel claro con volumen, igual que la tarjeta del Resumen.
+const PANEL_CLARO = {
+  background: 'linear-gradient(180deg,#ffffff,#f8f9fb)',
+  boxShadow: '0 14px 34px -16px rgba(30,41,59,0.25), inset 0 1.5px 1px rgba(255,255,255,0.9)',
+  border: '1px solid rgba(15,23,42,0.05)',
+};
+
 /**
  * CalendarView — Main calendar component (refactored).
  * Sub-components: MonthGrid, DayCell, WeekdayHeader, DateDetailPanel, HoursEditor
@@ -160,8 +178,9 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
 
           {/* View mode switcher */}
           <div className="flex justify-center p-3 bg-slate-50/70 border-b border-slate-100 gap-2 shrink-0" role="tablist" aria-label="Modo de vista del calendario">
-             <button onClick={() => setViewMode('mensual')} className={`flex-1 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'mensual' ? 'bg-gradient-to-b from-emerald-500 to-emerald-700 text-white shadow-[0_4px_10px_rgba(5,150,105,0.4)]' : 'text-slate-400 hover:bg-slate-200 bg-white border border-slate-100'}`} role="tab" aria-selected={viewMode === 'mensual'} aria-controls="calendar-grid">Mensual</button>
-             <button onClick={() => setViewMode('anual')} className={`flex-1 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'anual' ? 'bg-gradient-to-b from-emerald-500 to-emerald-700 text-white shadow-[0_4px_10px_rgba(5,150,105,0.4)]' : 'text-slate-400 hover:bg-slate-200 bg-white border border-slate-100'}`} role="tab" aria-selected={viewMode === 'anual'} aria-controls="calendar-grid">Anual</button>
+             {/* data-tour: puntos que ilumina el tutorial (ver constants/screenTips) */}
+             <button data-tour="cal-mensual" onClick={() => setViewMode('mensual')} className={`flex-1 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'mensual' ? 'bg-gradient-to-b from-emerald-500 to-emerald-700 text-white shadow-[0_4px_10px_rgba(5,150,105,0.4)]' : 'text-slate-400 hover:bg-slate-200 bg-white border border-slate-100'}`} role="tab" aria-selected={viewMode === 'mensual'} aria-controls="calendar-grid">Mensual</button>
+             <button data-tour="cal-anual" onClick={() => setViewMode('anual')} className={`flex-1 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'anual' ? 'bg-gradient-to-b from-emerald-500 to-emerald-700 text-white shadow-[0_4px_10px_rgba(5,150,105,0.4)]' : 'text-slate-400 hover:bg-slate-200 bg-white border border-slate-100'}`} role="tab" aria-selected={viewMode === 'anual'} aria-controls="calendar-grid">Anual</button>
           </div>
 
           {/* Navigation */}
@@ -251,11 +270,13 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
             />
 
             {/* Botón Festivos del Año - Ahora debajo de DateDetailPanel */}
-            <button 
+            <button
+              data-tour="cal-festivos"
               onClick={() => setShowFestivos(!showFestivos)}
-          className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 ${
-            showFestivos ? 'bg-emerald-700 border-emerald-600 shadow-md ring-2 ring-emerald-600/20' : 'bg-emerald-600 border-emerald-700/20 shadow-sm hover:bg-emerald-500'
-          }`}
+              className="btn3d w-full flex items-center justify-between p-4 rounded-2xl"
+              /* Mismo relieve que el resto de la app: en reposo sobresale (degradado
+                 + sombra proyectada + brillo interior arriba) y abierto se hunde. */
+              style={showFestivos ? BOTON_HUNDIDO : BOTON_RELIEVE}
         >
           <div className="flex items-center gap-3 min-w-0">
             <div className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${showFestivos ? 'bg-white text-emerald-700 shadow-lg' : 'bg-emerald-700/50 text-emerald-100'}`}>
@@ -270,8 +291,8 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
 
         {/* Lista de Festivos (Condicional) */}
         {showFestivos && (
-          <div className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-xl animate-in slide-in-from-top-4 duration-300 mb-4">
-            <div className="p-4 bg-slate-50 border-b border-slate-100">
+          <div className="rounded-[2rem] overflow-hidden animate-in slide-in-from-top-4 duration-300 mb-4" style={PANEL_CLARO}>
+            <div className="p-4 bg-slate-50/70 border-b border-slate-100">
               <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">
                 Festivos Nacionales, Regionales y Locales
                 {userStore && <span className="text-emerald-600 ml-1">· {formatStoreName(userStore)}</span>}

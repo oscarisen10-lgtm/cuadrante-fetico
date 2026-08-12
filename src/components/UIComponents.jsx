@@ -45,11 +45,13 @@ export function NavItem({ icon, label, isActive, onClick }) {
   );
 }
 
-export function StatBar({ label, currentValue, totalValue, percentage, color, large = false }) {
+// dataTour: marca opcional para que el tutorial pueda iluminar esta barra
+// (ver constants/screenTips).
+export function StatBar({ label, currentValue, totalValue, percentage, color, large = false, dataTour }) {
   const clampedPercentage = Math.max(0, Math.min(percentage, 100));
 
   return (
-    <div className="space-y-2.5 flex flex-col" role="meter" aria-label={label} aria-valuenow={clampedPercentage} aria-valuemin={0} aria-valuemax={100}>
+    <div data-tour={dataTour} className="space-y-2.5 flex flex-col" role="meter" aria-label={label} aria-valuenow={clampedPercentage} aria-valuemin={0} aria-valuemax={100}>
       <div className="flex justify-between items-end leading-none">
         <span className={`font-black uppercase ${large ? "text-xs text-slate-500 tracking-tight" : "text-[10px] text-slate-400 tracking-widest"}`}>{label}</span>
         <span className={`font-bold text-slate-400 ${large ? "text-base mr-0.5" : "text-xs mr-1"}`}>

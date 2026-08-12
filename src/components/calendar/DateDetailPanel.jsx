@@ -61,7 +61,9 @@ export function DateDetailPanel({ selectedDates, shiftsMap, setSelectedDates, ma
 
   return (
     <div className="animate-decay-bounce">
-      <div className="rounded-[2rem] p-6 flex flex-col shrink-0 animate-in zoom-in-95 duration-300" role="region" aria-label="Detalle de fechas seleccionadas" style={{ background: 'linear-gradient(180deg,#ffffff,#f6f8fa)', boxShadow: '0 20px 48px -18px rgba(5,80,60,0.35), inset 0 1.5px 1px rgba(255,255,255,0.9)', border: '1px solid rgba(16,185,129,0.18)' }}>
+      {/* data-tour: lo ilumina el tutorial, que selecciona un día para poder
+          enseñar esta ficha (ver constants/screenTips). */}
+      <div data-tour="cal-panel" className="rounded-[2rem] p-6 flex flex-col shrink-0 animate-in zoom-in-95 duration-300" role="region" aria-label="Detalle de fechas seleccionadas" style={{ background: 'linear-gradient(180deg,#ffffff,#f6f8fa)', boxShadow: '0 20px 48px -18px rgba(5,80,60,0.35), inset 0 1.5px 1px rgba(255,255,255,0.9)', border: '1px solid rgba(16,185,129,0.18)' }}>
         <div className="flex justify-between items-start mb-6 pb-4 border-b border-slate-100">
           <div className="flex flex-col">
             {selectedDates.length === 1 && dObj ? (

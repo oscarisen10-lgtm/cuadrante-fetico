@@ -16,6 +16,7 @@ import { NavItem, LoadingLogo } from './components/UIComponents';
 import AuthView from './components/AuthView';
 import { ToastContainer, ConfirmDialog } from './components/Toast';
 import { DashboardView } from './components/DashboardView';
+import { useScreenTips } from './hooks/useScreenTips';
 
 const TrackerView = lazy(() => import('./components/TrackerView').then(m => ({ default: m.TrackerView })));
 const CalendarView = lazy(() => import('./components/CalendarView').then(m => ({ default: m.CalendarView })));
@@ -25,6 +26,9 @@ const DelegadoNoticiasView = lazy(() => import('./components/DelegadoNoticiasVie
 const AdminView = lazy(() => import('./components/AdminView').then(m => ({ default: m.AdminView })));
 const CensoView = lazy(() => import('./components/CensoView').then(m => ({ default: m.CensoView })));
 const EstadisticasView = lazy(() => import('./components/EstadisticasView').then(m => ({ default: m.EstadisticasView })));
+// El bocadillo del tutorial solo sale la primera vez que se abre cada pantalla:
+// cargarlo aparte deja el arranque de siempre intacto para quien ya lo ha visto.
+const TipBubble = lazy(() => import('./components/TipBubble').then(m => ({ default: m.TipBubble })));
 
 /**
  * NavigationBar — Bottom tab bar with React Router integration.
@@ -122,8 +126,15 @@ function AppContent({ user, authHook }) {
   // vista (envuelta en React.memo) se re-renderizaría en cada render de AppContent.
   const openImage = useCallback((url, title) => setManualImg({ url, title }), []);
 
+  // ── Tutorial ──
+  // Cada pantalla explica lo suyo la primera vez que se abre; el botón de Ajustes
+  // lo devuelve al principio para verlo las veces que haga falta.
+  const { tip, dismiss: dismissTip, restart: restartTips } = useScreenTips();
+
   // El cartel salta solo (una vez por cartel nuevo). Ampliar manualmente desde Resumen tiene prioridad.
-  const autoCartelOpen = !!activeCartel && String(activeCartel.id) !== String(seenCartelId);
+  // Con un aviso del tutorial abierto NO se auto-abre: taparía la pantalla que se
+  // está explicando. Al cerrar el aviso, el cartel salta a continuación.
+  const autoCartelOpen = !tip && !!activeCartel && String(activeCartel.id) !== String(seenCartelId);
   const lightbox = manualImg || (autoCartelOpen ? { url: activeCartel.imageUrl, title: activeCartel.title, isAuto: true } : null);
   const closeLightbox = useCallback(() => {
     if (lightbox?.isAuto && activeCartel?.id != null) {
@@ -238,7 +249,7 @@ function AppContent({ user, authHook }) {
                 <LicenciasView permissionState={permissionState} requestTokenManually={requestTokenManually} isActive={isActive} />
               } />
               <Route path="/settings" element={
-                <SettingsView user={user} settings={settings} saveToCloud={saveToCloud} stopAlarm={stopAlarm} pushToken={pushToken} pushTokenError={pushTokenError} permissionState={permissionState} requestTokenManually={requestTokenManually} isDelegado={isDelegado} />
+                <SettingsView user={user} settings={settings} saveToCloud={saveToCloud} stopAlarm={stopAlarm} pushToken={pushToken} pushTokenError={pushTokenError} permissionState={permissionState} requestTokenManually={requestTokenManually} isDelegado={isDelegado} onOpenGuide={restartTips} />
               } />
               <Route path="/delegados" element={
                 isDelegado ? <DelegadoNoticiasView user={user} delegado={delegado} /> : <Navigate to="/dashboard" replace />
@@ -302,6 +313,15 @@ function AppContent({ user, authHook }) {
           </div>
         )}
       </div>
+      {/* fallback={null}: el bocadillo aparece cuando esté listo, sin un "Cargando…"
+          a pantalla completa por delante de la app recién pintada. */}
+      {tip && (
+        <Suspense fallback={null}>
+          {/* key: al cambiar de aviso se monta uno nuevo, así el recorrido por
+              partes (Agenda) siempre empieza por su primer paso. */}
+          <TipBubble key={tip.id} tip={tip} onDismiss={dismissTip} />
+        </Suspense>
+      )}
       <ToastContainer />
       <ConfirmDialog />
     </div>

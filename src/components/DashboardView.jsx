@@ -176,16 +176,17 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
           <span className="grid place-items-center w-8 h-8 rounded-xl text-white shrink-0" style={{ background: 'linear-gradient(180deg,#34d399,#059669)', boxShadow: '0 4px 10px rgba(5,150,105,0.4), inset 0 1px 1px rgba(255,255,255,0.5)' }}><PieChart size={16} /></span> Resumen Calendario
         </h2>
         <div className="flex-1 flex flex-col justify-between py-2 space-y-5">
-          <StatBar label="Horas Anuales" currentValue={formatTotalTime(stats.horasTotales)} percentage={(stats.horasTotales/(stats.targets?.horas || 1770))*100} totalValue={`${stats.targets?.horas || 1770}h`} color="bg-emerald-500" large={true} />
-          <StatBar label="Días Trabajados" currentValue={stats.diasTrabajados} percentage={(stats.diasTrabajados/(stats.targets?.trabajados || 268))*100} totalValue={stats.targets?.trabajados || 268} color="bg-emerald-600" large={true} />
-          <StatBar label="Días Libres" currentValue={stats.diasLibres} percentage={(stats.diasLibres/(stats.targets?.libres || 76))*100} totalValue={stats.targets?.libres || 76} color="bg-emerald-400" large={true} />
-          
+          {/* data-tour: puntos que ilumina el tutorial (ver constants/screenTips) */}
+          <StatBar dataTour="res-horas" label="Horas Anuales" currentValue={formatTotalTime(stats.horasTotales)} percentage={(stats.horasTotales/(stats.targets?.horas || 1770))*100} totalValue={`${stats.targets?.horas || 1770}h`} color="bg-emerald-500" large={true} />
+          <StatBar dataTour="res-trabajados" label="Días Trabajados" currentValue={stats.diasTrabajados} percentage={(stats.diasTrabajados/(stats.targets?.trabajados || 268))*100} totalValue={stats.targets?.trabajados || 268} color="bg-emerald-600" large={true} />
+          <StatBar dataTour="res-libres" label="Días Libres" currentValue={stats.diasLibres} percentage={(stats.diasLibres/(stats.targets?.libres || 76))*100} totalValue={stats.targets?.libres || 76} color="bg-emerald-400" large={true} />
+
           {stats.targets?.ha > 0 && (
-             <StatBar label="Días HA" currentValue={stats.contadorHA} percentage={(stats.contadorHA/stats.targets.ha)*100} totalValue={stats.targets.ha} color="bg-emerald-500" large={true} />
+             <StatBar dataTour="res-ha" label="Días HA" currentValue={stats.contadorHA} percentage={(stats.contadorHA/stats.targets.ha)*100} totalValue={stats.targets.ha} color="bg-emerald-500" large={true} />
           )}
-          
+
           {(stats.targets?.calidad || 0) > 0 && (
-            <div>
+            <div data-tour="res-calidad">
               <StatBar label="Calidad" currentValue={stats.findesCalidad} percentage={(stats.findesCalidad/(stats.targets?.calidad || 10))*100} totalValue={stats.targets?.calidad || 10} color="bg-emerald-600" large={true} />
               <div className="flex gap-3 mt-1.5 ml-1">
                 <span className="text-[9px] font-black text-emerald-700 uppercase tracking-wider">● Sáb-Dom: {stats.findesCalidadCorto}/{calidadCortoTarget}</span>
@@ -194,7 +195,7 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
             </div>
           )}
 
-          <StatBar label="DOMINGOS/FESTIVOS" currentValue={stats.domingosCount} percentage={(stats.domingosCount/(stats.targets?.domingos || 22))*100} totalValue={stats.targets?.domingos || 22} color="bg-emerald-500" large={true} />
+          <StatBar dataTour="res-domingos" label="DOMINGOS/FESTIVOS" currentValue={stats.domingosCount} percentage={(stats.domingosCount/(stats.targets?.domingos || 22))*100} totalValue={stats.targets?.domingos || 22} color="bg-emerald-500" large={true} />
         </div>
       </div>
       )}

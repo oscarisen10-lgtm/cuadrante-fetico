@@ -38,7 +38,8 @@ export const TrackerView = React.memo(function TrackerView({
 
   return (
     <div className="flex flex-col items-center justify-center space-y-8 py-6 animate-in fade-in duration-300 min-h-full">
-      <div className="text-center">
+      {/* data-tour: puntos que ilumina el tutorial (ver constants/screenTips) */}
+      <div data-tour="fichar-contador" className="text-center">
         <div className={`text-7xl font-black tracking-tighter font-mono tabular-nums leading-tight ${isBreakActive ? 'text-slate-300' : 'text-slate-800'}`} style={!isBreakActive ? { textShadow: '0 2px 4px rgba(0,0,0,0.08)' } : {}}>{formatTime(elapsed || 0)}</div>
         <div className="inline-flex items-center gap-1.5 mt-3 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest" style={{ background: activeShift ? (isBreakActive ? 'rgba(100,116,139,0.12)' : 'rgba(5,150,105,0.12)') : 'rgba(148,163,184,0.12)', color: activeShift ? (isBreakActive ? '#475569' : '#059669') : '#94a3b8' }}>
           <span className="w-1.5 h-1.5 rounded-full" style={{ background: activeShift ? (isBreakActive ? '#64748b' : '#059669') : '#94a3b8', boxShadow: activeShift && !isBreakActive ? '0 0 6px #059669' : 'none' }} />
@@ -47,6 +48,7 @@ export const TrackerView = React.memo(function TrackerView({
       </div>
 
       <button
+        data-tour="fichar-boton"
         onClick={() => {
           hapticMedium();
           if (activeShift) {
@@ -72,7 +74,9 @@ export const TrackerView = React.memo(function TrackerView({
         <span className="text-white font-black text-[11px] mt-2 uppercase tracking-widest relative">{activeShift ? 'Cerrar' : 'Entrar'}</span>
       </button>
 
-      <div className="w-full flex justify-center pb-4">
+      {/* El bloque de descanso solo existe con la jornada en marcha; el envoltorio
+          está siempre, para que el tutorial tenga algo que iluminar en los dos casos. */}
+      <div data-tour="fichar-descanso" className="w-full flex justify-center pb-4">
           {activeShift ? (
             <div className="w-full max-w-[230px] p-5 rounded-3xl space-y-4" style={{ background: 'linear-gradient(180deg,#ecfdf5,#d1fae5)', border: '1px solid rgba(16,185,129,0.2)', boxShadow: '0 10px 22px -10px rgba(5,150,105,0.32), inset 0 1.5px 1px rgba(255,255,255,0.85)' }}>
               {isBreakActive && (

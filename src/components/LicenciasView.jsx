@@ -3,10 +3,33 @@ import { FileText, ChevronDown, ChevronUp, Info, Users, Clock, ClipboardCheck } 
 import { LICENCIAS_CATEGORIES, GRADOS_CONSANGUINIDAD } from '../constants/licenciasData';
 import { ActivationGateModal } from './LockedView';
 
+// Mismo relieve que el resto de la app (Resumen, botones de Fichar, Agenda):
+// degradado vertical + sombra proyectada + brillo interior arriba. Al desplegarse,
+// el botón se hunde: fuera la sombra exterior, dentro una sombra que da profundidad.
+const BOTON_RELIEVE = {
+  background: 'linear-gradient(180deg,#34d399,#059669 58%,#047857)',
+  boxShadow: '0 8px 18px rgba(5,150,105,0.4), inset 0 1.5px 1px rgba(255,255,255,0.45)',
+};
+const BOTON_HUNDIDO = {
+  background: 'linear-gradient(180deg,#047857,#065f46)',
+  boxShadow: '0 2px 5px rgba(4,120,87,0.28), inset 0 3px 7px rgba(0,0,0,0.32)',
+};
+// El de grados en reposo es claro, no verde, pero con el mismo volumen.
+const BOTON_CLARO_RELIEVE = {
+  background: 'linear-gradient(180deg,#ffffff,#eef1f4)',
+  boxShadow: '0 8px 16px -6px rgba(15,23,42,0.28), inset 0 1.5px 1px rgba(255,255,255,0.95)',
+  border: '1px solid rgba(15,23,42,0.07)',
+};
+// Panel claro con volumen, igual que la tarjeta del Resumen.
+const PANEL_CLARO = {
+  background: 'linear-gradient(180deg,#ffffff,#f8f9fb)',
+  boxShadow: '0 14px 34px -16px rgba(30,41,59,0.25), inset 0 1.5px 1px rgba(255,255,255,0.9)',
+  border: '1px solid rgba(15,23,42,0.05)',
+};
+
 export const LicenciasView = React.memo(function LicenciasView({ permissionState, requestTokenManually, isActive = true }) {
   const [expandedLicencia, setExpandedLicencia] = useState(null);
   const [showGrados, setShowGrados] = useState(false);
-  const [showGeneral, setShowGeneral] = useState(true); // abierto por defecto al entrar
   // Cuentas PENDIENTES: la lista de permisos SE VE; este aviso salta solo al
   // intentar ABRIR el detalle de un permiso.
   const [showActivationGate, setShowActivationGate] = useState(false);
@@ -53,8 +76,9 @@ export const LicenciasView = React.memo(function LicenciasView({ permissionState
         </div>
       )}
       
-      {/* Control de tamaño de letra de este apartado (se guarda en el dispositivo) */}
-      <div className="flex items-center justify-between gap-2 mb-3">
+      {/* Control de tamaño de letra de este apartado (se guarda en el dispositivo).
+          data-tour: punto que ilumina el tutorial (ver constants/screenTips). */}
+      <div data-tour="lic-fuente" className="flex items-center justify-between gap-2 mb-3">
         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecciona el tamaño de letra</span>
         <div className="flex items-center gap-2 shrink-0">
           <button onClick={() => changeScale(-0.1)} disabled={fontScale <= 0.8} aria-label="Reducir tamaño de letra" className="w-9 h-9 rounded-xl bg-white border border-slate-200 shadow-sm text-slate-600 font-black text-xs flex items-center justify-center active:scale-90 transition disabled:opacity-30">A-</button>
@@ -65,34 +89,17 @@ export const LicenciasView = React.memo(function LicenciasView({ permissionState
 
       <div style={{ zoom: fontScale }} className="flex flex-col animate-in fade-in duration-500 gap-6 pb-24 flex-1">
 
-        {/* Botón Principal Desplegable: Licencias y Grados */}
-        <button 
-          onClick={() => setShowGeneral(!showGeneral)}
-          className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 ${
-            showGeneral ? 'bg-emerald-700 border-emerald-600 shadow-md ring-2 ring-emerald-600/20' : 'bg-emerald-600 border-emerald-700/20 shadow-sm hover:bg-emerald-500'
-          }`}
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${showGeneral ? 'bg-white text-emerald-700 shadow-lg' : 'bg-emerald-700/50 text-emerald-100'}`}>
-              <FileText size={16} />
-            </div>
-            <span className="text-[11px] font-black uppercase text-white leading-snug tracking-tight text-left">Licencias y Grados de Parentesco</span>
-          </div>
-          <div className={`p-1.5 rounded-lg border transition-all shrink-0 ${showGeneral ? 'bg-white border-white text-emerald-700' : 'bg-emerald-700/50 border-emerald-700/50 text-emerald-100'}`}>
-            {showGeneral ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </div>
-        </button>
+        {/* Antes esto colgaba de un desplegable "Licencias y Grados de Parentesco"
+            que había que abrir para ver nada. Ahora el contenido está siempre a la
+            vista; el único desplegable que queda es el de los grados. */}
+        <div className="flex flex-col gap-6">
 
-        {/* Contenido General Desplegable */}
-        {showGeneral && (
-          <div className="flex flex-col gap-6 animate-in slide-in-from-top-4 duration-300">
-            
             {/* Botón Grados de Consanguinidad (Anidado) */}
-            <button 
+            <button
+              data-tour="lic-grados"
               onClick={() => setShowGrados(!showGrados)}
-              className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 ${
-                showGrados ? 'bg-emerald-600 border-emerald-500 shadow-md ring-2 ring-emerald-500/20' : 'bg-white border-slate-200 shadow-sm hover:bg-slate-50'
-              }`}
+              className="btn3d w-full flex items-center justify-between p-4 rounded-2xl"
+              style={showGrados ? BOTON_HUNDIDO : BOTON_CLARO_RELIEVE}
             >
               <div className="flex items-center gap-3 min-w-0">
                 <div className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${showGrados ? 'bg-white text-emerald-600 shadow-md' : 'bg-slate-100 text-slate-500'}`}>
@@ -107,8 +114,8 @@ export const LicenciasView = React.memo(function LicenciasView({ permissionState
 
             {/* Tabla de Grados (Condicional) */}
             {showGrados && (
-              <div className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-sm animate-in slide-in-from-top-2 duration-300">
-                <div className="p-4 bg-slate-50 border-b border-slate-100">
+              <div className="rounded-[2rem] overflow-hidden animate-in slide-in-from-top-2 duration-300" style={PANEL_CLARO}>
+                <div className="p-4 bg-slate-50/70 border-b border-slate-100">
                   <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Referencia para Licencias Familiares</p>
                 </div>
                 <div className="divide-y divide-slate-100">
@@ -137,7 +144,7 @@ export const LicenciasView = React.memo(function LicenciasView({ permissionState
 
             {/* Categorías de Licencias */}
             <div className="space-y-8">
-              {LICENCIAS_CATEGORIES.map((cat) => (
+              {LICENCIAS_CATEGORIES.map((cat, catIdx) => (
                 <div key={cat.id} className="flex flex-col gap-4">
                   <div className="px-2">
                     <h3 className="text-[12px] font-black text-slate-800 uppercase italic tracking-wider flex items-center gap-2">
@@ -155,9 +162,21 @@ export const LicenciasView = React.memo(function LicenciasView({ permissionState
                       const isExpanded = expandedLicencia === itemId;
                       
                       return (
-                        <div key={idx} className={`bg-white border rounded-2xl overflow-hidden transition-all duration-300 ${isExpanded ? 'border-emerald-600 shadow-md ring-2 ring-emerald-600/20' : 'border-emerald-700/20 shadow-sm'}`}>
-                          <div 
-                            className={`p-4 cursor-pointer flex justify-between items-center gap-4 transition-colors ${isExpanded ? 'bg-emerald-700' : 'bg-emerald-600 hover:bg-emerald-500'}`}
+                        <div
+                          key={idx}
+                          /* La primera licencia es la que ilumina el tutorial */
+                          data-tour={catIdx === 0 && idx === 0 ? 'lic-item' : undefined}
+                          className="rounded-2xl overflow-hidden transition-all duration-300"
+                          /* El relieve va en la TARJETA, no en su cabecera: el
+                             overflow-hidden de aquí recortaría la sombra exterior
+                             y el botón se vería plano. Cerrada, la tarjeta entera
+                             es el botón en relieve; abierta, pasa a panel claro con
+                             la cabecera hundida encima. */
+                          style={isExpanded ? PANEL_CLARO : BOTON_RELIEVE}
+                        >
+                          <div
+                            className="p-4 cursor-pointer flex justify-between items-center gap-4 transition-all"
+                            style={isExpanded ? BOTON_HUNDIDO : undefined}
                             onClick={() => toggleLicencia(itemId)}
                           >
                             <div className="flex items-center gap-3 min-w-0">
@@ -207,8 +226,7 @@ export const LicenciasView = React.memo(function LicenciasView({ permissionState
                 </div>
               ))}
             </div>
-          </div>
-        )}
+        </div>
       </div>
 
       {showActivationGate && <ActivationGateModal onClose={() => setShowActivationGate(false)} />}
