@@ -1,4 +1,4 @@
-import { Sparkles, PieChart, Clock, Calendar, FileText, Settings } from 'lucide-react';
+import { Sparkles, PieChart, Clock, Calendar, FileText, Settings, Newspaper, ClipboardList } from 'lucide-react';
 
 /**
  * Textos del tutorial. NO es un recorrido lineal: cada pantalla tiene su propio
@@ -303,11 +303,107 @@ export const SCREEN_TIPS = {
         ),
       },
       {
+        // Solo lo tienen los delegados: si no está el interruptor, el paso se cae.
+        target: '[data-tour="set-delegado"]',
+        optional: true,
+        text: (
+          <p>
+            El <strong>Modo Delegado</strong>: encendido trabajas como delegado, con tus pestañas de
+            Noticias y Censo. Apagado ves la app como un usuario más, para fichar tu propia jornada.
+          </p>
+        ),
+      },
+      {
         target: '[data-tour="set-tutorial"]',
         text: (
           <p>
             Y desde aquí puedes <strong>volver a ver este tutorial</strong> entero, las veces que
             quieras.
+          </p>
+        ),
+      },
+    ],
+  },
+
+  // ── Pantallas de delegado ──
+  // Solo existen para quien lo es (App.jsx redirige al resto), así que no hace
+  // falta filtrar por rol aquí. Todos los pasos son prescindibles: un delegado sin
+  // tiendas asignadas no tiene ni botones ni listado que enseñar, y en ese caso la
+  // propia pantalla ya le dice que hable con el administrador.
+  '/delegados': {
+    id: 'delegados',
+    icon: <Newspaper size={17} />,
+    title: 'Noticias',
+    steps: [
+      {
+        target: '[data-tour="del-nueva"]',
+        optional: true,
+        text: (
+          <p>
+            Publica un <strong>comunicado para tus tiendas</strong>: aparece en el Resumen de tus
+            afiliados, firmado con tu nombre. Puedes acompañarlo de una foto y elegir a qué tiendas
+            va dirigido.
+          </p>
+        ),
+      },
+      {
+        target: '[data-tour="del-push"]',
+        optional: true,
+        text: (
+          <p>
+            El <strong>push</strong> va aparte: la noticia se queda en el Resumen sin avisar a
+            nadie, y esto sí les llega al <strong>móvil</strong> como notificación. Solo a los
+            usuarios de las tiendas que marques.
+          </p>
+        ),
+      },
+      {
+        target: '[data-tour="del-publicaciones"]',
+        optional: true,
+        text: (
+          <p>
+            Aquí tienes <strong>lo que has publicado</strong>, con las tiendas a las que fue
+            dirigido. Desde el icono rojo puedes borrar cualquiera, y desaparecerá del Resumen de
+            tus afiliados.
+          </p>
+        ),
+      },
+    ],
+  },
+  '/censo': {
+    id: 'censo',
+    icon: <ClipboardList size={17} />,
+    title: 'Censo',
+    steps: [
+      {
+        target: '[data-tour="censo-total"]',
+        optional: true,
+        text: (
+          <p>
+            La <strong>afiliación de tus tiendas</strong>: los que ya tienen la app, los futuros que
+            apuntes a mano y el porcentaje sobre el censo. La marca de la barra es el{' '}
+            <strong>objetivo del 30 %</strong>.
+          </p>
+        ),
+      },
+      {
+        target: '[data-tour="censo-tienda"]',
+        optional: true,
+        text: (
+          <p>
+            Cada tienda con su porcentaje. <strong>Ábrela</strong> y verás sus usuarios: ahí es donde{' '}
+            <strong>activas las cuentas nuevas</strong> con su interruptor, y donde puedes apuntar
+            futuros afiliados a mano.
+          </p>
+        ),
+      },
+      {
+        target: '[data-tour="censo-actualizar"]',
+        optional: true,
+        text: (
+          <p>
+            Y <strong>Actualizar</strong> vuelve a contar desde el servidor, por si alguien acaba de
+            instalarse la app.
           </p>
         ),
       },

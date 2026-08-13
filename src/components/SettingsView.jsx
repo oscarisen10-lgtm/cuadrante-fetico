@@ -231,7 +231,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
               Resumen solo noticias y pestaña "Usuarios" en el hueco de Fichar.
               Apagado, el delegado ve la app como un usuario normal. */}
           {isDelegado && (
-            <div className="flex justify-between items-center bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/25 mt-2">
+            <div data-tour="set-delegado" className="flex justify-between items-center bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/25 mt-2">
               <div className="flex flex-col">
                 <span className="text-xs font-bold text-emerald-300 uppercase leading-none flex items-center gap-1.5">
                   <Users size={14} className="text-emerald-400"/> Modo Delegado

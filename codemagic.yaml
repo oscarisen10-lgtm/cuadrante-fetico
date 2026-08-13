@@ -173,9 +173,9 @@ workflows:
           echo "Marketing version -> $NEW_VERSION"
           grep -m2 "MARKETING_VERSION" "$XCODE_PROJECT/project.pbxproj"
           # Build number interno (incrementa en cada subida a App Store Connect)
-          # Un número de build no se puede reutilizar en App Store Connect. El 177 fue
-          # el último intentado; esta es la 3.7.0, así que sube a 178 sin más.
-          NEW_BUILD=178
+          # Un número de build no se puede reutilizar en App Store Connect. El 178 fue
+          # el último intentado; esta es la 3.7.1, así que sube a 179 sin más.
+          NEW_BUILD=179
           echo "Build number -> $NEW_BUILD"
           cd ios/App
           agvtool new-version -all "$NEW_BUILD"

@@ -210,7 +210,8 @@ export const CensoView = React.memo(function CensoView({ user, delegado }) {
             <span className="grid place-items-center w-8 h-8 rounded-xl bg-white/20 shrink-0"><ClipboardList size={16} /></span>
             Censo
           </h2>
-          <button onClick={load} disabled={loading} className="bg-white/15 text-white px-3 py-1.5 rounded-xl text-[9px] font-black uppercase flex items-center gap-1.5 active:scale-95 transition-all">
+          {/* data-tour: puntos que ilumina el tutorial (ver constants/screenTips) */}
+          <button data-tour="censo-actualizar" onClick={load} disabled={loading} className="bg-white/15 text-white px-3 py-1.5 rounded-xl text-[9px] font-black uppercase flex items-center gap-1.5 active:scale-95 transition-all">
             <RefreshCw size={11} className={loading ? 'animate-spin' : ''} /> Actualizar
           </button>
         </div>
@@ -220,7 +221,7 @@ export const CensoView = React.memo(function CensoView({ user, delegado }) {
       </div>
 
       {/* Total */}
-      <div className="rounded-[2rem] p-5" style={{ background: 'linear-gradient(180deg,#ffffff,#f8f9fb)', boxShadow: '0 14px 34px -16px rgba(30,41,59,0.25), inset 0 1.5px 1px rgba(255,255,255,0.9)', border: '1px solid rgba(15,23,42,0.05)' }}>
+      <div data-tour="censo-total" className="rounded-[2rem] p-5" style={{ background: 'linear-gradient(180deg,#ffffff,#f8f9fb)', boxShadow: '0 14px 34px -16px rgba(30,41,59,0.25), inset 0 1.5px 1px rgba(255,255,255,0.9)', border: '1px solid rgba(15,23,42,0.05)' }}>
         <div className="flex justify-between items-center">
           <div className="flex flex-col gap-1">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Afiliación total</span>
@@ -254,12 +255,18 @@ export const CensoView = React.memo(function CensoView({ user, delegado }) {
         </div>
       ) : (
         <div className="space-y-3">
-          {perStore.map(({ store, activos, futuros, pct }) => {
+          {perStore.map(({ store, activos, futuros, pct }, storeIdx) => {
             const isOpen = expanded === store;
             const list = prospects[store] || [];
             const usersLoaded = storeUsers[store];
             return (
-              <div key={store} className="rounded-3xl overflow-hidden" style={{ background: 'linear-gradient(180deg,#ffffff,#f8f9fb)', boxShadow: '0 8px 20px -10px rgba(30,41,59,0.2), inset 0 1.5px 1px rgba(255,255,255,0.9)', border: '1px solid rgba(15,23,42,0.07)' }}>
+              <div
+                key={store}
+                /* La primera tienda es la que ilumina el tutorial */
+                data-tour={storeIdx === 0 ? 'censo-tienda' : undefined}
+                className="rounded-3xl overflow-hidden"
+                style={{ background: 'linear-gradient(180deg,#ffffff,#f8f9fb)', boxShadow: '0 8px 20px -10px rgba(30,41,59,0.2), inset 0 1.5px 1px rgba(255,255,255,0.9)', border: '1px solid rgba(15,23,42,0.07)' }}
+              >
                 <button
                   onClick={() => {
                     const next = isOpen ? null : store;

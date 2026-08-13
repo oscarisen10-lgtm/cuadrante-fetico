@@ -39,6 +39,7 @@ export function TipBubble({ tip, onDismiss }) {
   const [target, setTarget] = useState(null);
   const [cardHeight, setCardHeight] = useState(0);
   const cardRef = useRef(null);
+  const indexRef = useRef(0); // paso actual, legible desde los temporizadores
   const { pathname } = useLocation();
 
   // Los respaldos son constantes de módulo, no literales: creados aquí serían un
@@ -50,7 +51,24 @@ export function TipBubble({ tip, onDismiss }) {
 
   useLayoutEffect(() => {
     const all = tip.steps || [tip];
-    setSteps(all.filter((s) => !s.optional || (s.target && document.querySelector(s.target))));
+    const calcular = () => all.filter((s) => !s.optional || (s.target && document.querySelector(s.target)));
+    setSteps(calcular());
+
+    // Hay pantallas que traen su contenido del servidor y tardan: el Censo del
+    // delegado no tiene tarjetas de tienda hasta que responde la red, así que al
+    // abrirse el aviso ese paso parecía no existir y se caía. Se vuelve a mirar un
+    // par de veces por si aparece algo que al principio no estaba.
+    //
+    // Solo se acepta el cambio mientras el usuario sigue en el PRIMER paso: un
+    // paso que reaparece se coloca en su sitio del guion, y si ya hubiera avanzado
+    // le movería los pasos bajo los pies.
+    const revisar = () => setSteps((previos) => {
+      const ahora = calcular();
+      return (indexRef.current === 0 && ahora.length > (previos?.length ?? 0)) ? ahora : previos;
+    });
+    const t1 = setTimeout(revisar, 400);
+    const t2 = setTimeout(revisar, 1500);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [tip]);
 
   // Si no quedó ningún paso que enseñar (p. ej. el Resumen de ECI, que aún no tiene
@@ -124,6 +142,8 @@ export function TipBubble({ tip, onDismiss }) {
       if (step.cleanup) setTimeout(step.cleanup, 0);
     };
   }, [tip.spotlight, step, index, pathname]);
+
+  useLayoutEffect(() => { indexRef.current = index; }, [index]);
 
   // Alto real del bocadillo: cambia con el texto de cada paso, y de él depende a
   // qué lado cabe. offsetHeight es medida de maquetación, así que no le afecta la

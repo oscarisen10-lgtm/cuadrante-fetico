@@ -183,7 +183,9 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
           {/* Botones: Nueva noticia + Push, SEPARADOS (como en el panel del admin) */}
           {!showComposer ? (
             <div className="flex gap-2">
+              {/* data-tour: puntos que ilumina el tutorial (ver constants/screenTips) */}
               <button
+                data-tour="del-nueva"
                 onClick={() => setShowComposer(true)}
                 className="btn3d flex-[2] text-white font-black py-4 rounded-2xl uppercase text-xs flex items-center justify-center gap-2"
                 style={{ background: 'linear-gradient(180deg,#34d399,#059669)', boxShadow: '0 8px 18px rgba(5,150,105,0.4), inset 0 1.5px 1px rgba(255,255,255,0.45)' }}
@@ -191,6 +193,7 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
                 <Plus size={16} /> Nueva Noticia
               </button>
               <button
+                data-tour="del-push"
                 onClick={() => setShowPushModal(true)}
                 className="btn3d flex-1 text-white font-black py-4 rounded-2xl uppercase text-xs flex items-center justify-center gap-2"
                 style={{ background: 'linear-gradient(180deg,#818cf8,#4f46e5)', boxShadow: '0 8px 18px rgba(79,70,229,0.4), inset 0 1.5px 1px rgba(255,255,255,0.4)' }}
@@ -277,7 +280,7 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
           )}
 
           {/* Mis noticias publicadas */}
-          <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+          <div data-tour="del-publicaciones" className="flex justify-between items-center border-b border-slate-200 pb-3">
             <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
               <Newspaper size={14}/> Tus publicaciones
             </h3>
