@@ -246,7 +246,7 @@ function AppContent({ user, authHook }) {
                 <CalendarView shifts={shifts} shiftsMap={shiftsMap} saveToCloud={saveToCloud} user={user} permissionState={permissionState} requestTokenManually={requestTokenManually} isActive={isActive} />
               } />
               <Route path="/licencias" element={
-                <LicenciasView permissionState={permissionState} requestTokenManually={requestTokenManually} isActive={isActive} />
+                <LicenciasView user={user} permissionState={permissionState} requestTokenManually={requestTokenManually} isActive={isActive} />
               } />
               <Route path="/settings" element={
                 <SettingsView user={user} settings={settings} saveToCloud={saveToCloud} stopAlarm={stopAlarm} pushToken={pushToken} pushTokenError={pushTokenError} permissionState={permissionState} requestTokenManually={requestTokenManually} isDelegado={isDelegado} onOpenGuide={restartTips} />

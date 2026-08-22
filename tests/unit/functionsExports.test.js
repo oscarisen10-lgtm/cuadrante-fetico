@@ -19,6 +19,7 @@ const DEPLOYED_FUNCTIONS = [
   'adminOverview',
   'adminSetDelegado',
   'adminStats',
+  'cambiarMiTienda',
   'cleanupOnAuthDelete',
   'delegadoCensusCounts',
   'delegadoExpelUser',
@@ -32,7 +33,7 @@ const DEPLOYED_FUNCTIONS = [
 ];
 
 describe('functions/index.js — superficie desplegada', () => {
-  it('exporta exactamente las 13 funciones esperadas (comprobación estática)', () => {
+  it('exporta exactamente las 14 funciones esperadas (comprobación estática)', () => {
     const src = readFileSync(join(FUNCTIONS_DIR, 'index.js'), 'utf8');
     const exported = [...src.matchAll(/^exports\.([A-Za-z0-9_]+)\s*=/gm)]
       .map((m) => m[1])

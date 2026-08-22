@@ -77,6 +77,18 @@ export function StatBar({ label, currentValue, totalValue, percentage, color, la
   );
 }
 
+// Contador SIN objetivo: mismo encabezado que StatBar pero sin barra de progreso.
+// Lo usa el Resumen de quien trabaja en una empresa no verificada, de la que no
+// conocemos el convenio: se enseña lo que lleva hecho, no un objetivo inventado.
+export function StatCounter({ label, value, large = false, dataTour }) {
+  return (
+    <div data-tour={dataTour} className="flex justify-between items-end leading-none">
+      <span className={`font-black uppercase ${large ? "text-xs text-slate-500 tracking-tight" : "text-[10px] text-slate-400 tracking-widest"}`}>{label}</span>
+      <span className={`${large ? "text-2xl font-black tracking-tighter" : "text-sm font-black"} text-slate-900`}>{value}</span>
+    </div>
+  );
+}
+
 export function InputGroup({ label, name, icon, type = "text", maxLength, minLength, small = false, ...props }) {
   const inputId = `input-${name}`;
   const isPassword = type === "password";

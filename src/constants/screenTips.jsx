@@ -40,11 +40,30 @@ export const SCREEN_TIPS = {
   // barra no existe para el puesto del usuario (los días HA y los findes de calidad
   // no los tienen todos los rangos); si no queda ninguna —ECI, que aún no tiene
   // gráfico, o cuentas que solo ven noticias—, el aviso no llega a salir.
+  //
+  // Los pasos "-libre" son la versión para quien trabaja FUERA de ANGED: de su
+  // convenio no sabemos nada, así que no se le puede hablar de "lo que marca tu
+  // convenio". El Resumen les pone ese sufijo en el data-tour (ver DashboardView),
+  // de modo que cada usuario recibe solo la mitad que le corresponde y la otra se
+  // cae sola. Van emparejados: si tocas uno, mira el otro.
   '/dashboard': {
     id: 'dashboard',
     icon: <PieChart size={17} />,
     title: 'Resumen',
     steps: [
+      // ── Aviso de "sin objetivos" (solo empresas de fuera que no los han puesto) ──
+      {
+        target: '[data-tour="res-sin-objetivos"]',
+        optional: true,
+        text: (
+          <p>
+            Como tu empresa no está entre las que conocemos, <strong>no sabemos tu convenio</strong>{' '}
+            ni los objetivos que te tocan. Puedes escribirlos tú en{' '}
+            <strong>Ajustes → Mis Objetivos</strong>, y entonces esta pantalla te irá midiendo sobre
+            ellos.
+          </p>
+        ),
+      },
       {
         target: '[data-tour="res-horas"]',
         optional: true,
@@ -53,6 +72,17 @@ export const SCREEN_TIPS = {
             Tu punto de partida: cada barra enfrenta <strong>lo que llevas realizado</strong> con el{' '}
             <strong>máximo que debes cumplir</strong>, según tu convenio. Esta son las{' '}
             <strong>horas anuales</strong> que llevas registradas.
+          </p>
+        ),
+      },
+      {
+        target: '[data-tour="res-horas-libre"]',
+        optional: true,
+        text: (
+          <p>
+            Las <strong>horas anuales</strong> que llevas registradas. Si te has puesto un objetivo
+            en Ajustes, verás la barra con lo que te queda; si no, solo el{' '}
+            <strong>total acumulado</strong>.
           </p>
         ),
       },
@@ -67,12 +97,30 @@ export const SCREEN_TIPS = {
         ),
       },
       {
+        target: '[data-tour="res-trabajados-libre"]',
+        optional: true,
+        text: (
+          <p>
+            Los <strong>días trabajados</strong>: los que tienen jornada registrada este año.
+          </p>
+        ),
+      },
+      {
         target: '[data-tour="res-libres"]',
         optional: true,
         text: (
           <p>
             Los <strong>días libres</strong> que has marcado en la Agenda, sobre los que te
             corresponden.
+          </p>
+        ),
+      },
+      {
+        target: '[data-tour="res-libres-libre"]',
+        optional: true,
+        text: (
+          <p>
+            Los <strong>días libres</strong> que has marcado en la Agenda.
           </p>
         ),
       },
@@ -103,6 +151,17 @@ export const SCREEN_TIPS = {
         text: (
           <p>
             Y los <strong>domingos y festivos</strong> que has trabajado, sobre el máximo anual.
+          </p>
+        ),
+      },
+      {
+        target: '[data-tour="res-domingos-libre"]',
+        optional: true,
+        text: (
+          <p>
+            Y los <strong>domingos y festivos</strong> que has trabajado. Para contarlos usamos los{' '}
+            <strong>festivos nacionales</strong>: no sabemos en qué comunidad trabajas, así que los
+            autonómicos y locales no entran.
           </p>
         ),
       },
@@ -212,10 +271,24 @@ export const SCREEN_TIPS = {
       },
       {
         target: '[data-tour="cal-festivos"]',
+        optional: true,
         text: (
           <p>
             Y al final, el <strong>calendario de festivos</strong> del año: nacionales, regionales y
             los locales que corresponden a tu tienda.
+          </p>
+        ),
+      },
+      {
+        // Empresas de fuera de ANGED: solo nacionales (ver getFestivosComunes).
+        target: '[data-tour="cal-festivos-nacional"]',
+        optional: true,
+        text: (
+          <p>
+            Y al final, el <strong>calendario de festivos</strong> del año. Como no sabemos en qué
+            comunidad ni municipio trabajas, aquí solo salen los{' '}
+            <strong>festivos nacionales</strong>: los tuyos autonómicos y locales tendrás que
+            mirarlos aparte.
           </p>
         ),
       },
@@ -231,11 +304,27 @@ export const SCREEN_TIPS = {
         // de golpe daría un foco de media pantalla, y además así se señala justo
         // lo que hay que tocar para desplegarla.
         target: '[data-tour="lic-item"]',
+        optional: true,
         text: (
           <p>
             Las <strong>licencias y permisos</strong> que recoge tu convenio, agrupadas por tipo.
             Despliega cualquiera y verás su <strong>duración</strong>, el <strong>requisito</strong>{' '}
             para pedirla y la <strong>documentación</strong> que tendrás que presentar.
+          </p>
+        ),
+      },
+      {
+        // Empresas de fuera: ven los permisos del Estatuto, no los del convenio de
+        // ANGED (ver LICENCIAS_ET_CATEGORIES en licenciasData.js).
+        target: '[data-tour="lic-item-otra"]',
+        optional: true,
+        text: (
+          <p>
+            Los <strong>permisos del Estatuto de los Trabajadores</strong>, que te corresponden
+            trabajes donde trabajes. Despliega cualquiera y verás su <strong>duración</strong>, el{' '}
+            <strong>requisito</strong> y la <strong>documentación</strong> que tendrás que
+            presentar. Son el <strong>mínimo legal</strong>: tu convenio puede mejorarlos, nunca
+            recortarlos.
           </p>
         ),
       },
@@ -267,11 +356,36 @@ export const SCREEN_TIPS = {
     steps: [
       {
         target: '[data-tour="set-puesto"]',
+        optional: true,
         text: (
           <p>
             Tu <strong>empresa, puesto, tienda y sección</strong>. De aquí salen los objetivos de
             convenio que ves en el Resumen y los festivos locales de tu calendario, así que mantenlo
             al día si cambias de destino.
+          </p>
+        ),
+      },
+      {
+        // Empresas de fuera de ANGED: solo tienen el nombre de su empresa.
+        target: '[data-tour="set-empresa"]',
+        optional: true,
+        text: (
+          <p>
+            Tu <strong>empresa</strong>. Como no está entre las que tenemos modeladas, no hay
+            convenio del que sacar tus objetivos ni tienda de la que sacar festivos locales: solo
+            nos sirve para identificarte.
+          </p>
+        ),
+      },
+      {
+        // Solo existe para las empresas de fuera: los de ANGED ya tienen convenio.
+        target: '[data-tour="set-objetivos"]',
+        optional: true,
+        text: (
+          <p>
+            Aquí escribes <strong>tus objetivos anuales</strong>: horas, días trabajados, días
+            libres y domingos. El Resumen los usará para medirte. Lo que dejes en blanco te saldrá
+            allí como <strong>contador</strong>, sin barra.
           </p>
         ),
       },

@@ -28,7 +28,7 @@ const admin = require('firebase-admin');
 const path = require('path');
 const fs = require('fs');
 
-const ADMIN_EMAIL = 'oscargarcia@fetico.es'; // nunca se borra
+const ADMIN_EMAIL = 'oscarisen10@gmail.com'; // nunca se borra
 
 const KEY_PATH = path.join(__dirname, 'serviceAccount.json');
 if (!fs.existsSync(KEY_PATH)) {

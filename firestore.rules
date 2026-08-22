@@ -22,9 +22,14 @@ service cloud.firestore {
     // estar verificado, mientras que el claim solo lo pone el backend/owner
     // (scripts/set-admin-claim.js). Si el admin pierde acceso: re-ejecutar ese
     // script y cerrar/abrir sesión.
+    // OJO con el `'admin' in`: sin él, leer request.auth.token.admin en un token
+    // que no lleva el claim NO devuelve false, sino que LANZA ("Property admin is
+    // undefined on object"). Mientras la otra rama de cada `||` fuese true el
+    // error quedaba tapado, pero en cuanto una regla legítima evalúa a false, el
+    // error aflora y deniega un acceso que debería permitirse.
     function isAdmin() {
       return request.auth != null && request.auth.token != null &&
-        request.auth.token.admin == true;
+        'admin' in request.auth.token && request.auth.token.admin == true;
     }
 
     // ⚠️ SEGURIDAD (escalada de privilegios): el "rango" (jefe/coordinador…) lo
@@ -57,6 +62,58 @@ service cloud.firestore {
       return !('membership' in d) || d.membership.active == true;
     }
 
+    // ---------- Empresas de fuera de ANGED ----------
+    // Estas cuentas nacen ACTIVAS porque no hay delegado de FETICO que pueda
+    // activarlas. A cambio quedan ENCERRADAS en ese estado: se marcan con
+    // profile.companyVerified == false y SIN tienda, y ninguna de las dos cosas
+    // se puede cambiar después desde el cliente. Si se pudiera:
+    //   - poner companyVerified = true convertiría la cuenta en una de ANGED ya
+    //     activada, saltándose la verificación del delegado;
+    //   - poner una tienda real dejaría leer las noticias del delegado de esa
+    //     tienda (noticiasTienda filtra por profile.store) y ensuciaría su censo.
+    // Solo el admin o el backend (Admin SDK) pueden sacarlas de ahí.
+    function esAltaNoVerificada() {
+      return 'profile' in request.resource.data &&
+             'companyVerified' in request.resource.data.profile &&
+             request.resource.data.profile.companyVerified == false &&
+             'store' in request.resource.data.profile &&
+             request.resource.data.profile.store == "";
+    }
+
+    // ¿Era ya una cuenta de empresa no verificada antes de esta edición?
+    function eraNoVerificada() {
+      return 'profile' in resource.data &&
+             'companyVerified' in resource.data.profile &&
+             resource.data.profile.companyVerified == false;
+    }
+
+    // ---------- La tienda NO la elige el cliente ----------
+    // ⚠️ SEGURIDAD (auditoría 22-ago-2026). profile.store no es decoración: de él
+    // dependen las noticias que puedes leer (noticiasTienda), el censo del delegado
+    // (delegadoListUsers / delegadoCensusCounts) y quién puede gestionarte
+    // (requireCanManageUser). Mientras el cliente pudo escribirlo, un empleado YA
+    // ACTIVADO se cambiaba de tienda en Ajustes y aparecía en el censo del delegado
+    // nuevo como si este le hubiera verificado, además de leerle sus noticias internas.
+    //
+    // Ahora el único camino es la function `cambiarMiTienda`, que además devuelve la
+    // cuenta a PENDIENTE para que la verifique el delegado de la tienda nueva.
+    //
+    // Se lee con guardas ('profile' in / 'store' in) porque leer una clave ausente NO
+    // devuelve null: LANZA, y denegaría escrituras legítimas de perfiles antiguos que
+    // no tuvieran el campo (mismo error que el del claim 'admin', ver arriba).
+    function tiendaDe(data) {
+      return ('profile' in data && 'store' in data.profile) ? data.profile.store : '';
+    }
+    function mismaTienda() {
+      return tiendaDe(request.resource.data) == tiendaDe(resource.data);
+    }
+
+    // Tienda del usuario que hace la petición, con las mismas guardas.
+    function miTienda() {
+      let d = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return ('profile' in d && 'store' in d.profile) ? d.profile.store : '';
+    }
+
     // ---------- Usuarios ----------
     match /users/{userId} {
       // Lectura PRIVADA: SOLO el propio usuario o el admin. Ningún compañero (ni
@@ -66,22 +123,43 @@ service cloud.firestore {
         isAdmin()
       );
 
-      // Alta: los registros nuevos nacen SIEMPRE desactivados (membership.active
-      // == false). Una app antigua (que no envía membership) no puede crear
-      // cuentas nuevas: solo así se garantiza que nadie nazca activado.
+      // Alta: los registros de ANGED nacen desactivados (membership.active ==
+      // false) hasta que un delegado los verifique. Una app antigua (que no
+      // envía membership) no puede crear cuentas: así nadie nace activado.
+      //
+      // EXCEPCIÓN: quien trabaja fuera de ANGED (profile.companyVerified ==
+      // false) nace ACTIVO, porque no existe ningún delegado de FETICO que
+      // pueda activarle la cuenta y se quedaría bloqueado para siempre. Estar
+      // activo NO da acceso a datos de otros usuarios (nadie puede leer perfiles
+      // ajenos): solo desbloquea el calendario propio (libres/vacaciones).
+      // El coste es que un trabajador de ANGED podría darse de alta así para
+      // saltarse al delegado; a cambio pierde su convenio, su tienda y las
+      // noticias de su delegado. La app no le deja cambiarse luego a una
+      // empresa de ANGED (SettingsView), aunque por API sí sería posible.
       allow create: if request.auth != null && (
         isAdmin() ||
         (request.auth.uid == userId &&
          'membership' in request.resource.data &&
-         request.resource.data.membership.active == false)
+         (request.resource.data.membership.active == false ||
+          esAltaNoVerificada()))
       );
 
       // Edición: el propio usuario puede modificar su perfil pero NO membership
-      // (ni añadirlo, ni cambiarlo, ni borrarlo). El admin sí.
+      // (ni añadirlo, ni cambiarlo, ni borrarlo) NI su tienda. El admin sí.
+      //
+      // La tienda va aparte porque de ella dependen permisos de lectura y el censo
+      // del delegado: se cambia solo por la function `cambiarMiTienda` (ver mismaTienda).
+      //
+      // Además, quien nació como empresa NO verificada tiene que seguir siéndolo:
+      // no puede quitarse la marca ni ponerse una tienda (ver esAltaNoVerificada).
+      // Su cuenta ya está activa sin que nadie la aprobara, así que dejarle
+      // cambiar eso sería saltarse al delegado por la puerta de atrás.
       allow update: if request.auth != null && (
         isAdmin() ||
         (request.auth.uid == userId &&
-         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['membership']))
+         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['membership']) &&
+         mismaTienda() &&
+         (!eraNoVerificada() || esAltaNoVerificada()))
       );
 
       allow delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
@@ -224,11 +302,18 @@ service cloud.firestore {
         myDelegado().active != false;
     }
 
+    // La cuenta tiene que estar ACTIVADA para leer: si bastara con estar registrado,
+    // cualquiera podría darse de alta eligiendo una tienda y leerle las noticias
+    // internas a su delegado sin que nadie le hubiera verificado (auditoría 22-ago-2026).
+    // Ahora la tienda solo la fija `cambiarMiTienda` (que deja la cuenta pendiente), así
+    // que "activo + tienda X" significa de verdad "un delegado de X me verificó".
+    // isActiveMember() y miTienda() leen el MISMO documento: get() se cachea por
+    // petición, así que las dos juntas siguen contando como UNA lectura.
     match /noticiasTienda/{noticiaId} {
       allow read: if request.auth != null && (
         isAdmin() ||
         resource.data.authorUid == request.auth.uid ||
-        myProfile().store in resource.data.stores
+        (isActiveMember() && miTienda() in resource.data.stores)
       );
       allow create: if request.auth != null && (
         isAdmin() ||
@@ -250,6 +335,16 @@ service cloud.firestore {
     }
 
     // ---------- Licencias (requiere sesión) ----------
+    // El contenido de permisos se sirve ya ESTÁTICO desde constants/licenciasData.js:
+    // la app actual no lee esta colección (se retiraron subscribeToLicencias y compañía).
+    //
+    // Se deja la lectura abierta a propósito, a diferencia de ai_cache y users/{uid}/usage
+    // (cerradas con `if false` al retirarlas): aquellas no las leía ninguna pantalla, y
+    // esta SÍ alimentaba la pantalla de Licencias de las builds ANTIGUAS que todavía
+    // pueda haber instaladas. Cerrarla les dejaría esa pantalla en blanco, y aquí no hay
+    // nada que proteger: es texto de convenio, no datos personales.
+    // Para cerrarla del todo: confirmar que la colección está vacía (Admin SDK) y que ya
+    // no queda ninguna build antigua viva; entonces pasarla a `allow read, write: if false`.
     match /licencias/{licenciaId} {
       allow read: if request.auth != null;
       allow write: if isAdmin();

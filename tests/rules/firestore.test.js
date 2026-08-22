@@ -23,6 +23,7 @@ const BASE = 'base1';   // Personal base en la MISMA sección
 const BASE2 = 'base2';  // Otro personal base de la misma sección (no es jefe)
 const BARNA = 'barna1'; // Personal base en OTRA tienda (Barcelona)
 const PENDIENTE = 'pendiente1'; // Cuenta nueva SIN activar (membership.active == false)
+const FUERA = 'fuera1';         // Empresa NO verificada: nació activa, sin tienda
 const DELEGADO = 'delegado1';   // Delegado con doc en delegados/{uid}
 
 const STOREKEY_CENTRO = 'Supercor_Centro_Frescos';
@@ -64,6 +65,12 @@ beforeEach(async () => {
     await setDoc(doc(db, 'users', PENDIENTE), {
       profile: { company: 'Supercor', store: 'Centro', section: 'Frescos', rank: 'Personal base', fullName: 'Nuevo Sin Activar' },
       membership: { active: false, createdAt: 1 },
+    });
+    // Cuenta de empresa NO verificada: nació ACTIVA (no hay delegado que la
+    // active) y a cambio queda encerrada en ese estado, sin tienda.
+    await setDoc(doc(db, 'users', FUERA), {
+      profile: { company: 'Mercadona', companyVerified: false, store: '', rank: '', fullName: 'De Fuera' },
+      membership: { active: true, createdAt: 1 },
     });
     // Un delegado con su doc de tiendas autorizadas.
     await setDoc(doc(db, 'delegados', DELEGADO), { stores: ['Centro'], active: true });
@@ -275,6 +282,109 @@ describe('Sistema de delegados (activación de cuentas)', () => {
     );
   });
 
+  // Empresas de fuera de ANGED: no hay delegado de FETICO que pueda activarlas,
+  // así que nacen activas. Es la ÚNICA excepción al "nadie nace activado".
+  // uid distinto de FUERA a propósito: ese ya está sembrado, y sobrescribirlo
+  // sería un update, no un alta, así que no probaría la regla de create.
+  test('una cuenta de fuera de ANGED SÍ puede nacer activada (companyVerified == false)', async () => {
+    await assertSucceeds(
+      setDoc(doc(as('altafuera1'), 'users', 'altafuera1'), {
+        profile: { company: 'Mercadona', companyVerified: false, store: '', rank: '', fullName: 'De Fuera' },
+        membership: { active: true, createdAt: 2 },
+      })
+    );
+  });
+
+  test('poner companyVerified a TRUE no permite nacer activado', async () => {
+    await assertFails(
+      setDoc(doc(as('fuera2'), 'users', 'fuera2'), {
+        profile: { company: 'Supercor', companyVerified: true, store: 'Centro', fullName: 'Listillo' },
+        membership: { active: true, createdAt: 2 },
+      })
+    );
+  });
+
+  // Nacer activo va SIEMPRE atado a no tener tienda: con una tienda real leería
+  // las noticias del delegado de esa tienda y saldría en su censo como afiliado.
+  test('no se puede nacer activado de fuera de ANGED CON una tienda real', async () => {
+    await assertFails(
+      setDoc(doc(as('fuera3'), 'users', 'fuera3'), {
+        profile: { company: 'Mercadona', companyVerified: false, store: 'Centro', fullName: 'Colado' },
+        membership: { active: true, createdAt: 2 },
+      })
+    );
+  });
+});
+
+// Una cuenta de fuera de ANGED nace ACTIVA sin que ningún delegado la apruebe.
+// Para que eso no sea una puerta trasera, queda encerrada en ese estado: ni puede
+// dejar de ser "no verificada" ni ponerse una tienda. Solo el admin la libera.
+describe('Empresas no verificadas: la cuenta no puede promocionarse sola', () => {
+  // FUERA se siembra en el beforeEach común: si se sembrara aquí con un beforeAll,
+  // el clearFirestore() de cada test lo borraría y estos tests pasarían por el
+  // motivo equivocado (denegar una edición sobre un documento que no existe).
+  test('el documento de partida existe y es editable por su dueño', async () => {
+    await assertSucceeds(
+      updateDoc(doc(as(FUERA), 'users', FUERA), { 'profile.fullName': 'Sigo Existiendo' })
+    );
+  });
+
+  test('NO puede quitarse la marca de empresa no verificada', async () => {
+    await assertFails(
+      updateDoc(doc(as(FUERA), 'users', FUERA), { 'profile.companyVerified': true })
+    );
+  });
+
+  test('NO puede BORRAR la marca reescribiendo el perfil entero', async () => {
+    await assertFails(
+      updateDoc(doc(as(FUERA), 'users', FUERA), {
+        profile: { company: 'Supercor', store: 'Centro', rank: 'Jefes', fullName: 'De Fuera' },
+      })
+    );
+  });
+
+  test('NO puede ponerse una tienda real (leería las noticias de ese delegado)', async () => {
+    await assertFails(
+      updateDoc(doc(as(FUERA), 'users', FUERA), { 'profile.store': 'Centro' })
+    );
+  });
+
+  test('SÍ puede editar lo suyo: nombre, empresa y objetivos a mano', async () => {
+    await assertSucceeds(
+      updateDoc(doc(as(FUERA), 'users', FUERA), {
+        'profile.fullName': 'Nombre Nuevo',
+        'profile.company': 'Carrefour',
+        'profile.customTargets': { horas: 1800 },
+      })
+    );
+  });
+
+  // Este es el que de verdad importa: replica lo que escribe la app. SettingsView
+  // llama a saveToCloud({ profile: { ...user, ...updates } }), o sea el mapa
+  // ENTERO del perfil (con el uid dentro, que useAuth le añade al leerlo). Si esta
+  // forma no pasara las reglas, Ajustes quedaría roto en producción para ellos.
+  test('la escritura REAL de Ajustes (perfil entero) pasa las reglas', async () => {
+    await assertSucceeds(
+      setDoc(doc(as(FUERA), 'users', FUERA), {
+        profile: {
+          uid: FUERA,
+          company: 'Carrefour',
+          companyVerified: false,
+          store: '',
+          rank: '',
+          fullName: 'De Fuera',
+          customTargets: { horas: 1800, trabajados: 240 },
+        },
+      }, { merge: true })
+    );
+  });
+
+  test('sigue sin poder tocar su membership', async () => {
+    await assertFails(
+      updateDoc(doc(as(FUERA), 'users', FUERA), { membership: { active: true, hack: 1 } })
+    );
+  });
+
   test('una cuenta pendiente NO puede autoactivarse tocando su membership', async () => {
     await assertFails(
       updateDoc(doc(as(PENDIENTE), 'users', PENDIENTE), { membership: { active: true } })
@@ -335,6 +445,59 @@ describe('Sistema de delegados (activación de cuentas)', () => {
   });
 });
 
+// La TIENDA gobierna qué noticias lees y en qué censo de delegado apareces. Si el
+// cliente pudiera escribirla, un empleado YA ACTIVADO se cambiaría de tienda en
+// Ajustes y entraría en la tienda nueva con su activación puesta: leyéndole las
+// noticias internas a ese delegado y ensuciándole el censo. Se cambia solo por la
+// function `cambiarMiTienda` (Admin SDK), que devuelve la cuenta a pendiente.
+describe('La tienda no se puede cambiar desde el cliente', () => {
+  test('un usuario NO puede cambiarse de tienda', async () => {
+    await assertFails(
+      updateDoc(doc(as(BASE), 'users', BASE), { 'profile.store': 'Barcelona' })
+    );
+  });
+
+  test('tampoco reescribiendo el perfil entero de una vez', async () => {
+    await assertFails(
+      setDoc(doc(as(BASE), 'users', BASE), {
+        profile: { company: 'Supercor', store: 'Barcelona', section: 'Frescos', rank: 'Personal base', fullName: 'Base Uno' },
+      })
+    );
+  });
+
+  test('ni quitándose la tienda para volver a elegirla', async () => {
+    await assertFails(
+      updateDoc(doc(as(BASE), 'users', BASE), { 'profile.store': '' })
+    );
+  });
+
+  // Blindar la tienda no puede haber bloqueado el resto de Ajustes.
+  test('el resto del perfil se sigue pudiendo editar (misma tienda)', async () => {
+    await assertSucceeds(
+      updateDoc(doc(as(BASE), 'users', BASE), { 'profile.section': 'Charcutería', 'profile.rank': 'Jefe de sección' })
+    );
+  });
+
+  // Forma EXACTA en que escribe la app: saveUserData hace setDoc({profile: {...user,
+  // ...cambios}}, {merge:true}), o sea reenvía el perfil ENTERO en cada ajuste. Si el
+  // candado de la tienda rechazara esto, se caería la pantalla de Ajustes al completo.
+  test('el guardado real de Ajustes (perfil entero con merge) sigue funcionando', async () => {
+    await assertSucceeds(
+      setDoc(
+        doc(as(BASE), 'users', BASE),
+        { profile: { company: 'Supercor', store: 'Centro', section: 'Sala', rank: 'Personal base', fullName: 'Base Uno' } },
+        { merge: true }
+      )
+    );
+  });
+
+  test('el admin SÍ puede mover a alguien de tienda (soporte)', async () => {
+    await assertSucceeds(
+      updateDoc(doc(as('admin1', { admin: true }), 'users', BASE), { 'profile.store': 'Barcelona' })
+    );
+  });
+});
+
 describe('Noticias de delegado (noticiasTienda)', () => {
   const nueva = (extra = {}) => ({
     title: 'Aviso', desc: 'Texto', stores: ['Centro'],
@@ -347,6 +510,18 @@ describe('Noticias de delegado (noticiasTienda)', () => {
 
   test('un usuario de OTRA tienda NO puede leer la noticia', async () => {
     await assertFails(getDoc(doc(as(BARNA), 'noticiasTienda', 'nt1')));
+  });
+
+  // Una cuenta sin verificar elige su tienda al registrarse y nadie ha comprobado que
+  // trabaje ahí: si le bastara con estar registrada, cualquiera se daría de alta en la
+  // tienda que quisiera y leería las noticias internas de ese delegado.
+  test('una cuenta PENDIENTE de activar NO puede leer la noticia de su tienda', async () => {
+    await assertFails(getDoc(doc(as(PENDIENTE), 'noticiasTienda', 'nt1')));
+  });
+
+  test('una cuenta PENDIENTE tampoco puede consultar el feed de su tienda', async () => {
+    const q = query(collection(as(PENDIENTE), 'noticiasTienda'), where('stores', 'array-contains', 'Centro'));
+    await assertFails(getDocs(q));
   });
 
   test('el feed por tienda (array-contains la tienda PROPIA) es una consulta válida', async () => {

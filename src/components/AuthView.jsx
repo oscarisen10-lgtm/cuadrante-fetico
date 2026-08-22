@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
-import { User, Lock, Mail, Store, ShieldCheck, KeyRound, X, ChevronDown } from 'lucide-react';
+import { User, Lock, Mail, Store, ShieldCheck, KeyRound, X, ChevronDown, Building2 } from 'lucide-react';
 import { loginUser, registerUser, resetPassword } from '../services/firebaseService';
 import { InputGroup } from './UIComponents';
-import { COMPANY_RULES } from '../constants/config';
+import { COMPANY_RULES, OTHER_COMPANY } from '../constants/config';
 import { STORES, S_ROMERO_STORES, ECI_STORES, formatStoreName } from '../constants/stores';
 import appLogo from '../../icons/icon-192.webp';
 
@@ -51,6 +51,9 @@ export default function AuthView() {
   const [recoveryError, setRecoveryError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [formCompany, setFormCompany] = useState("Supercor");
+  // Empresa de fuera de ANGED: la escribe el usuario, igual que su puesto. No
+  // tiene tienda en STORES, así que elige su municipio para los festivos locales.
+  const esOtraEmpresa = formCompany === OTHER_COMPANY;
 
   const sortedStores = useMemo(() => {
     let filteredStores = STORES;
@@ -89,14 +92,33 @@ export default function AuthView() {
            return;
         }
 
-        const newUserProfile = {
-          email: emailInput,
-          fullName: formData.get('fullName') || 'Compañero/a',
-          company: formData.get('company') || "Supercor",
-          store: formData.get('store') || "Centro sin definir",
-          rank: formData.get('rank') || "Personal base"
-        };
-        
+        const selectedCompany = formData.get('company') || "Supercor";
+        const otraEmpresa = selectedCompany === OTHER_COMPANY;
+
+        const newUserProfile = otraEmpresa
+          ? {
+              email: emailInput,
+              fullName: formData.get('fullName') || 'Compañero/a',
+              company: formData.get('companyName')?.trim() || OTHER_COMPANY,
+              // Marca explícita de "no conocemos su convenio": manda sobre el
+              // nombre, que lo escribe el usuario y podría coincidir con una de
+              // ANGED. Ver hasKnownConvenio().
+              companyVerified: false,
+              // Sin centro ni rango: no tienen sentido fuera de ANGED y no
+              // calculan nada. El centro VACÍO además evita que, escribiendo el
+              // nombre de una tienda real, se le colaran las noticias del
+              // delegado de esa tienda (la consulta se salta si no hay tienda).
+              store: "",
+              rank: ""
+            }
+          : {
+              email: emailInput,
+              fullName: formData.get('fullName') || 'Compañero/a',
+              company: selectedCompany,
+              store: formData.get('store') || "Centro sin definir",
+              rank: formData.get('rank') || "Personal base"
+            };
+
         await registerUser(emailInput, pass, newUserProfile);
       }
     } catch (error) {
@@ -114,15 +136,18 @@ export default function AuthView() {
     const formData = new FormData(e.target);
     const emailInput = formData.get('email')?.trim().toLowerCase();
     setIsLoading(true);
+    // MISMA respuesta exista o no la cuenta. Antes se decía "Cuenta no encontrada en
+    // la Nube" cuando el email no estaba registrado, así que el formulario servía para
+    // averiguar QUIÉN tiene cuenta (el comentario decía lo contrario que el código).
+    // El fallo se traga a propósito: si el envío falla de verdad, el usuario
+    // simplemente no recibe el correo, que es lo mismo que ve quien no tiene cuenta.
     try {
       await resetPassword(emailInput);
-      setRecoveryError("¡Éxito! Revisa tu email para crear una nueva contraseña.");
-      setTimeout(() => { setShowForgotModal(false); setRecoveryError(""); }, 3000);
-    } catch {
-      // Mensaje genérico a propósito: no revelamos si el email existe o no
-      // (evita que el formulario sirva para enumerar cuentas).
-      setRecoveryError("Cuenta no encontrada en la Nube.");
+    } catch (error) {
+      console.warn("resetPassword:", error?.code || error);
     }
+    setRecoveryError("Si ese correo tiene cuenta, te hemos enviado un email para crear una nueva contraseña.");
+    setTimeout(() => { setShowForgotModal(false); setRecoveryError(""); }, 4000);
     setIsLoading(false);
   };
 
@@ -146,44 +171,59 @@ export default function AuthView() {
               <>
                 <InputGroup label="Nombre Apellidos" name="fullName" small icon={<User size={14}/>} />
                 <InputGroup label="Email" name="email" type="email" small icon={<Mail size={14}/>} />
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-0.5">
-                    <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight">Empresa</label>
-                    <select name="company" onChange={(e) => setFormCompany(e.target.value)} className="w-full bg-slate-50 border-none p-1.5 rounded-lg text-sm outline-none ring-1 ring-slate-200">
-                      {Object.keys(COMPANY_RULES).map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-0.5">
-                    <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight">Rango</label>
-                    <select name="rank" className="w-full bg-slate-50 border-none p-1.5 rounded-lg text-sm outline-none ring-1 ring-slate-200">
-                      {Object.keys(COMPANY_RULES[formCompany] || {}).map(r => <option key={r} value={r}>{r}</option>)}
-                    </select>
-                  </div>
-                </div>
-                {["Supercor", "S. Romero", "S. Express", "ECI"].includes(formCompany) ? (
-                  <div className="space-y-0.5">
-                    <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight flex items-center gap-1">
-                      <Store size={10}/> Centro / Tienda
-                    </label>
-                    <div className="relative">
-                      <select
-                        name="store"
-                        className="w-full bg-slate-50 border-none p-1.5 pr-8 rounded-lg text-sm outline-none ring-1 ring-slate-200 appearance-none font-medium"
-                        defaultValue=""
-                        required
-                      >
-                        <option value="" disabled>Selecciona tu tienda...</option>
-                        {sortedStores.map(s => (
-                          <option key={s.name} value={s.name}>{formatStoreName(s.name)}</option>
-                        ))}
+                {/* Empresa de ANGED: empresa + rango + tienda, como siempre.
+                    Empresa de fuera: solo el nombre que escriba. Ni rango ni
+                    centro — puede ser camarero o albañil, y no le calculan nada. */}
+                {esOtraEmpresa ? (
+                  <>
+                    <div className="space-y-0.5">
+                      <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight">Empresa</label>
+                      <select name="company" onChange={(e) => setFormCompany(e.target.value)} className="w-full bg-slate-50 border-none p-1.5 rounded-lg text-sm outline-none ring-1 ring-slate-200">
+                        {Object.keys(COMPANY_RULES).map(c => <option key={c} value={c}>{c}</option>)}
+                        <option value={OTHER_COMPANY}>{OTHER_COMPANY}</option>
                       </select>
-                      <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                        <ChevronDown size={14} />
+                    </div>
+                    <InputGroup label="Nombre de tu empresa" name="companyName" maxLength={60} small icon={<Building2 size={14}/>} />
+                  </>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-0.5">
+                        <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight">Empresa</label>
+                        <select name="company" onChange={(e) => setFormCompany(e.target.value)} className="w-full bg-slate-50 border-none p-1.5 rounded-lg text-sm outline-none ring-1 ring-slate-200">
+                          {Object.keys(COMPANY_RULES).map(c => <option key={c} value={c}>{c}</option>)}
+                          <option value={OTHER_COMPANY}>{OTHER_COMPANY}</option>
+                        </select>
+                      </div>
+                      <div className="space-y-0.5">
+                        <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight">Rango</label>
+                        <select name="rank" className="w-full bg-slate-50 border-none p-1.5 rounded-lg text-sm outline-none ring-1 ring-slate-200">
+                          {Object.keys(COMPANY_RULES[formCompany] || {}).map(r => <option key={r} value={r}>{r}</option>)}
+                        </select>
                       </div>
                     </div>
-                  </div>
-                ) : (
-                  <InputGroup label="Centro / Tienda" name="store" small icon={<Store size={14}/>} />
+                    <div className="space-y-0.5">
+                      <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight flex items-center gap-1">
+                        <Store size={10}/> Centro / Tienda
+                      </label>
+                      <div className="relative">
+                        <select
+                          name="store"
+                          className="w-full bg-slate-50 border-none p-1.5 pr-8 rounded-lg text-sm outline-none ring-1 ring-slate-200 appearance-none font-medium"
+                          defaultValue=""
+                          required
+                        >
+                          <option value="" disabled>Selecciona tu tienda...</option>
+                          {sortedStores.map(s => (
+                            <option key={s.name} value={s.name}>{formatStoreName(s.name)}</option>
+                          ))}
+                        </select>
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                          <ChevronDown size={14} />
+                        </div>
+                      </div>
+                    </div>
+                  </>
                 )}
                 <InputGroup label="Contraseña (mín. 6)" name="password" type="password" minLength={6} small icon={<Lock size={14}/>} />
                 <InputGroup label="Repetir Contraseña" name="confirmPassword" type="password" minLength={6} small icon={<ShieldCheck size={14}/>} />

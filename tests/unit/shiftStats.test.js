@@ -120,3 +120,44 @@ describe('computeShiftStats', () => {
     expect(stats.targets).toEqual({ horas: 1770, domingos: 22, calidad: 10, trabajados: 258, libres: 76, ha: 15 });
   });
 });
+
+// Empresas de fuera de ANGED: no conocemos su convenio, así que NO se les puede
+// colar el de Supercor. O tienen los objetivos que ellos mismos han escrito, o
+// no tienen ninguno (el Resumen se pinta entonces como contadores, sin barras).
+describe('computeShiftStats — empresa no verificada', () => {
+  const OTRA = { company: 'Mercadona', companyVerified: false, rank: 'Reponedor' };
+
+  test('sin objetivos propios, targets es null (nunca los de Supercor)', () => {
+    const stats = computeShiftStats([], {}, OTRA, NOW);
+    expect(stats.targets).toBeNull();
+  });
+
+  test('con objetivos a mano, se usan esos y calidad/HA quedan a 0', () => {
+    const stats = computeShiftStats([], {}, { ...OTRA, customTargets: { horas: 1800, trabajados: 240 } }, NOW);
+    expect(stats.targets).toEqual({ horas: 1800, trabajados: 240, libres: 0, domingos: 0, calidad: 0, ha: 0, custom: true });
+  });
+
+  test('companyVerified manda sobre el nombre: escribir "Supercor" no da su convenio', () => {
+    const stats = computeShiftStats([], {}, { company: 'Supercor', companyVerified: false, rank: 'Jefes' }, NOW);
+    expect(stats.targets).toBeNull();
+  });
+
+  test('los objetivos escritos a mano se sanean (basura, negativos y topes)', () => {
+    const stats = computeShiftStats(
+      [], {}, { ...OTRA, customTargets: { horas: 99999, trabajados: -5, libres: 'abc', domingos: 12.6 } }, NOW
+    );
+    expect(stats.targets).toEqual({ horas: 4000, trabajados: 0, libres: 0, domingos: 13, calidad: 0, ha: 0, custom: true });
+  });
+
+  test('las horas y los días se siguen contando igual que en ANGED', () => {
+    const shifts = [
+      { date: '2026-01-02', type: 'work', hours: 8 },
+      { date: '2026-01-05', type: 'work', hours: 7 },
+      { date: '2026-01-03', type: 'rest' }
+    ];
+    const stats = computeShiftStats(shifts, toMap(shifts), OTRA, NOW);
+    expect(stats.horasTotales).toBe(15);
+    expect(stats.diasTrabajados).toBe(2);
+    expect(stats.diasLibres).toBe(1);
+  });
+});

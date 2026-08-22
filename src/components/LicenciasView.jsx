@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { FileText, ChevronDown, ChevronUp, Info, Users, Clock, ClipboardCheck } from 'lucide-react';
-import { LICENCIAS_CATEGORIES, GRADOS_CONSANGUINIDAD } from '../constants/licenciasData';
+import { LICENCIAS_CATEGORIES, LICENCIAS_ET_CATEGORIES, LICENCIAS_ET_NOTA, GRADOS_CONSANGUINIDAD } from '../constants/licenciasData';
 import { ActivationGateModal } from './LockedView';
+import { hasKnownConvenio } from '../constants/config';
 
 // Mismo relieve que el resto de la app (Resumen, botones de Fichar, Agenda):
 // degradado vertical + sombra proyectada + brillo interior arriba. Al desplegarse,
@@ -27,7 +28,12 @@ const PANEL_CLARO = {
   border: '1px solid rgba(15,23,42,0.05)',
 };
 
-export const LicenciasView = React.memo(function LicenciasView({ permissionState, requestTokenManually, isActive = true }) {
+export const LicenciasView = React.memo(function LicenciasView({ user, permissionState, requestTokenManually, isActive = true }) {
+  // Quien trabaja en ANGED ve los permisos de SU convenio. Del resto no conocemos
+  // el convenio, así que se les enseña el mínimo legal del Estatuto: les aplica
+  // seguro, y su convenio solo puede mejorarlo (lo advierte LICENCIAS_ET_NOTA).
+  const esANGED = hasKnownConvenio(user);
+  const categorias = esANGED ? LICENCIAS_CATEGORIES : LICENCIAS_ET_CATEGORIES;
   const [expandedLicencia, setExpandedLicencia] = useState(null);
   const [showGrados, setShowGrados] = useState(false);
   // Cuentas PENDIENTES: la lista de permisos SE VE; este aviso salta solo al
@@ -142,9 +148,21 @@ export const LicenciasView = React.memo(function LicenciasView({ permissionState
               </div>
             )}
 
+            {/* Aviso permanente para quien ve el Estatuto: lo que hay debajo es el
+                suelo legal, no su convenio. Va aquí y no solo en el tutorial porque
+                el tutorial se ve una vez y esta pantalla se abre muchas más. */}
+            {!esANGED && (
+              <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 mb-6">
+                <p className="text-[10px] font-black text-amber-800 uppercase tracking-widest leading-none mb-2">
+                  Permisos del Estatuto de los Trabajadores
+                </p>
+                <p className="text-[10px] text-slate-600 font-bold leading-snug">{LICENCIAS_ET_NOTA}</p>
+              </div>
+            )}
+
             {/* Categorías de Licencias */}
             <div className="space-y-8">
-              {LICENCIAS_CATEGORIES.map((cat, catIdx) => (
+              {categorias.map((cat, catIdx) => (
                 <div key={cat.id} className="flex flex-col gap-4">
                   <div className="px-2">
                     <h3 className="text-[12px] font-black text-slate-800 uppercase italic tracking-wider flex items-center gap-2">
@@ -164,8 +182,10 @@ export const LicenciasView = React.memo(function LicenciasView({ permissionState
                       return (
                         <div
                           key={idx}
-                          /* La primera licencia es la que ilumina el tutorial */
-                          data-tour={catIdx === 0 && idx === 0 ? 'lic-item' : undefined}
+                          /* La primera licencia es la que ilumina el tutorial. A quien
+                             trabaja fuera de ANGED se le pone otro id: este contenido es
+                             el convenio de ANGED, no el suyo, y el aviso se lo dice. */
+                          data-tour={catIdx === 0 && idx === 0 ? (esANGED ? 'lic-item' : 'lic-item-otra') : undefined}
                           className="rounded-2xl overflow-hidden transition-all duration-300"
                           /* El relieve va en la TARJETA, no en su cabecera: el
                              overflow-hidden de aquí recortaría la sombra exterior
@@ -209,13 +229,15 @@ export const LicenciasView = React.memo(function LicenciasView({ permissionState
                                   </div>
                                 </div>
 
-                                <div className="flex gap-3">
-                                  <div className="bg-emerald-50 p-2 rounded-xl text-emerald-600 h-fit"><ClipboardCheck size={14} /></div>
-                                  <div>
-                                    <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">Documentación Necesaria</p>
-                                    <p className="text-[11px] text-slate-700 font-bold leading-tight mt-0.5">{lic.documentacion}</p>
+                                {lic.documentacion && (
+                                  <div className="flex gap-3">
+                                    <div className="bg-emerald-50 p-2 rounded-xl text-emerald-600 h-fit"><ClipboardCheck size={14} /></div>
+                                    <div>
+                                      <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">Documentación Necesaria</p>
+                                      <p className="text-[11px] text-slate-700 font-bold leading-tight mt-0.5">{lic.documentacion}</p>
+                                    </div>
                                   </div>
-                                </div>
+                                )}
                               </div>
                             </div>
                           )}

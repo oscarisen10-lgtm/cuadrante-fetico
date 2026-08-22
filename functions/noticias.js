@@ -89,6 +89,13 @@ exports.sendPushNotification = onDocumentCreated(
 );
 
 /**
+ * Enfriamiento entre pushes de un MISMO delegado. Un delegado publica avisos
+ * puntuales, no ráfagas: 60 s no estorba a nadie que escriba de verdad y corta en
+ * seco un bucle automatizado.
+ */
+const PUSH_COOLDOWN_MS = 60 * 1000;
+
+/**
  * sendStoreNews — Push DIRIGIDO de las noticias de delegado (noticiasTienda).
  * Se dispara al crear una noticia de tienda con sendPush == true y la envía SOLO
  * a los usuarios de las tiendas destino, por TOKEN directo (multicast):
@@ -120,6 +127,20 @@ exports.sendStoreNews = onDocumentCreated(
         console.error(`sendStoreNews: autor ${data.authorUid} sin autorización para [${stores.join(", ")}]. No se envía.`);
         return null;
       }
+
+      // Cortafuegos anti-spam (auditoría 22-ago-2026): sin esto, una cuenta de
+      // delegado comprometida podía crear noticias con sendPush en bucle y bombardear
+      // a toda su plantilla — maxInstances acota la concurrencia, no la cadencia.
+      // La noticia SÍ se publica (queda en el feed); lo único que se descarta es el
+      // push, que es lo intrusivo. `lastPushAt` lo escribe solo el Admin SDK.
+      const ahora = Date.now();
+      const ultimoPush = typeof delegado.lastPushAt === "number" ? delegado.lastPushAt : 0;
+      if (ahora - ultimoPush < PUSH_COOLDOWN_MS) {
+        const faltan = Math.ceil((PUSH_COOLDOWN_MS - (ahora - ultimoPush)) / 1000);
+        console.warn(`sendStoreNews: ${data.authorUid} en enfriamiento (${faltan}s). La noticia se publica, el push NO se envía.`);
+        return null;
+      }
+      await delegadoSnap.ref.set({ lastPushAt: ahora }, { merge: true });
 
       const tokens = await tokensForStores(db, stores);
       if (tokens.size === 0) {
@@ -223,11 +244,25 @@ exports.notifyDelegadoNewUser = onDocumentCreated(
  * directamente. Idempotente: re-suscribirse en cada arranque es gratis e inofensivo.
  */
 exports.subscribeToNewsTopic = onCall({ maxInstances: 10, enforceAppCheck: ENFORCE_APP_CHECK }, async (request) => {
-  requireAuth(request, HttpsError);
+  const uid = requireAuth(request, HttpsError);
   const token = request.data?.token;
   if (typeof token !== "string" || token.length < 10 || token.length > 4096) {
     throw new HttpsError("invalid-argument", "Token no válido.");
   }
+
+  // El token debe ser TUYO (auditoría 22-ago-2026): antes cualquiera podía suscribir
+  // un token ajeno al topic. Se rechaza solo si consta a nombre de OTRO usuario; si
+  // todavía no consta en ningún perfil se acepta, porque el cliente guarda
+  // profile.fcmToken y llama aquí casi a la vez y el orden no está garantizado.
+  const dueñoSnap = await db().collection("users")
+    .where("profile.fcmToken", "==", token)
+    .select()
+    .limit(1)
+    .get();
+  if (!dueñoSnap.empty && dueñoSnap.docs[0].id !== uid) {
+    throw new HttpsError("permission-denied", "Ese dispositivo pertenece a otra cuenta.");
+  }
+
   try {
     await admin.messaging().subscribeToTopic(token, NEWS_TOPIC);
     return { success: true };

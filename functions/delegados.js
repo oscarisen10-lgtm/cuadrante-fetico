@@ -14,7 +14,7 @@
  */
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { admin, db, ENFORCE_APP_CHECK } = require("./lib/firebase");
-const { ADMIN_EMAIL, isAdminToken, requireAuth, getDelegadoDoc, isUserActive } = require("./lib/auth");
+const { isAdminToken, isProtectedAdminAccount, requireAuth, getDelegadoDoc, isUserActive } = require("./lib/auth");
 
 /** Lanza si quien llama no es el admin. */
 const requireAdmin = (request, mensaje) => {
@@ -285,7 +285,12 @@ async function requireCanManageUser(request, targetUid) {
     if (!delegado || !Array.isArray(delegado.stores) || !delegado.stores.includes(targetStore)) {
       throw new HttpsError("permission-denied", "Ese usuario no pertenece a tus tiendas autorizadas.");
     }
-    if ((userSnap.data().profile || {}).email === ADMIN_EMAIL) {
+    // Se comprueba por CLAIM y por email de AUTH (ver isProtectedAdminAccount): así
+    // la cuenta del admin sigue protegida aunque el claim y ADMIN_EMAIL estén
+    // temporalmente en cuentas distintas durante un cambio de administrador. El email
+    // ya NO se le pasa desde el perfil de Firestore: ese campo lo controla el propio
+    // usuario y servía para hacerse pasar por el admin (auditoría 22-ago-2026).
+    if (await isProtectedAdminAccount(targetUid)) {
       throw new HttpsError("permission-denied", "No puedes modificar esa cuenta.");
     }
   }

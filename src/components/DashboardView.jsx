@@ -1,19 +1,37 @@
 import React, { useState } from 'react';
 import { PieChart, Newspaper, Plus, Trash2, Link, X, Upload, HardHat } from 'lucide-react';
-import { StatBar, InputGroup } from './UIComponents';
+import { StatBar, StatCounter, InputGroup } from './UIComponents';
 import { formatTotalTime } from '../utils/dateUtils';
-import { isAdminUser, tieneFindeLargoDe4Dias } from '../constants/config';
+import { isAdminUser, tieneFindeLargoDe4Dias, hasKnownConvenio } from '../constants/config';
 import { toast, confirm } from '../services/toastBus';
 import { storage } from '../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { compressImage } from '../utils/imageUtils';
+
+/**
+ * Devuelve el enlace solo si es http(s); si no, null (y el botón no se pinta).
+ * El campo `linkUrl` viene del documento de la noticia, y aunque hoy el compositor
+ * del admin siempre lo deja a null, nada en el esquema impide que otro camino de
+ * escritura meta un `javascript:…` que se ejecutaría al tocar el botón.
+ */
+const enlaceSeguro = (url) => {
+  if (typeof url !== 'string' || !url.trim()) return null;
+  try {
+    const { protocol } = new URL(url, window.location.origin);
+    return protocol === 'http:' || protocol === 'https:' ? url : null;
+  } catch {
+    return null;
+  }
+};
 
 // newsOnly: cuentas pendientes de activación (o admin en Modo Admin) → el Resumen
 // muestra SOLO la sección de Noticias, sin las estadísticas personales.
 export const DashboardView = React.memo(function DashboardView({ user, stats, newsList, addNews, deleteNews, permissionState, requestTokenManually, onImageClick, newsOnly = false }) {
   const isAdmin = isAdminUser(user);
   // El cuadrante de ECI aún no está modelado, así que sus cifras no significarían nada.
-  const esECI = user?.company === "ECI";
+  // Solo aplica al ECI de verdad: si alguien de fuera escribió "ECI" a mano en su
+  // empresa, es otra cosa y su resumen se pinta con normalidad (sin objetivos).
+  const esECI = hasKnownConvenio(user) && user?.company === "ECI";
 
   // Desglose de findes de calidad según el puesto. Algunos puestos (coordinadores de
   // frescos, jefes) tienen finde largo de 4 días (sáb-dom-lun-mar) con reparto
@@ -22,6 +40,21 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
   const calidadCortoTarget = findeLargo4Dias ? 2 : 6;
   const calidadLargoTarget = findeLargo4Dias ? 8 : 4;
   const calidadLargoLabel = findeLargo4Dias ? "Sáb-Dom-Lun-Mar" : "Sáb-Dom-Lun";
+
+  // Objetivos del usuario (null = empresa no verificada que aún no ha puesto los
+  // suyos). Cada métrica se pinta con barra de progreso SOLO si tiene objetivo;
+  // si no, va como contador a secas. Así el resumen de quien está fuera de ANGED
+  // enseña lo que lleva trabajado sin compararlo con una cifra que no es la suya.
+  const objetivo = (key) => stats.targets?.[key] || 0;
+  const sinObjetivos = !stats.targets;
+
+  // El tutorial explica cada barra hablando del convenio, y a quien está fuera de
+  // ANGED eso no le vale: sus objetivos se los pone él. En vez de meterle lógica
+  // de usuario al motor de tips, se les cambia el data-tour: los pasos `optional`
+  // de screenTips ya se caen solos cuando su elemento no está en pantalla, así
+  // que cada tipo de usuario recibe su propia explicación. Ver screenTips.jsx.
+  const sinConvenio = !hasKnownConvenio(user);
+  const tour = (id) => (sinConvenio ? `${id}-libre` : id);
 
   const [showAddNewsModal, setShowAddNewsModal] = useState(false);
 
@@ -175,19 +208,41 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
         <h2 className="text-sm font-black text-slate-800 uppercase italic tracking-widest border-b border-slate-100 pb-3 flex items-center gap-2.5 mb-6 shrink-0">
           <span className="grid place-items-center w-8 h-8 rounded-xl text-white shrink-0" style={{ background: 'linear-gradient(180deg,#34d399,#059669)', boxShadow: '0 4px 10px rgba(5,150,105,0.4), inset 0 1px 1px rgba(255,255,255,0.5)' }}><PieChart size={16} /></span> Resumen Calendario
         </h2>
+        {sinObjetivos && (
+          <div data-tour="res-sin-objetivos" className="rounded-2xl bg-amber-50 border border-amber-200 p-3.5 mb-5 shrink-0">
+            <p className="text-[9px] font-black text-amber-800 uppercase tracking-widest leading-none mb-1.5">Sin objetivos configurados</p>
+            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tight leading-tight">
+              No conocemos el convenio de tu empresa. Puedes fijar tus objetivos a mano en Ajustes.
+            </p>
+          </div>
+        )}
         <div className="flex-1 flex flex-col justify-between py-2 space-y-5">
           {/* data-tour: puntos que ilumina el tutorial (ver constants/screenTips) */}
-          <StatBar dataTour="res-horas" label="Horas Anuales" currentValue={formatTotalTime(stats.horasTotales)} percentage={(stats.horasTotales/(stats.targets?.horas || 1770))*100} totalValue={`${stats.targets?.horas || 1770}h`} color="bg-emerald-500" large={true} />
-          <StatBar dataTour="res-trabajados" label="Días Trabajados" currentValue={stats.diasTrabajados} percentage={(stats.diasTrabajados/(stats.targets?.trabajados || 268))*100} totalValue={stats.targets?.trabajados || 268} color="bg-emerald-600" large={true} />
-          <StatBar dataTour="res-libres" label="Días Libres" currentValue={stats.diasLibres} percentage={(stats.diasLibres/(stats.targets?.libres || 76))*100} totalValue={stats.targets?.libres || 76} color="bg-emerald-400" large={true} />
-
-          {stats.targets?.ha > 0 && (
-             <StatBar dataTour="res-ha" label="Días HA" currentValue={stats.contadorHA} percentage={(stats.contadorHA/stats.targets.ha)*100} totalValue={stats.targets.ha} color="bg-emerald-500" large={true} />
+          {objetivo('horas') > 0 ? (
+            <StatBar dataTour={tour("res-horas")} label="Horas Anuales" currentValue={formatTotalTime(stats.horasTotales)} percentage={(stats.horasTotales/objetivo('horas'))*100} totalValue={`${objetivo('horas')}h`} color="bg-emerald-500" large={true} />
+          ) : (
+            <StatCounter dataTour={tour("res-horas")} label="Horas Anuales" value={formatTotalTime(stats.horasTotales)} large={true} />
           )}
 
-          {(stats.targets?.calidad || 0) > 0 && (
+          {objetivo('trabajados') > 0 ? (
+            <StatBar dataTour={tour("res-trabajados")} label="Días Trabajados" currentValue={stats.diasTrabajados} percentage={(stats.diasTrabajados/objetivo('trabajados'))*100} totalValue={objetivo('trabajados')} color="bg-emerald-600" large={true} />
+          ) : (
+            <StatCounter dataTour={tour("res-trabajados")} label="Días Trabajados" value={stats.diasTrabajados} large={true} />
+          )}
+
+          {objetivo('libres') > 0 ? (
+            <StatBar dataTour={tour("res-libres")} label="Días Libres" currentValue={stats.diasLibres} percentage={(stats.diasLibres/objetivo('libres'))*100} totalValue={objetivo('libres')} color="bg-emerald-400" large={true} />
+          ) : (
+            <StatCounter dataTour={tour("res-libres")} label="Días Libres" value={stats.diasLibres} large={true} />
+          )}
+
+          {objetivo('ha') > 0 && (
+             <StatBar dataTour="res-ha" label="Días HA" currentValue={stats.contadorHA} percentage={(stats.contadorHA/objetivo('ha'))*100} totalValue={objetivo('ha')} color="bg-emerald-500" large={true} />
+          )}
+
+          {objetivo('calidad') > 0 && (
             <div data-tour="res-calidad">
-              <StatBar label="Calidad" currentValue={stats.findesCalidad} percentage={(stats.findesCalidad/(stats.targets?.calidad || 10))*100} totalValue={stats.targets?.calidad || 10} color="bg-emerald-600" large={true} />
+              <StatBar label="Calidad" currentValue={stats.findesCalidad} percentage={(stats.findesCalidad/objetivo('calidad'))*100} totalValue={objetivo('calidad')} color="bg-emerald-600" large={true} />
               <div className="flex gap-3 mt-1.5 ml-1">
                 <span className="text-[9px] font-black text-emerald-700 uppercase tracking-wider">● Sáb-Dom: {stats.findesCalidadCorto}/{calidadCortoTarget}</span>
                 <span className="text-[9px] font-black text-emerald-500 uppercase tracking-wider">● {calidadLargoLabel}: {stats.findesCalidadLargo}/{calidadLargoTarget}</span>
@@ -195,7 +250,11 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
             </div>
           )}
 
-          <StatBar dataTour="res-domingos" label="DOMINGOS/FESTIVOS" currentValue={stats.domingosCount} percentage={(stats.domingosCount/(stats.targets?.domingos || 22))*100} totalValue={stats.targets?.domingos || 22} color="bg-emerald-500" large={true} />
+          {objetivo('domingos') > 0 ? (
+            <StatBar dataTour={tour("res-domingos")} label="DOMINGOS/FESTIVOS" currentValue={stats.domingosCount} percentage={(stats.domingosCount/objetivo('domingos'))*100} totalValue={objetivo('domingos')} color="bg-emerald-500" large={true} />
+          ) : (
+            <StatCounter dataTour={tour("res-domingos")} label="DOMINGOS/FESTIVOS" value={stats.domingosCount} large={true} />
+          )}
         </div>
       </div>
       )}
@@ -263,8 +322,8 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
 
                         <h4 className="text-sm font-black text-slate-800 uppercase leading-tight mb-2 tracking-tight">{news.title}</h4>
                         <p className="text-xs text-slate-500 leading-relaxed whitespace-pre-wrap">{news.desc}</p>
-                        {news.linkUrl && (
-                          <a href={news.linkUrl} target="_blank" rel="noopener noreferrer" className="mt-4 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors text-emerald-700 py-3 px-3 rounded-xl text-[10px] font-bold uppercase text-center flex items-center justify-center gap-2">
+                        {enlaceSeguro(news.linkUrl) && (
+                          <a href={enlaceSeguro(news.linkUrl)} target="_blank" rel="noopener noreferrer" className="mt-4 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors text-emerald-700 py-3 px-3 rounded-xl text-[10px] font-bold uppercase text-center flex items-center justify-center gap-2">
                             <Link size={14}/> Ver más información
                           </a>
                         )}

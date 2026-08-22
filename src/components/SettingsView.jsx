@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, ShieldCheck, Users, HelpCircle } from 'lucide-react';
-import { COMPANY_RULES, isAdminUser } from '../constants/config';
+import { Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, ShieldCheck, Users, HelpCircle, Target } from 'lucide-react';
+import { COMPANY_RULES, isAdminUser, hasKnownConvenio, CUSTOM_TARGET_FIELDS } from '../constants/config';
 import { STORES, S_ROMERO_STORES, ECI_STORES, formatStoreName } from '../constants/stores';
-import { deleteUserAccount } from '../services/firebaseService';
+import { deleteUserAccount, cambiarMiTienda } from '../services/firebaseService';
 import { firestoreCacheMode } from '../firebase';
 import { toast } from '../services/toastBus';
 import { setHapticsEnabled, isHapticsEnabled, hapticLight } from '../utils/haptics';
@@ -24,12 +24,56 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
       setShowDeleteModal(false);
     }
   };
+  // Empresa de fuera de ANGED: no conocemos su convenio, así que solo tiene el
+  // nombre de su empresa (a mano) y los objetivos que se fije él.
+  const esOtraEmpresa = !hasKnownConvenio(user);
   const currentCompany = user?.company || "Supercor";
   const currentRank = user?.rank || "Personal de fresco";
   const currentStore = user?.store || "";
 
   const handleProfileChange = async (updates) => {
     saveToCloud({ profile: { ...user, ...updates } });
+  };
+
+  // La TIENDA no se puede escribir desde el cliente (firestore.rules): de ella dependen
+  // las noticias de delegado que puedes leer y el censo de tu delegado. Va por una
+  // function que, de paso, devuelve la cuenta a PENDIENTE para que la verifique el
+  // delegado de la tienda nueva. Admin y delegados no se degradan.
+  const [cambiandoTienda, setCambiandoTienda] = useState(false);
+
+  const handleStoreChange = async (updates) => {
+    setCambiandoTienda(true);
+    try {
+      const res = await cambiarMiTienda(updates);
+      if (res?.pendiente) {
+        toast('Tienda actualizada. Tu cuenta queda pendiente de que la verifique el delegado de tu nueva tienda.', 'warning');
+      } else {
+        toast('Tienda actualizada.', 'success');
+      }
+    } catch (error) {
+      toast('No se pudo cambiar la tienda: ' + (error?.message || error), 'error');
+    }
+    setCambiandoTienda(false);
+  };
+
+  // Los campos de texto se guardan al SALIR del campo (onBlur), no en cada tecla:
+  // cada guardado es una escritura en Firestore. Mientras no se estén editando, el
+  // borrador es null y el input muestra lo guardado en el perfil; así el campo se
+  // rellena solo cuando el perfil llega de la nube después de montar la pantalla.
+  const [companyDraft, setCompanyDraft] = useState(null);
+  const [targetsDraft, setTargetsDraft] = useState({});
+
+  const savedTarget = (key) => (user?.customTargets?.[key] ? String(user.customTargets[key]) : "");
+  const targetValue = (key) => targetsDraft[key] ?? savedTarget(key);
+
+  const commitTargets = () => {
+    const limpios = {};
+    CUSTOM_TARGET_FIELDS.forEach(({ key, max }) => {
+      const n = parseInt(targetValue(key), 10);
+      if (Number.isFinite(n) && n > 0) limpios[key] = Math.min(n, max);
+    });
+    setTargetsDraft({});
+    handleProfileChange({ customTargets: limpios });
   };
 
   const tokenStatus = pushToken
@@ -56,84 +100,153 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
         <h3 className="text-xs font-black text-white/50 uppercase tracking-widest mb-6 flex items-center gap-2 border-b border-white/5 pb-3"><Settings size={16}/> Preferencias</h3>
         <div className="space-y-6">
           {/* data-tour: puntos que ilumina el tutorial (ver constants/screenTips) */}
-          <div data-tour="set-puesto" className="flex flex-col gap-4 bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
+          {/* data-tour distinto según el usuario: el paso del tutorial que habla de
+              puesto, tienda y sección no le vale a quien solo tiene empresa. Los
+              pasos `optional` de screenTips se caen solos (ver TipBubble). */}
+          <div data-tour={esOtraEmpresa ? "set-empresa" : "set-puesto"} className="flex flex-col gap-4 bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
              <div className="flex items-center gap-2 mb-1">
                 <Building2 size={14} className="text-emerald-500" />
-                <span className="text-xs font-bold text-white uppercase leading-none">Mi Puesto</span>
+                <span className="text-xs font-bold text-white uppercase leading-none">{esOtraEmpresa ? "Mi Empresa" : "Mi Puesto"}</span>
              </div>
-             
-             <div className="grid grid-cols-2 gap-3">
+
+             {/* Fuera de ANGED: SOLO el nombre de la empresa. Ni rango, ni centro,
+                 ni sección — no calculan nada y pueden no venir a cuento (un
+                 camarero no tiene "sección de charcutería"). Tampoco se ofrece el
+                 desplegable de empresas: pasarse a una de ANGED desde aquí se
+                 saltaría la verificación del delegado, porque la cuenta ya nació
+                 activa. Ese camino se cierra en el cliente a propósito. */}
+             {esOtraEmpresa ? (
                <div className="flex flex-col space-y-1">
                   <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1">Empresa</span>
-                  <select 
-                    value={currentCompany} 
-                    onChange={(e) => {
-                      const newCompany = e.target.value;
-                      const firstRank = Object.keys(COMPANY_RULES[newCompany] || {})[0];
-                      handleProfileChange({ company: newCompany, rank: firstRank, store: "" });
+                  <input
+                    type="text"
+                    value={companyDraft ?? (user?.company || "")}
+                    maxLength={60}
+                    placeholder="Escribe tu empresa"
+                    onChange={(e) => setCompanyDraft(e.target.value)}
+                    onBlur={() => {
+                      if (companyDraft === null) return;
+                      setCompanyDraft(null);
+                      handleProfileChange({ company: companyDraft.trim(), companyVerified: false });
                     }}
-                    className="w-full bg-white/10 border border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] p-2 rounded-xl text-xs outline-none text-white appearance-none"
-                  >
-                    {Object.keys(COMPANY_RULES).map(c => <option key={c} value={c} className="text-slate-800">{c}</option>)}
-                  </select>
-               </div>
-               <div className="flex flex-col space-y-1">
-                  <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1">Rango</span>
-                  <select 
-                    value={currentRank} 
-                    onChange={(e) => handleProfileChange({ rank: e.target.value })}
-                    className="w-full bg-white/10 border border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] p-2 rounded-xl text-xs outline-none text-white appearance-none"
-                  >
-                    {Object.keys(COMPANY_RULES[currentCompany] || {}).map(r => <option key={r} value={r} className="text-slate-800">{r}</option>)}
-                  </select>
-               </div>
-             </div>
-
-                <div className="flex flex-col space-y-1 mt-1">
-                  <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1 flex items-center gap-1">
-                    <Store size={10} className="text-emerald-500"/> Centro / Tienda
+                    className="w-full bg-white/10 border border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] p-2.5 rounded-xl text-xs outline-none text-white placeholder:text-white/25 font-medium"
+                  />
+                  <span className="text-[8px] text-white/30 font-bold uppercase tracking-tight ml-1 pt-1 leading-tight">
+                    ¿Trabajas en Supercor, S. Romero, S. Express o ECI? Habla con tu delegado de FETICO para que te pase a tu empresa
                   </span>
-                  <div className="relative">
-                    <select 
-                      value={currentStore} 
-                      onChange={(e) => handleProfileChange({ store: e.target.value })}
-                      className="w-full bg-white/10 border border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] p-2.5 pr-8 rounded-xl text-xs outline-none text-white appearance-none font-medium"
-                    >
-                      <option value="" disabled className="text-slate-800">Selecciona tu tienda...</option>
-                      {sortedStores.map(s => (
-                        <option key={s.name} value={s.name} className="text-slate-800">{formatStoreName(s.name)}</option>
-                      ))}
-                    </select>
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-white/30">
-                      <ChevronDown size={14} />
-                    </div>
-                  </div>
-                </div>
+               </div>
+             ) : (
+               <>
+                 <div className="grid grid-cols-2 gap-3">
+                   <div className="flex flex-col space-y-1">
+                      <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1">Empresa</span>
+                      <select
+                        value={currentCompany}
+                        disabled={cambiandoTienda}
+                        onChange={(e) => {
+                          const newCompany = e.target.value;
+                          const firstRank = Object.keys(COMPANY_RULES[newCompany] || {})[0];
+                          // Cambiar de empresa vacía la tienda (cada empresa tiene sus
+                          // centros), así que también pasa por la function.
+                          handleStoreChange({ company: newCompany, rank: firstRank, store: "" });
+                        }}
+                        className="w-full bg-white/10 border border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] p-2 rounded-xl text-xs outline-none text-white appearance-none"
+                      >
+                        {Object.keys(COMPANY_RULES).map(c => <option key={c} value={c} className="text-slate-800">{c}</option>)}
+                      </select>
+                   </div>
+                   <div className="flex flex-col space-y-1">
+                      <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1">Rango</span>
+                      <select
+                        value={currentRank}
+                        onChange={(e) => handleProfileChange({ rank: e.target.value })}
+                        className="w-full bg-white/10 border border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] p-2 rounded-xl text-xs outline-none text-white appearance-none"
+                      >
+                        {Object.keys(COMPANY_RULES[currentCompany] || {}).map(r => <option key={r} value={r} className="text-slate-800">{r}</option>)}
+                      </select>
+                   </div>
+                 </div>
 
-                <div className="flex flex-col space-y-1 mt-1">
-                  <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1 flex items-center gap-1">
-                    <Store size={10} className="text-emerald-500"/> Sección
-                  </span>
-                  <div className="relative">
-                    <select 
-                      value={user?.section || "Sin especificar"} 
-                      onChange={(e) => handleProfileChange({ section: e.target.value })}
-                      className="w-full bg-white/10 border border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] p-2.5 pr-8 rounded-xl text-xs outline-none text-white appearance-none font-medium"
-                    >
-                      <option value="Sin especificar" className="text-slate-800">Sin especificar</option>
-                      <option value="Charcutería" className="text-slate-800">Charcutería</option>
-                      <option value="Carnicería" className="text-slate-800">Carnicería</option>
-                      <option value="Pescadería" className="text-slate-800">Pescadería</option>
-                      <option value="Panadería" className="text-slate-800">Panadería/Platos</option>
-                      <option value="Frutería" className="text-slate-800">Frutería</option>
-                      <option value="Sala" className="text-slate-800">Sala</option>
-                    </select>
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-white/30">
-                      <ChevronDown size={14} />
-                    </div>
-                  </div>
-                </div>
+                 <div className="flex flex-col space-y-1 mt-1">
+                   <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1 flex items-center gap-1">
+                     <Store size={10} className="text-emerald-500"/> Centro / Tienda
+                   </span>
+                   <div className="relative">
+                     <select
+                       value={currentStore}
+                       disabled={cambiandoTienda}
+                       onChange={(e) => handleStoreChange({ store: e.target.value })}
+                       className="w-full bg-white/10 border border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] p-2.5 pr-8 rounded-xl text-xs outline-none text-white appearance-none font-medium"
+                     >
+                       <option value="" disabled className="text-slate-800">Selecciona tu tienda...</option>
+                       {sortedStores.map(s => (
+                         <option key={s.name} value={s.name} className="text-slate-800">{formatStoreName(s.name)}</option>
+                       ))}
+                     </select>
+                     <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-white/30">
+                       <ChevronDown size={14} />
+                     </div>
+                   </div>
+                 </div>
+
+                 <div className="flex flex-col space-y-1 mt-1">
+                   <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1 flex items-center gap-1">
+                     <Store size={10} className="text-emerald-500"/> Sección
+                   </span>
+                   <div className="relative">
+                     <select
+                       value={user?.section || "Sin especificar"}
+                       onChange={(e) => handleProfileChange({ section: e.target.value })}
+                       className="w-full bg-white/10 border border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] p-2.5 pr-8 rounded-xl text-xs outline-none text-white appearance-none font-medium"
+                     >
+                       <option value="Sin especificar" className="text-slate-800">Sin especificar</option>
+                       <option value="Charcutería" className="text-slate-800">Charcutería</option>
+                       <option value="Carnicería" className="text-slate-800">Carnicería</option>
+                       <option value="Pescadería" className="text-slate-800">Pescadería</option>
+                       <option value="Panadería" className="text-slate-800">Panadería/Platos</option>
+                       <option value="Frutería" className="text-slate-800">Frutería</option>
+                       <option value="Sala" className="text-slate-800">Sala</option>
+                     </select>
+                     <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-white/30">
+                       <ChevronDown size={14} />
+                     </div>
+                   </div>
+                 </div>
+               </>
+             )}
           </div>
+
+          {/* Objetivos a mano: solo para quien está fuera de ANGED. De su convenio no
+              sabemos nada, así que los pone él. Lo que deje vacío sale como contador. */}
+          {esOtraEmpresa && (
+            <div data-tour="set-objetivos" className="flex flex-col gap-4 bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
+              <div className="flex items-center gap-2">
+                <Target size={14} className="text-emerald-500" />
+                <span className="text-xs font-bold text-white uppercase leading-none">Mis Objetivos</span>
+              </div>
+              <p className="text-[9px] text-white/40 font-bold uppercase tracking-tight leading-tight -mt-2">
+                No conocemos el convenio de tu empresa. Escribe aquí tus objetivos anuales y el Resumen los usará. Lo que dejes vacío se muestra como contador, sin barra.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                {CUSTOM_TARGET_FIELDS.map(({ key, label, max }) => (
+                  <div key={key} className="flex flex-col space-y-1">
+                    <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1">{label}</span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={max}
+                      value={targetValue(key)}
+                      placeholder="—"
+                      onChange={(e) => setTargetsDraft(d => ({ ...d, [key]: e.target.value }))}
+                      onBlur={commitTargets}
+                      className="w-full bg-white/10 border border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] p-2 rounded-xl text-xs outline-none text-white placeholder:text-white/25"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div data-tour="set-sync" className="flex justify-between items-center bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
              <div className="flex flex-col">

@@ -61,6 +61,11 @@ export const useAuth = () => {
   // marcador shiftsMonthlyMigratedAt del perfil evita repetirla entre sesiones).
   const migrationStartedRef = useRef(false);
 
+  // Custom claim de admin, leído del token de Auth (ver isAdminUser en config.js).
+  // En un ref porque el snapshot del perfil, que se dispara muchas veces, tiene que
+  // poder reinyectarlo en el objeto `user` sin volver a pedir el token.
+  const adminClaimRef = useRef(false);
+
   useEffect(() => {
     let unsubUserDoc = null;
     let unsubShifts = null;
@@ -81,7 +86,23 @@ export const useAuth = () => {
     const unsubAuth = subscribeToAuth((firebaseUser) => {
       if (firebaseUser) {
         let snapshotFired = false;
-        
+
+        // ¿Es admin? Va por CUSTOM CLAIM, que llega firmado dentro del token de Auth
+        // (antes se deducía comparando profile.email con VITE_ADMIN_EMAIL, y ese campo
+        // lo puede reescribir el propio usuario → cualquiera se abría el panel de admin).
+        // Es asíncrono, así que se guarda en un ref y se reinyecta en el user cuando
+        // llega: mientras tanto, isAdminClaim es false, que es el valor seguro.
+        firebaseUser.getIdTokenResult()
+          .then((res) => {
+            adminClaimRef.current = res?.claims?.admin === true;
+            setUser((prev) => (
+              prev && prev.isAdminClaim !== adminClaimRef.current
+                ? { ...prev, isAdminClaim: adminClaimRef.current }
+                : prev
+            ));
+          })
+          .catch((e) => console.warn("No se pudo leer el claim de admin:", e?.message));
+
         const docTimeout = setTimeout(() => {
           if (!snapshotFired) {
             console.error("Firestore timeout: No se recibió perfil de usuario a tiempo.");
@@ -125,7 +146,7 @@ export const useAuth = () => {
                 .catch((e) => console.error("Migración de turnos a modelo mensual falló:", e?.message));
             }
             setUser((prev) => {
-              const next = { ...data.profile, uid: firebaseUser.uid };
+              const next = { ...data.profile, uid: firebaseUser.uid, isAdminClaim: adminClaimRef.current };
               return shallowEqualUser(prev, next) ? prev : next;
             });
             // membership ausente = cuenta anterior al sistema de delegados → activa.

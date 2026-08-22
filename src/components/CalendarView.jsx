@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, CalendarDays, ChevronDown, ChevronUp, Lock } from 'lucide-react';
-import { CONFIG } from '../constants/config';
-import { STORES, MUNICIPAL_HOLIDAYS, formatStoreName } from '../constants/stores';
+import { CONFIG, FESTIVOS_NACIONALES, hasKnownConvenio } from '../constants/config';
+import { MUNICIPAL_HOLIDAYS, formatStoreName, resolveUserCity } from '../constants/stores';
 import { MonthGrid, WeekdayHeader } from './calendar/CalendarGrid';
 import { DateDetailPanel } from './calendar/DateDetailPanel';
 import { HoursEditor } from './calendar/HoursEditor';
@@ -9,25 +9,24 @@ import { ActivationGateModal } from './LockedView';
 
 /**
  * getAllYearHolidays — Collects all common + municipal holidays for the year.
+ * `city` viene ya resuelto de la tienda del usuario (null para quien trabaja
+ * fuera de ANGED, que solo ve los nacionales: ver getFestivosComunes).
  */
-function getAllYearHolidays(userStoreName) {
+function getAllYearHolidays(city, festivosComunes) {
   const holidays = [];
 
-  // Common holidays (Madrid region)
-  Object.entries(CONFIG.FESTIVOS || {}).forEach(([dateStr, name]) => {
+  // Common holidays (Madrid region, o solo nacionales si el usuario es de fuera)
+  Object.entries(festivosComunes).forEach(([dateStr, name]) => {
     holidays.push({ date: dateStr, name, type: 'common' });
   });
 
-  // Municipal holidays based on the user's store city
-  if (userStoreName) {
-    const store = STORES.find(s => s.name === userStoreName);
-    if (store && store.city && MUNICIPAL_HOLIDAYS[store.city]) {
-      Object.entries(MUNICIPAL_HOLIDAYS[store.city]).forEach(([dateStr, name]) => {
-        if (!holidays.find(h => h.date === dateStr)) {
-          holidays.push({ date: dateStr, name, type: 'local' });
-        }
-      });
-    }
+  // Municipal holidays based on the user's city
+  if (city && MUNICIPAL_HOLIDAYS[city]) {
+    Object.entries(MUNICIPAL_HOLIDAYS[city]).forEach(([dateStr, name]) => {
+      if (!holidays.find(h => h.date === dateStr)) {
+        holidays.push({ date: dateStr, name, type: 'local' });
+      }
+    });
   }
 
   // Sort by month-day
@@ -76,7 +75,12 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
   const [showActivationGate, setShowActivationGate] = useState(false);
 
   const userStore = user?.store;
-  const holidays = useMemo(() => getAllYearHolidays(userStore), [userStore]);
+  // Los de fuera de ANGED no tienen municipio del que sacar festivos locales, y
+  // sus comunes son solo los nacionales (no sabemos ni en qué comunidad están).
+  const esANGED = hasKnownConvenio(user);
+  const userCity = esANGED ? resolveUserCity(user) : null;
+  const festivosComunes = esANGED ? CONFIG.FESTIVOS : FESTIVOS_NACIONALES;
+  const holidays = useMemo(() => getAllYearHolidays(userCity, festivosComunes), [userCity, festivosComunes]);
   // Set "MM-DD" precalculado una vez para que las celdas comprueben festivo en O(1)
   // (antes cada celda recorría STORES en su propia llamada a isHoliday()).
   const holidaySet = useMemo(() => new Set(holidays.map(h => h.date)), [holidays]);
@@ -269,9 +273,11 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
               user={user}
             />
 
-            {/* Botón Festivos del Año - Ahora debajo de DateDetailPanel */}
+            {/* Botón Festivos del Año - Ahora debajo de DateDetailPanel.
+                Los de fuera de ANGED solo tienen festivos nacionales, así que el
+                tutorial les cuenta otra cosa (ver screenTips.jsx). */}
             <button
-              data-tour="cal-festivos"
+              data-tour={esANGED ? "cal-festivos" : "cal-festivos-nacional"}
               onClick={() => setShowFestivos(!showFestivos)}
               className="btn3d w-full flex items-center justify-between p-4 rounded-2xl"
               /* Mismo relieve que el resto de la app: en reposo sobresale (degradado

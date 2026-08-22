@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { getFormattedDate } from '../utils/dateUtils';
-import { COMPANY_RULES, tieneFindeLargoDe4Dias } from '../constants/config';
+import { resolveTargets, tieneFindeLargoDe4Dias } from '../constants/config';
 import { isHoliday } from '../utils/holidayUtils';
 
 /**
@@ -30,7 +30,7 @@ export const computeShiftStats = (shifts, shiftsMap, user, now = new Date()) => 
       if (s.isHA) contadorHA += 1;
       const [y, m, d] = s.date.split('-');
       const dayOfWeek = new Date(y, m - 1, d).getDay();
-      const isHolidayDay = isHoliday(s.date, user?.store);
+      const isHolidayDay = isHoliday(s.date, user);
       if (dayOfWeek === 0 || isHolidayDay) domingosCount += 1;
     }
     if (s.type === 'vacation') vacacionesCount += 1;
@@ -77,9 +77,10 @@ export const computeShiftStats = (shifts, shiftsMap, user, now = new Date()) => 
     current.setDate(current.getDate() + 1);
   }
 
-  const company = user?.company || "Supercor";
-  const rank = user?.rank || "Personal de fresco";
-  const userRules = COMPANY_RULES[company]?.[rank] || COMPANY_RULES["Supercor"]["Personal de fresco"];
+  // Empresa de ANGED → objetivos de su convenio. Empresa no verificada → los que
+  // haya escrito el usuario a mano, o null si aún no ha puesto ninguno (el
+  // Resumen lo detecta y se pinta en modo simple, sin barras de progreso).
+  const userRules = resolveTargets(user);
 
   return {
     horasTotales: horasTotalesDecimal,

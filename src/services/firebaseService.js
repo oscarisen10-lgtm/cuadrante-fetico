@@ -193,15 +193,21 @@ export const loginUser = async (email, password) => {
 export const registerUser = async (email, password, profileData) => {
   const res = await withTimeout(createUserWithEmailAndPassword(auth, email, password));
 
+  // Quien trabaja fuera de ANGED no tiene delegado de FETICO que le active la
+  // cuenta: se quedaría en "pendiente" para siempre viendo solo las noticias.
+  // Por eso nace ACTIVA. No es afiliación: solo desbloquea SU propio calendario,
+  // no da acceso a datos de nadie. Las reglas permiten este caso concreto.
+  const esOtraEmpresa = profileData.companyVerified === false;
+
   await withTimeout(setDoc(doc(db, "users", res.user.uid), {
     profile: {
       ...profileData,
       section: profileData.section || "Sin especificar"
     },
-    // Las cuentas nuevas nacen DESACTIVADAS (solo noticias) hasta que un delegado
-    // de FETICO las active. Las reglas de Firestore EXIGEN este campo en el alta;
-    // solo el backend (delegadoSetActive) puede cambiarlo después.
-    membership: { active: false, createdAt: Date.now() },
+    // Las cuentas de ANGED nacen DESACTIVADAS (solo noticias) hasta que un
+    // delegado de FETICO las active. Las reglas de Firestore EXIGEN este campo
+    // en el alta; solo el backend (delegadoSetActive) puede cambiarlo después.
+    membership: { active: esOtraEmpresa, createdAt: Date.now() },
     settings: { notifications: true, breakDuration: 15 },
     shifts: [],
     // Las cuentas nuevas nacen ya en el modelo mensual de turnos: no hay nada que migrar.
@@ -412,6 +418,21 @@ export const subscribeTokenToNewsTopic = async (token) => {
   return fn({ token });
 };
 
+/**
+ * Cambia la tienda (y opcionalmente empresa/rango) del usuario que llama.
+ *
+ * ⚠️ Es la ÚNICA vía: firestore.rules ya no deja escribir profile.store desde el
+ * cliente, porque de ese campo dependen las noticias de delegado que puedes leer y
+ * el censo del delegado. Cambiar de tienda devuelve la cuenta a PENDIENTE, para que
+ * la verifique el delegado de la tienda nueva (admin y delegados quedan exentos).
+ * Devuelve { success, store, pendiente }.
+ */
+export const cambiarMiTienda = async ({ store, company, rank } = {}) => {
+  const fn = httpsCallable(functions, 'cambiarMiTienda');
+  const { data } = await fn({ store, company, rank });
+  return data;
+};
+
 // --- NOTICIAS ---
 
 export const subscribeToNews = (callback) => {
@@ -471,9 +492,24 @@ export const subscribeToMyStoreNews = (uid, callback) => {
   );
 };
 
+/**
+ * Reserva el id de una noticia de delegado ANTES de crearla. Hace falta porque el
+ * cartel se sube a `noticias-delegado/{uid}/{noticiaId}/…`: storage.rules usa ese id
+ * para comprobar contra Firestore que la tienda de quien mira está entre las tiendas
+ * destino. Sin reservar el id antes, no habría carpeta a la que subir la imagen.
+ * No escribe nada: doc() sin datos solo genera una referencia con id.
+ */
+export const nuevaNoticiaTiendaRef = () => doc(collection(db, "noticiasTienda"));
+
 /** Publica una noticia de delegado. Con sendPush:true, el backend la envía por
- *  push SOLO a los usuarios de las tiendas destino (ver sendStoreNews). */
-export const addStoreNews = async (newsData) => {
+ *  push SOLO a los usuarios de las tiendas destino (ver sendStoreNews).
+ *  Si se pasa `ref` (de nuevaNoticiaTiendaRef), la noticia se crea con ESE id —
+ *  el mismo que se usó en la ruta del cartel. */
+export const addStoreNews = async (newsData, ref = null) => {
+  if (ref) {
+    await setDoc(ref, newsData);
+    return ref;
+  }
   return await addDoc(collection(db, "noticiasTienda"), newsData);
 };
 

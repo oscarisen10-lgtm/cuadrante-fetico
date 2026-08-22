@@ -3,7 +3,7 @@ export const STORES = [
   { name: "REYES CAT", city: "San Sebastián de los Reyes" },
   { name: "MAJADAHONDA I", city: "Majadahonda" },
   { name: "MONTE PILAR", city: "Majadahonda" },
-  { name: "PARQUE PINAR", city: "Las Rozas de Madrid" },
+  { name: "PARQUE PINAR", city: "Pozuelo de Alarcón" },
   { name: "LA NAVATA", city: "Galapagar" },
   { name: "VILLALBA", city: "Collado Villalba" },
   { name: "GUADARRAMA", city: "Guadarrama" },
@@ -11,7 +11,7 @@ export const STORES = [
   { name: "CERRO ESPINO", city: "Majadahonda" },
   { name: "MIRASIERRA", city: "Madrid" },
   { name: "PTA HIERRO", city: "Madrid" },
-  { name: "PINEA", city: "Pozuelo de Alarcón" },
+  { name: "PINEA", city: "Majadahonda" },
   { name: "MORALEJA GREEN", city: "Alcobendas" },
   { name: "ZIELO", city: "Pozuelo de Alarcón" },
   { name: "PASEO IMPERIAL", city: "Madrid" },
@@ -103,8 +103,11 @@ export const ECI_STORES = [
 // El Corte Inglés se guardan como "El Corte Inglés X" (así están en Firestore
 // para los usuarios ya registrados), pero se muestran como "ECI X". Solo
 // afecta a la vista, nunca al dato guardado.
-export const formatStoreName = (name) =>
-  typeof name === "string" ? name.replace(/^El Corte Inglés\s*/i, "ECI ").trim() : name;
+export const formatStoreName = (name) => {
+  if (typeof name !== "string") return name;
+  if (name === "PINEA") return "PINNEA";
+  return name.replace(/^El Corte Inglés\s*/i, "ECI ").trim();
+};
 
 export const S_ROMERO_STORES = [
   "ARTURO SORIA",
@@ -144,4 +147,12 @@ export const MUNICIPAL_HOLIDAYS = {
   "Tres Cantos": { "03-21": "Aniversario de la Ciudad", "06-24": "San Juan" },
   "Villanueva de la Cañada": { "05-15": "San Isidro", "07-24": "San Ignacio de Loyola" },
   "Villaviciosa de Odón": { "01-20": "San Sebastián", "09-21": "Stmo. Cristo del Milagro" }
+};
+
+// Municipio del usuario, del que salen sus festivos locales. Se hereda de la
+// tienda. Quien trabaja fuera de ANGED no tiene tienda en esta lista, así que se
+// queda sin municipio y solo ve los festivos nacionales (ver getFestivosComunes).
+export const resolveUserCity = (user) => {
+  if (!user?.store) return null;
+  return STORES.find(s => s.name === user.store)?.city || null;
 };

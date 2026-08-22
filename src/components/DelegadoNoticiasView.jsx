@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Newspaper, Plus, Trash2, X, Upload, Bell, Store as StoreIcon, Send } from 'lucide-react';
-import { addStoreNews, deleteStoreNews, subscribeToMyStoreNews } from '../services/firebaseService';
+import { addStoreNews, deleteStoreNews, subscribeToMyStoreNews, nuevaNoticiaTiendaRef } from '../services/firebaseService';
 import { storage } from '../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { compressImage } from '../utils/imageUtils';
@@ -117,11 +117,16 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
 
     setPublishing(true);
     try {
+      // El id se reserva ANTES de subir el cartel: la imagen va a
+      // noticias-delegado/{uid}/{noticiaId}/… y storage.rules usa ese id para
+      // comprobar que quien la mira pertenece a una de las tiendas destino.
+      const noticiaRef = nuevaNoticiaTiendaRef();
+
       let imageUrl = null;
       if (selectedFile) {
         // Compresión en el dispositivo (igual que las noticias del admin).
         const { blob, type, ext } = await compressImage(selectedFile);
-        const storageRef = ref(storage, `noticias-delegado/${Date.now()}_cartel.${ext}`);
+        const storageRef = ref(storage, `noticias-delegado/${user.uid}/${noticiaRef.id}/cartel.${ext}`);
         await uploadBytes(storageRef, blob, { contentType: type });
         imageUrl = await getDownloadURL(storageRef);
       }
@@ -135,7 +140,7 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
         authorName: user.fullName || 'Delegado/a',
         date: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
         createdAt: Date.now(),
-      });
+      }, noticiaRef);
       toast("¡Noticia publicada!", "success");
       resetComposer();
     } catch (error) {

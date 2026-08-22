@@ -39,6 +39,9 @@ exports.delegadoCensusCounts = delegados.delegadoCensusCounts;
 // --- Cuentas ---
 exports.deleteMyAccount = cuentas.deleteMyAccount;
 exports.cleanupOnAuthDelete = cuentas.cleanupOnAuthDelete;
+// Única vía para cambiar de tienda: las reglas ya no dejan tocar profile.store desde
+// el cliente, porque de ese campo dependen las noticias de delegado y el censo.
+exports.cambiarMiTienda = cuentas.cambiarMiTienda;
 
 // La Arena/Competición (submitArenaScore + leaderboards) se ELIMINÓ el 17-jul-2026.
 // El flujo de "pedir día libre" y la callable teamStatus se eliminaron el 28-jul-2026.
