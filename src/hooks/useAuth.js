@@ -15,6 +15,7 @@ import {
   recordAppOpen
 } from '../services/firebaseService';
 import { toast } from '../services/toastBus';
+import { setCrashUser } from '../services/crashReporter';
 
 // Cada cuánto se refresca el sello de "última actividad". Con 12h, el contador de
 // usuarios activos de los últimos 7 días es exacto a nivel de día y cada usuario
@@ -84,6 +85,10 @@ export const useAuth = () => {
     }, 10000);
 
     const unsubAuth = subscribeToAuth((firebaseUser) => {
+      // Etiqueta los informes de error con el uid (identificador opaco, nunca el
+      // email): permite cruzar "a quien se quejó le pasó ESTO". Al cerrar sesión
+      // se limpia, para no atribuirle al usuario anterior lo que pase después.
+      setCrashUser(firebaseUser?.uid || '');
       if (firebaseUser) {
         let snapshotFired = false;
 

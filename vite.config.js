@@ -18,6 +18,12 @@ export default defineConfig({
   // diagnóstico de fallos. En `vite dev` no se minifica, así que siguen visibles.
   esbuild: {
     pure: ['console.log', 'console.info', 'console.debug'],
+    // Conserva los nombres de funciones y clases al minificar. Cuesta unos pocos
+    // KB y es lo que hace USABLES las trazas que llegan a Crashlytics: sin esto,
+    // un error reportado desde producción se lee "n is not a function en t.x",
+    // que no dice nada. Crashlytics NO desminifica JavaScript (solo símbolos
+    // nativos y ProGuard), así que el nombre tiene que sobrevivir al build.
+    keepNames: true,
   },
   build: {
     rollupOptions: {

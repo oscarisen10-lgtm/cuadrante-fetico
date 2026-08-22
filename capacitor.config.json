@@ -11,6 +11,17 @@
     "iosScheme": "capacitor",
     "androidScheme": "https"
   },
+  "experimental": {
+    "ios": {
+      "spm": {
+        "packageOptions": {
+          "@capacitor-firebase/crashlytics": {
+            "symlink": true
+          }
+        }
+      }
+    }
+  },
   "plugins": {
     "SplashScreen": {
       "launchAutoHide": false,
