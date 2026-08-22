@@ -31,8 +31,11 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
   const currentRank = user?.rank || "Personal de fresco";
   const currentStore = user?.store || "";
 
+  // Solo los campos que de verdad cambian: `user` lleva `uid` e `isAdminClaim`
+  // (los añade useAuth al leer el snapshot), y si se hiciera spread del objeto
+  // entero esos dos acabarían guardados dentro de profile en Firestore.
   const handleProfileChange = async (updates) => {
-    saveToCloud({ profile: { ...user, ...updates } });
+    saveToCloud({ profile: updates });
   };
 
   // La TIENDA no se puede escribir desde el cliente (firestore.rules): de ella dependen

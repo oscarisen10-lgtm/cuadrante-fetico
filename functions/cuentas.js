@@ -13,6 +13,7 @@ const functionsV1 = require("firebase-functions/v1");
 const { admin, db, ENFORCE_APP_CHECK } = require("./lib/firebase");
 const { NEWS_TOPIC } = require("./lib/push");
 const { isAdminToken, requireAuth, getDelegadoDoc, isUserActive } = require("./lib/auth");
+const { isValidStore } = require("./lib/validStores");
 
 /**
  * purgeUserData — Borra de Firestore TODO lo asociado a un uid (perfil + subcolecciones,
@@ -112,8 +113,14 @@ exports.cambiarMiTienda = onCall({ maxInstances: 10, enforceAppCheck: ENFORCE_AP
 
   // "" es válido: en la app, cambiar de EMPRESA vacía la tienda (las listas de tiendas
   // son distintas por empresa) y obliga a reelegirla.
+  //
+  // Validado contra el catálogo real (auditoría 22-ago-2026, F-04): antes solo la
+  // longitud se comprobaba aquí, y el desplegable del cliente era la única barrera
+  // real. Una llamada directa a la callable podía dejar a un usuario con una tienda
+  // inexistente, invisible para cualquier delegado y por tanto atascado en pendiente
+  // para siempre (sin vía de auto-recuperación, solo el admin podía arreglarlo a mano).
   const store = String(request.data?.store ?? "").trim();
-  if (store.length > 80) {
+  if (store.length > 80 || !isValidStore(store)) {
     throw new HttpsError("invalid-argument", "Tienda no válida.");
   }
 

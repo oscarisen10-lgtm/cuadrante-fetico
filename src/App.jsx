@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, Suspense, lazy, useCallback } from 'react
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Network } from '@capacitor/network';
+import { App as CapacitorApp } from '@capacitor/app';
 import { NativeBiometric } from "@capgo/capacitor-native-biometric";
 import { useAuth } from './hooks/useAuth';
 import { useNews } from './hooks/useNews';
@@ -401,6 +402,29 @@ export default function App() {
       }
     }
   }, [loading, uid, settings?.useBiometric, isUnlocked, verifyBiometric]);
+
+  // Re-arma el bloqueo biométrico (auditoría 22-ago-2026, F-01). `isUnlocked` es
+  // estado de React de ESTE componente, que nunca se desmonta entre sesiones (la
+  // SPA no recarga al hacer logout): sin este efecto, cerrar sesión y volver a
+  // entrar —con la misma cuenta o con otra, en el mismo proceso— heredaba el
+  // isUnlocked=true de la sesión anterior y se saltaba la pantalla de huella/FaceID.
+  useEffect(() => {
+    if (!uid) setIsUnlocked(false);
+  }, [uid]);
+
+  // Re-arma el bloqueo al volver de segundo plano (mismo hallazgo). Un WebView de
+  // Capacitor normalmente NO se destruye al pasar la app a segundo plano —sigue
+  // vivo en memoria—, así que sin este listener "Bloqueo Biométrico" solo pedía
+  // huella/FaceID la PRIMERA vez que se abría la app en todo el proceso, nunca al
+  // reabrirla después de minimizarla. Con esto, cada vez que la app deja de estar
+  // en primer plano se vuelve a exigir la verificación al volver.
+  useEffect(() => {
+    if (!settings?.useBiometric) return;
+    const listenerPromise = CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+      if (!isActive) setIsUnlocked(false);
+    });
+    return () => { listenerPromise.then((l) => l.remove()).catch(() => {}); };
+  }, [settings?.useBiometric]);
 
   if (loading) return (
     <div className="h-screen flex flex-col items-center justify-center" style={{ background: 'radial-gradient(circle at 50% 35%, #ecfdf5, #d1fae5 60%, #a7f3d0)' }} role="status" aria-label="Cargando aplicación">

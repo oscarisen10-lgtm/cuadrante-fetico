@@ -15,6 +15,7 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { admin, db, ENFORCE_APP_CHECK } = require("./lib/firebase");
 const { isAdminToken, isProtectedAdminAccount, requireAuth, getDelegadoDoc, isUserActive } = require("./lib/auth");
+const { VALID_STORES } = require("./lib/validStores");
 
 /** Lanza si quien llama no es el admin. */
 const requireAdmin = (request, mensaje) => {
@@ -420,10 +421,14 @@ exports.adminSetDelegado = onCall({ maxInstances: 5, enforceAppCheck: ENFORCE_AP
     return { success: true, uid, removed: true };
   }
 
+  // Validado contra el catálogo real (auditoría 22-ago-2026, F-04): antes solo se
+  // comprobaba tipo/longitud, y solo el desplegable del cliente restringía a tiendas
+  // que existen de verdad. Aquí SÍ tiene que ser una tienda real (a diferencia de
+  // cambiarMiTienda, "" no tiene sentido en la lista de tiendas de un delegado).
   const stores = request.data?.stores;
   if (!Array.isArray(stores) || stores.length === 0 ||
-      !stores.every((s) => typeof s === "string" && s.trim() && s.length <= 80)) {
-    throw new HttpsError("invalid-argument", "Debes indicar al menos una tienda.");
+      !stores.every((s) => typeof s === "string" && VALID_STORES.includes(s))) {
+    throw new HttpsError("invalid-argument", "Debes indicar al menos una tienda válida.");
   }
 
   const userSnap = await db().collection("users").doc(uid).get();

@@ -37,6 +37,8 @@ ui-debug.log
 .env.*
 .env.production
 .env.local
+# ...salvo la plantilla: documenta qué VITE_* hacen falta, sin ningún valor real.
+!.env.example
 
 # Keys and Keystores
 *.keystore
