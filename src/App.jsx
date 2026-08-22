@@ -383,15 +383,24 @@ export default function App() {
     };
   }, [loading]);
 
+  // Depende de uid (estable), NO del objeto `user` entero: `user` cambia de
+  // referencia con CADA actualización de perfil (incluida la del custom claim
+  // de admin, que llega un instante después del login — ver useAuth.js). Si el
+  // efecto dependiera de `user`, cualquiera de esos cambios lo re-disparaba a
+  // mitad de una verificación biométrica ya en curso, reabriendo el diálogo del
+  // sistema en bucle (parpadeo, "cancelar" sin efecto). Con uid, el efecto solo
+  // se rearma cuando cambia DE SESIÓN (login/logout), que es lo que de verdad
+  // le interesa: "hay alguien nuevo, comprueba su huella una vez".
+  const uid = user?.uid;
   useEffect(() => {
     if (!loading) {
-      if (user && settings?.useBiometric && !isUnlocked) {
+      if (uid && settings?.useBiometric && !isUnlocked) {
         verifyBiometric();
-      } else if (user && !settings?.useBiometric) {
+      } else if (uid && !settings?.useBiometric) {
         setIsUnlocked(true);
       }
     }
-  }, [loading, user, settings?.useBiometric, isUnlocked, verifyBiometric]);
+  }, [loading, uid, settings?.useBiometric, isUnlocked, verifyBiometric]);
 
   if (loading) return (
     <div className="h-screen flex flex-col items-center justify-center" style={{ background: 'radial-gradient(circle at 50% 35%, #ecfdf5, #d1fae5 60%, #a7f3d0)' }} role="status" aria-label="Cargando aplicación">
