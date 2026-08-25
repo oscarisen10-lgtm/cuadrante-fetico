@@ -57,6 +57,17 @@ workflows:
           # Si un test falla, este paso devuelve != 0 y el workflow se detiene
           # AQUÍ: no se llega al despliegue.
           npm run test:rules
+      - name: Cloud Functions tests (emulador)
+        script: |
+          set -eu
+          # Los tests de reglas comprueban el DOCUMENTO resultante; estos comprueban
+          # la FUNCIÓN que lo escribe (quién puede gestionar a quién, qué degrada una
+          # cuenta a pendiente, el enfriamiento de los push). Sin ellos, una regresión
+          # de autorización en functions/ no la paraba nada antes de producción.
+          # Necesitan functions/node_modules: el paso de instalación solo hace la raíz
+          # en algunos runners, así que se asegura aquí.
+          npm --prefix functions install
+          npm run test:functions
       - name: Deploy Firestore rules, indexes and functions
         script: |
           set -eu
