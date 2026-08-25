@@ -4,11 +4,6 @@ import { SplashScreen } from '@capacitor/splash-screen'
 import './index.css'
 import App from './App.jsx'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { initCrashReporting } from './services/crashReporter'
-
-// Antes de montar React: así quedan cubiertos también los errores que ocurran
-// durante el primer render, que son los peores (dejan la app en blanco).
-initCrashReporting()
 
 // Red de seguridad del splash nativo.
 //

@@ -1,6 +1,5 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
-import { reportError } from '../services/crashReporter';
 
 export class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -14,15 +13,6 @@ export class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('ErrorBoundary caught:', error, errorInfo);
-    // Este es EL error que más importa reportar: ha tumbado el árbol entero y el
-    // usuario está viendo la pantalla de "Algo ha fallado". Antes solo se
-    // imprimía por consola, invisible en producción (auditoría, F-02).
-    // Se adjunta el componentStack de React, que dice en qué vista reventó.
-    const pila = errorInfo?.componentStack ? `\nComponentes:${errorInfo.componentStack}` : '';
-    reportError(
-      Object.assign(new Error(`${error?.message || error}${pila}`), { name: error?.name, stack: error?.stack }),
-      'ErrorBoundary'
-    );
   }
 
   render() {
