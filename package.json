@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@capacitor-community/fcm": "^8.1.0",
-    "@capacitor-firebase/crashlytics": "^8.4.0",
+    "@capacitor-firebase/crashlytics": "^7.5.0",
     "@capacitor/android": "^8.3.1",
     "@capacitor/app": "^8.1.1",
     "@capacitor/core": "^8.3.1",
