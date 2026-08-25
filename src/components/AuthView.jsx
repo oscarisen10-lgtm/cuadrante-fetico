@@ -13,6 +13,12 @@ import appLogo from '../../icons/icon-192.webp';
 // registro en esta pantalla, no cierra el alta por API.
 const ALLOW_REGISTRATION = true;
 
+// Longitud mínima de contraseña. Firebase acepta desde 6; aquí se exigen 8
+// (auditoría 22-ago-2026, F-12) porque 6 caracteres se rompen por fuerza bruta en
+// minutos y estas cuentas guardan datos laborales y de contacto. Solo afecta a
+// registros y cambios NUEVOS: a quien ya tiene cuenta no se le invalida la suya.
+const MIN_PASSWORD = 8;
+
 const getFriendlyErrorMessage = (error, isRegistering) => {
   if (error.message && error.message.includes("Timeout")) {
     return error.message;
@@ -28,7 +34,7 @@ const getFriendlyErrorMessage = (error, isRegistering) => {
     case 'auth/operation-not-allowed':
       return 'El registro por correo no está habilitado en el servidor.';
     case 'auth/weak-password':
-      return 'La contraseña es muy débil. Mínimo 6 caracteres.';
+      return `La contraseña es muy débil. Mínimo ${MIN_PASSWORD} caracteres.`;
       
     // Errores de Login
     case 'auth/wrong-password':
@@ -77,8 +83,11 @@ export default function AuthView() {
     const emailInput = formData.get('email')?.trim().toLowerCase();
     const pass = formData.get('password');
 
-    if (pass.length < 6) {
-      setRecoveryError("La contraseña debe tener mínimo 6 caracteres.");
+    // Solo se exige la longitud nueva al REGISTRARSE. Al iniciar sesión no: quien
+    // creó su cuenta cuando el mínimo eran 6 seguiría entrando con la suya, y
+    // rechazársela aquí le dejaría fuera de su propia cuenta sin explicación.
+    if (isRegistering && pass.length < MIN_PASSWORD) {
+      setRecoveryError(`La contraseña debe tener mínimo ${MIN_PASSWORD} caracteres.`);
       setTimeout(() => setRecoveryError(""), 3000);
       return;
     }
@@ -229,8 +238,8 @@ export default function AuthView() {
                     </div>
                   </>
                 )}
-                <InputGroup label="Contraseña (mín. 6)" name="password" type="password" minLength={6} small icon={<Lock size={14}/>} />
-                <InputGroup label="Repetir Contraseña" name="confirmPassword" type="password" minLength={6} small icon={<ShieldCheck size={14}/>} />
+                <InputGroup label={`Contraseña (mín. ${MIN_PASSWORD})`} name="password" type="password" minLength={MIN_PASSWORD} small icon={<Lock size={14}/>} />
+                <InputGroup label="Repetir Contraseña" name="confirmPassword" type="password" minLength={MIN_PASSWORD} small icon={<ShieldCheck size={14}/>} />
               </>
             ) : (
               <div className="space-y-4 py-2 flex flex-col">

@@ -1,0 +1,40 @@
+# Avisos de dependencias desactualizadas o vulnerables (auditoría 22-ago-2026, F-11).
+#
+# Hasta ahora no había NADA vigilando las dependencias: los CVE se descubrían solo
+# cuando alguien ejecutaba `npm audit` a mano. Esto no despliega nada ni toca el
+# código sin permiso — abre PRs que hay que revisar y aprobar.
+#
+# Dos ecosistemas separados porque el proyecto tiene dos package.json con ciclos de
+# vida distintos: la app (Vite/React/Capacitor) y el backend (Cloud Functions).
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    # Las de parche/menor se agrupan en un solo PR: con ~40 dependencias directas,
+    # un PR por cada bump semanal es ruido que acaba ignorándose (y entonces el
+    # aviso que SÍ importa se pierde entre los demás).
+    groups:
+      dependencias-menores:
+        update-types: ["minor", "patch"]
+    ignore:
+      # Capacitor 8 va acoplado a los proyectos nativos: subir de MAJOR obliga a
+      # tocar android/ e ios/ y a rehacer builds, no es un merge de PR. Se hace a
+      # mano y a propósito. Los minor/patch sí entran.
+      - dependency-name: "@capacitor/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@capacitor-community/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@capacitor-firebase/*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "npm"
+    directory: "/functions"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      dependencias-menores:
+        update-types: ["minor", "patch"]
