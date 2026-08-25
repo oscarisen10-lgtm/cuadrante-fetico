@@ -3,6 +3,7 @@ import { FileText, ChevronDown, ChevronUp, Info, Users, Clock, ClipboardCheck } 
 import { LICENCIAS_CATEGORIES, LICENCIAS_ET_CATEGORIES, LICENCIAS_ET_NOTA, GRADOS_CONSANGUINIDAD } from '../constants/licenciasData';
 import { ActivationGateModal } from './LockedView';
 import { hasKnownConvenio } from '../constants/config';
+import { useActivationGate } from '../hooks/useActivationGate';
 
 // Mismo relieve que el resto de la app (Resumen, botones de Fichar, Agenda):
 // degradado vertical + sombra proyectada + brillo interior arriba. Al desplegarse,
@@ -36,9 +37,9 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
   const categorias = esANGED ? LICENCIAS_CATEGORIES : LICENCIAS_ET_CATEGORIES;
   const [expandedLicencia, setExpandedLicencia] = useState(null);
   const [showGrados, setShowGrados] = useState(false);
-  // Cuentas PENDIENTES: la lista de permisos SE VE; este aviso salta solo al
-  // intentar ABRIR el detalle de un permiso.
-  const [showActivationGate, setShowActivationGate] = useState(false);
+  // Cuentas PENDIENTES: la lista de permisos SE VE; el aviso salta solo al intentar
+  // ABRIR el detalle de un permiso (ver hooks/useActivationGate).
+  const { requireActive, gateVisible, closeGate } = useActivationGate(isActive);
   const [fontScale, setFontScale] = useState(() => {
     try { return parseFloat(localStorage.getItem('licFontScale')) || 1; } catch { return 1; }
   });
@@ -50,7 +51,7 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
   });
 
   const toggleLicencia = (id) => {
-    if (!isActive) { setShowActivationGate(true); return; }
+    if (!requireActive()) return;
     setExpandedLicencia(expandedLicencia === id ? null : id);
   };
 
@@ -251,7 +252,7 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
         </div>
       </div>
 
-      {showActivationGate && <ActivationGateModal onClose={() => setShowActivationGate(false)} />}
+      {gateVisible && <ActivationGateModal onClose={closeGate} />}
     </div>
   );
 });

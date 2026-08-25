@@ -6,7 +6,11 @@ import { COMPANY_RULES, OTHER_COMPANY } from '../constants/config';
 import { STORES, S_ROMERO_STORES, ECI_STORES, formatStoreName } from '../constants/stores';
 import appLogo from '../../icons/icon-192.webp';
 
-// ⚠️ MODO TESTERS: Cambiar a `true` para reactivar el registro público
+// Registro público abierto. Se puso a `false` una temporada mientras la app estaba
+// solo en manos de testers; hoy cualquiera puede crear cuenta, y las de ANGED nacen
+// PENDIENTES hasta que un delegado las verifica (ver membership en firestore.rules),
+// que es lo que de verdad controla el acceso. Ponerlo a `false` oculta el botón de
+// registro en esta pantalla, no cierra el alta por API.
 const ALLOW_REGISTRATION = true;
 
 const getFriendlyErrorMessage = (error, isRegistering) => {

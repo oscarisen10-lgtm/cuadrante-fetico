@@ -23,6 +23,23 @@ const withTimeout = (promise, ms = 15000) =>
   ]);
 
 /**
+ * Llama a una Cloud Function con un tope de espera propio.
+ *
+ * El SDK trae su propio timeout, pero es de ~70 s: ante un arranque en frío lento
+ * o una red mala, los paneles de admin/delegado se quedaban más de un minuto con
+ * el "Cargando…" girando, sin decir nada. 20 s da margen de sobra a un cold start
+ * real (que ronda los 2-5 s) y falla con un mensaje legible en vez de colgarse.
+ *
+ * `maxInstances` de las functions acota la concurrencia, no la latencia, así que
+ * esto es lo único que protege a la interfaz de una espera indefinida.
+ */
+const callFunction = async (nombre, payload, ms = 20000) => {
+  const fn = httpsCallable(functions, nombre);
+  const { data } = await withTimeout(fn(payload), ms);
+  return data;
+};
+
+/**
  * Ejecuta operaciones en lotes de como máximo `size` (Firestore limita los batch
  * a 500 por commit). Evita que un usuario con muchos turnos (2 años ≈ cientos de
  * documentos) rompa el borrado de cuenta o el guardado masivo.
@@ -265,6 +282,12 @@ export const deleteUserAccount = async () => {
   // El borrado lo hace el SERVIDOR (Admin SDK): elimina perfil, turnos, cuota, peticiones
   // y la cuenta de Auth de forma consistente, sin el fallo "requires-recent-login" ni
   // dejar datos huérfanos. Ver Cloud Function `deleteMyAccount`.
+  //
+  // A PROPÓSITO sin el callFunction de arriba: esa function declara
+  // timeoutSeconds: 300 porque el recursiveDelete de un usuario con años de
+  // historial no siempre cabe en menos. Cortar aquí a los 20 s le enseñaría al
+  // usuario un error mientras el borrado sigue corriendo y termina bien — peor que
+  // no poner tope, porque le haría reintentar algo que ya está hecho.
   const fn = httpsCallable(functions, 'deleteMyAccount');
   await fn();
   // Cerramos sesión localmente para que la app vuelva al login de inmediato.
@@ -316,9 +339,7 @@ export const markFichado = async (uid) => {
  * usuarios entera; `refresh: true` fuerza el recálculo (botón de recargar).
  */
 export const fetchAdminStats = async ({ refresh = false } = {}) => {
-  const fn = httpsCallable(functions, 'adminStats');
-  const { data } = await fn({ refresh });
-  return data;
+  return callFunction('adminStats', { refresh });
 };
 
 // --- DELEGADOS (activación de cuentas por tienda) ---
@@ -341,16 +362,13 @@ export const subscribeToDelegado = (uid, callback) => {
 
 /** Usuarios de una tienda (vía backend; valida que el delegado la tenga autorizada). */
 export const fetchStoreUsers = async (store) => {
-  const fn = httpsCallable(functions, 'delegadoListUsers');
-  const { data } = await fn({ store });
+  const data = await callFunction('delegadoListUsers', { store });
   return data.users || [];
 };
 
 /** Activa/desactiva la cuenta de un usuario (delegado con tienda autorizada, o admin). */
 export const setUserActiveStatus = async (uid, active) => {
-  const fn = httpsCallable(functions, 'delegadoSetActive');
-  const { data } = await fn({ uid, active });
-  return data;
+  return callFunction('delegadoSetActive', { uid, active });
 };
 
 /**
@@ -359,9 +377,7 @@ export const setUserActiveStatus = async (uid, active) => {
  * por si quiere seguir usando la app.
  */
 export const setUserExpelled = async (uid, expelled) => {
-  const fn = httpsCallable(functions, 'delegadoExpelUser');
-  const { data } = await fn({ uid, expelled });
-  return data;
+  return callFunction('delegadoExpelUser', { uid, expelled });
 };
 
 // --- CENSO (delegados) ---
@@ -372,8 +388,7 @@ export const setUserExpelled = async (uid, expelled) => {
  * usuarios tenga. Devuelve { "PINEA": { users, activos }, ... }.
  */
 export const fetchCensusCounts = async () => {
-  const fn = httpsCallable(functions, 'delegadoCensusCounts');
-  const { data } = await fn();
+  const data = await callFunction('delegadoCensusCounts');
   return data.counts || {};
 };
 
@@ -392,9 +407,7 @@ export const saveCenso = async (uid, prospects) => {
 
 /** SOLO admin: nombra un delegado ({ email, stores }) o lo retira ({ email, remove: true }). */
 export const saveDelegado = async (payload) => {
-  const fn = httpsCallable(functions, 'adminSetDelegado');
-  const { data } = await fn(payload);
-  return data;
+  return callFunction('adminSetDelegado', payload);
 };
 
 /**
@@ -403,9 +416,7 @@ export const saveDelegado = async (payload) => {
  * `refresh: true` fuerza el recálculo desde el botón de recargar del panel.
  */
 export const fetchAdminOverview = async ({ refresh = false } = {}) => {
-  const fn = httpsCallable(functions, 'adminOverview');
-  const { data } = await fn({ refresh });
-  return data;
+  return callFunction('adminOverview', { refresh });
 };
 
 /**
@@ -414,8 +425,7 @@ export const fetchAdminOverview = async ({ refresh = false } = {}) => {
  * Idempotente: se llama en cada arranque con permiso concedido.
  */
 export const subscribeTokenToNewsTopic = async (token) => {
-  const fn = httpsCallable(functions, 'subscribeToNewsTopic');
-  return fn({ token });
+  return callFunction('subscribeToNewsTopic', { token });
 };
 
 /**
@@ -428,9 +438,7 @@ export const subscribeTokenToNewsTopic = async (token) => {
  * Devuelve { success, store, pendiente }.
  */
 export const cambiarMiTienda = async ({ store, company, rank } = {}) => {
-  const fn = httpsCallable(functions, 'cambiarMiTienda');
-  const { data } = await fn({ store, company, rank });
-  return data;
+  return callFunction('cambiarMiTienda', { store, company, rank });
 };
 
 // --- NOTICIAS ---

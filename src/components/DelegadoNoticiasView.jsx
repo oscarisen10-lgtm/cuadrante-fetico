@@ -45,6 +45,16 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
 
   useEffect(() => { setTargetStores(stores); setPushStores(stores); }, [stores]);
 
+  // Los envíos de push (isPushRequest) no se listan: son avisos puntuales, no
+  // publicaciones — mismo criterio que el panel del admin. Se filtra una sola vez
+  // en vez de repetir el mismo `.filter()` en cada punto donde hace falta.
+  // `myNews` es null mientras carga, y eso hay que conservarlo: la vista distingue
+  // "cargando" (null) de "no has publicado nada" (lista vacía).
+  const publicaciones = useMemo(
+    () => (myNews === null ? null : myNews.filter((n) => !n.isPushRequest)),
+    [myNews]
+  );
+
   useEffect(() => {
     if (!user?.uid) return;
     const unsub = subscribeToMyStoreNews(user.uid, setMyNews);
@@ -291,18 +301,16 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
             </h3>
           </div>
 
-          {myNews === null ? (
+          {publicaciones === null ? (
             <div className="py-8"><LoadingLogo label="Cargando…" /></div>
-          ) : myNews.filter((n) => !n.isPushRequest).length === 0 ? (
+          ) : publicaciones.length === 0 ? (
             <div className="py-10 flex flex-col items-center opacity-40">
               <Newspaper size={36} className="text-slate-300 mb-3" />
               <p className="text-[10px] text-slate-400 text-center italic uppercase font-bold tracking-widest">Aún no has publicado nada</p>
             </div>
           ) : (
             <div className="space-y-5">
-              {/* Los envíos de push (isPushRequest) no se listan: son avisos
-                  puntuales, no publicaciones — mismo criterio que el admin. */}
-              {myNews.filter((n) => !n.isPushRequest).map((n) => (
+              {publicaciones.map((n) => (
                 <div key={n.id} className="flex flex-col pb-5 border-b border-slate-200 last:border-b-0 last:pb-0">
                   <div className="flex justify-between items-center mb-2.5">
                     <div className="flex items-center gap-1.5 flex-wrap min-w-0">

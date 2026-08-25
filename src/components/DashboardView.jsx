@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { PieChart, Newspaper, Plus, Trash2, Link, X, Upload, HardHat } from 'lucide-react';
 import { StatBar, StatCounter, InputGroup } from './UIComponents';
 import { formatTotalTime } from '../utils/dateUtils';
@@ -55,6 +55,11 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
   // que cada tipo de usuario recibe su propia explicación. Ver screenTips.jsx.
   const sinConvenio = !hasKnownConvenio(user);
   const tour = (id) => (sinConvenio ? `${id}-libre` : id);
+
+  // Las peticiones de push (isPushRequest) son avisos puntuales, no publicaciones:
+  // nunca salen en el feed. Se filtran UNA vez y no tres veces por render, que era
+  // lo que pasaba al repetir `newsList.filter(...)` en cada punto donde hacía falta.
+  const noticiasVisibles = useMemo(() => newsList.filter(n => !n.isPushRequest), [newsList]);
 
   const [showAddNewsModal, setShowAddNewsModal] = useState(false);
 
@@ -262,7 +267,7 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
       {/* Sección de Noticias — SIN panel oscuro: las noticias van directas sobre el fondo
           claro de la página (texto oscuro), solo con un separador fino entre ellas.
           En modo newsOnly siempre se muestra (aunque esté vacía). */}
-      {(newsOnly || newsList.filter(n => !n.isPushRequest).length > 0 || (isAdmin)) && (
+      {(newsOnly || noticiasVisibles.length > 0 || (isAdmin)) && (
         <div className="flex flex-col">
           <div className="flex justify-between items-center mb-5 shrink-0 border-b border-slate-200 pb-3">
             <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
@@ -280,13 +285,13 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
             )}
           </div>
           <div className="space-y-5">
-              {newsList.filter(n => !n.isPushRequest).length === 0 ? (
+              {noticiasVisibles.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center py-10 opacity-40">
                   <Newspaper size={40} className="text-slate-300 mb-3" />
                   <p className="text-[10px] text-slate-400 text-center italic uppercase font-bold tracking-widest">No hay noticias publicadas</p>
                 </div>
               ) : (
-                newsList.filter(n => !n.isPushRequest).map(news => (
+                noticiasVisibles.map(news => (
                     // Noticia SIN recuadro: solo el contenido (imagen/título/texto), con un
                     // separador sutil entre noticias en lugar de un marco por tarjeta.
                     <div key={news.id} className="flex flex-col pb-5 border-b border-slate-200 last:border-b-0 last:pb-0">

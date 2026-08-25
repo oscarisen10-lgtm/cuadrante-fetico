@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, Suspense, lazy, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, Suspense, lazy, useCallback } from 'react';
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Network } from '@capacitor/network';
@@ -342,7 +342,17 @@ export default function App() {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [biometricError, setBiometricError] = useState(false);
 
+  // Guarda de reentrada: mientras haya una verificación EN CURSO, no se lanza otra.
+  // El efecto de abajo puede re-dispararse (cambia `settings.useBiometric`, llega el
+  // perfil de la nube, vuelve la app del segundo plano) mientras el diálogo del
+  // sistema sigue abierto, y pedir una segunda verificación encima de la primera es
+  // justo lo que producía el parpadeo del bucle que arregló el hotfix 3.8.1. Va en
+  // un ref, no en estado: cambiarlo no debe provocar un render.
+  const verificandoRef = useRef(false);
+
   const verifyBiometric = useCallback(async () => {
+    if (verificandoRef.current) return;
+    verificandoRef.current = true;
     try {
       const result = await NativeBiometric.isAvailable();
       if (result.isAvailable) {
@@ -358,6 +368,11 @@ export default function App() {
     } catch (e) {
       console.error(e);
       setBiometricError(true);
+    } finally {
+      // En `finally`: si se libera solo en el camino feliz, un fallo de verificación
+      // dejaría el cerrojo puesto para siempre y el botón "Desbloquear" no volvería
+      // a funcionar en toda la sesión.
+      verificandoRef.current = false;
     }
   }, []);
 

@@ -6,6 +6,7 @@ import { MonthGrid, WeekdayHeader } from './calendar/CalendarGrid';
 import { DateDetailPanel } from './calendar/DateDetailPanel';
 import { HoursEditor } from './calendar/HoursEditor';
 import { ActivationGateModal } from './LockedView';
+import { useActivationGate } from '../hooks/useActivationGate';
 
 /**
  * getAllYearHolidays — Collects all common + municipal holidays for the year.
@@ -70,9 +71,10 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
   const [editmm, setEditmm] = useState("0");
   const [editTurn, setEditTurn] = useState("morning");
   const [showFestivos, setShowFestivos] = useState(false);
-  // Cuentas PENDIENTES: la agenda SE VE con normalidad; este aviso salta solo al
-  // intentar REGISTRAR algo (libre, vacaciones, ajustar horas, borrar, solicitar).
-  const [showActivationGate, setShowActivationGate] = useState(false);
+  // Cuentas PENDIENTES: la agenda SE VE con normalidad; el aviso salta solo al
+  // intentar REGISTRAR algo (libre, vacaciones, ajustar horas, borrar). Ver
+  // hooks/useActivationGate: `requireActive()` corta la acción y muestra el aviso.
+  const { requireActive, gateVisible, closeGate } = useActivationGate(isActive);
 
   const userStore = user?.store;
   // Los de fuera de ANGED no tienen municipio del que sacar festivos locales, y
@@ -86,14 +88,14 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
   const holidaySet = useMemo(() => new Set(holidays.map(h => h.date)), [holidays]);
 
   const openEditHours = useCallback((dateStr) => {
-    if (!isActive) { setShowActivationGate(true); return; }
+    if (!requireActive()) return;
     const s = shiftsMap[dateStr];
     const totalHoursDecimal = (s?.type === 'work' && s.hours > 0) ? s.hours : 6.75;
     setEditingDay(dateStr);
     setEditHH(Math.floor(totalHoursDecimal).toString());
     setEditmm(Math.round((totalHoursDecimal % 1) * 60).toString());
     setEditTurn(s?.turn || 'morning');
-  }, [shiftsMap, isActive]);
+  }, [shiftsMap, requireActive]);
 
   const saveEditedHours = useCallback(() => {
     const hoursDecimal = (parseInt(editHH) || 0) + ((parseInt(editmm) || 0) / 60);
@@ -118,20 +120,20 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
   }, [editHH, editmm, editTurn, selectedDates, editingDay, shifts, saveToCloud]);
 
   const markMulti = useCallback((type) => {
-    if (!isActive) { setShowActivationGate(true); return; }
+    if (!requireActive()) return;
     const filtered = shifts.filter(s => !selectedDates.includes(s.date));
     const newEntries = selectedDates.map(date => ({ id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now() + Math.random(), date, type, hours: 0, isHA: false }));
     const newShifts = [...filtered, ...newEntries];
     setSelectedDates([]);
     saveToCloud({ shifts: newShifts });
-  }, [shifts, selectedDates, saveToCloud, isActive]);
+  }, [shifts, selectedDates, saveToCloud, requireActive]);
 
   const deleteSelectedDates = useCallback(() => {
-    if (!isActive) { setShowActivationGate(true); return; }
+    if (!requireActive()) return;
     const newShifts = shifts.filter(s => !selectedDates.includes(s.date));
     setSelectedDates([]);
     saveToCloud({ shifts: newShifts });
-  }, [shifts, selectedDates, saveToCloud, isActive]);
+  }, [shifts, selectedDates, saveToCloud, requireActive]);
 
   const handleDayClick = useCallback((dateStr) => {
     setSelectedDates(prev => 
@@ -347,7 +349,7 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
         saveEditedHours={saveEditedHours}
       />
 
-      {showActivationGate && <ActivationGateModal onClose={() => setShowActivationGate(false)} />}
+      {gateVisible && <ActivationGateModal onClose={closeGate} />}
     </div>
   );
 });
