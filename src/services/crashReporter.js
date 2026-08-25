@@ -79,19 +79,27 @@ const esRepetido = (clave) => {
  * fallo del reportero no puede ser motivo de otro fallo).
  * @param {Error|unknown} error
  * @param {string} [contexto]  De dónde viene ('ErrorBoundary', 'onerror'…)
+ * @returns {Promise<boolean>} true SOLO si el informe llegó a enviarse. Lo usa el
+ *   botón de prueba de Ajustes para no decir "enviado" cuando no se envió nada
+ *   (en web esto es siempre false: Crashlytics no tiene SDK web).
  */
 export const reportError = async (error, contexto) => {
-  if (!esNativo) return;
+  if (!esNativo) return false;
   try {
     const message = construirMensaje(error, contexto);
-    if (esRepetido(message)) return;
+    if (esRepetido(message)) return false;
     const Crashlytics = await getPlugin();
-    if (!Crashlytics) return;
+    if (!Crashlytics) return false;
     await Crashlytics.recordException({ message });
+    return true;
   } catch {
     // A propósito en silencio: aquí no se puede volver a reportar.
+    return false;
   }
 };
+
+/** ¿Se pueden enviar informes en esta plataforma? (false en web) */
+export const puedeReportar = () => esNativo;
 
 /**
  * Asocia los informes con el usuario, para poder cruzar "este fallo le pasó a

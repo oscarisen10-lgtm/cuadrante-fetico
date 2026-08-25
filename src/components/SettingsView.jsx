@@ -3,7 +3,7 @@ import { Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fingerprin
 import { COMPANY_RULES, isAdminUser, hasKnownConvenio, CUSTOM_TARGET_FIELDS } from '../constants/config';
 import { STORES, S_ROMERO_STORES, ECI_STORES, formatStoreName } from '../constants/stores';
 import { deleteUserAccount, cambiarMiTienda } from '../services/firebaseService';
-import { reportError } from '../services/crashReporter';
+import { reportError, puedeReportar } from '../services/crashReporter';
 import { firestoreCacheMode } from '../firebase';
 import { toast } from '../services/toastBus';
 import { setHapticsEnabled, isHapticsEnabled, hapticLight } from '../utils/haptics';
@@ -427,8 +427,19 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                         Solo hace algo en la app nativa (en web es un no-op). */}
                     <button
                       onClick={async () => {
-                        await reportError(new Error('Prueba de Crashlytics desde Ajustes'), 'prueba-manual');
-                        toast('Error de prueba enviado. Debería aparecer en Crashlytics en unos minutos.', 'info');
+                        const enviado = await reportError(new Error('Prueba de Crashlytics desde Ajustes'), 'prueba-manual');
+                        // Se dice la verdad segun lo que HAYA PASADO. En web no se
+                        // envia nada (Crashlytics no tiene SDK web) y antes se
+                        // anunciaba "enviado" igualmente: probabas desde el
+                        // navegador, no llegaba nada y parecia que el reporte
+                        // estaba roto.
+                        if (enviado) {
+                          toast('Error de prueba enviado. Debería aparecer en Crashlytics en unos minutos.', 'success');
+                        } else if (!puedeReportar()) {
+                          toast('Crashlytics solo funciona en la app instalada (Android/iOS), no en el navegador.', 'warning');
+                        } else {
+                          toast('No se pudo enviar el error de prueba. Revisa la consola.', 'error');
+                        }
                       }}
                       className="w-full bg-amber-600/80 text-white py-2 rounded-xl text-[9px] font-black uppercase flex items-center justify-center gap-2 mt-1"
                     >
