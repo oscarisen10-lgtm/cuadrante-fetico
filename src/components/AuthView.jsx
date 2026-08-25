@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { User, Lock, Mail, Store, ShieldCheck, KeyRound, X, ChevronDown, Building2 } from 'lucide-react';
 import { loginUser, registerUser, resetPassword } from '../services/firebaseService';
 import { InputGroup } from './UIComponents';
-import { COMPANY_RULES, OTHER_COMPANY } from '../constants/config';
+import { COMPANY_RULES, OTHER_COMPANY, isKnownCompany } from '../constants/config';
 import { STORES, S_ROMERO_STORES, ECI_STORES, formatStoreName } from '../constants/stores';
 import appLogo from '../../icons/icon-192.webp';
 
@@ -60,10 +60,16 @@ export default function AuthView() {
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [recoveryError, setRecoveryError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [formCompany, setFormCompany] = useState("Supercor");
-  // Empresa de fuera de ANGED: la escribe el usuario, igual que su puesto. No
-  // tiene tienda en STORES, así que elige su municipio para los festivos locales.
+  // Empieza VACÍA a propósito: con "Supercor" preseleccionado, quien no se fijaba
+  // se registraba en una empresa que no es la suya (y con ella, en una tienda y un
+  // convenio ajenos). Sin valor por defecto, elegir empresa es un acto consciente.
+  const [formCompany, setFormCompany] = useState("");
+  // Empresa de fuera de ANGED: la escribe el usuario, igual que su puesto.
   const esOtraEmpresa = formCompany === OTHER_COMPANY;
+  // Solo las empresas de ANGED tienen convenio conocido, y por tanto rango y
+  // centro. Mientras no haya empresa elegida no se enseña ninguno de los dos:
+  // antes salían los de Supercor por el valor por defecto.
+  const esANGED = isKnownCompany(formCompany);
 
   const sortedStores = useMemo(() => {
     let filteredStores = STORES;
@@ -105,7 +111,18 @@ export default function AuthView() {
            return;
         }
 
-        const selectedCompany = formData.get('company') || "Supercor";
+        // Sin `|| "Supercor"`: ese respaldo tenía sentido cuando el desplegable
+        // nacía en Supercor, pero ahora "" es un estado real (nadie ha elegido). Si
+        // se colara, registraría al usuario en una empresa que no es la suya, con su
+        // convenio y sus tiendas. El `required` del select ya lo impide en el
+        // navegador; esto es el cinturón por si el formulario se envía de otro modo.
+        const selectedCompany = formData.get('company');
+        if (!selectedCompany) {
+          setRecoveryError("Selecciona tu empresa.");
+          setIsLoading(false);
+          setTimeout(() => setRecoveryError(""), 3000);
+          return;
+        }
         const otraEmpresa = selectedCompany === OTHER_COMPANY;
 
         const newUserProfile = otraEmpresa
@@ -184,59 +201,80 @@ export default function AuthView() {
               <>
                 <InputGroup label="Nombre Apellidos" name="fullName" small icon={<User size={14}/>} />
                 <InputGroup label="Email" name="email" type="email" small icon={<Mail size={14}/>} />
-                {/* Empresa de ANGED: empresa + rango + tienda, como siempre.
-                    Empresa de fuera: solo el nombre que escriba. Ni rango ni
-                    centro — puede ser camarero o albañil, y no le calculan nada. */}
-                {esOtraEmpresa ? (
-                  <>
+                {/* El select de EMPRESA se pinta UNA sola vez, fuera de cualquier
+                    rama condicional, y es CONTROLADO (`value={formCompany}`).
+                    Antes había dos copias, una en cada rama del ternario, y ninguna
+                    era controlada: al elegir "Otra empresa", React desmontaba una y
+                    montaba la otra, que al nacer sin valor se posicionaba en su
+                    primera opción ("Supercor"). Los campos de debajo sí cambiaban,
+                    pero el desplegable mostraba Supercor y había que elegir dos
+                    veces. Con un único elemento controlado, eso no puede pasar.
+
+                    La rejilla de dos columnas solo se activa cuando hay Rango al
+                    lado; el select no se mueve de sitio en el árbol, así que
+                    cambiar de empresa nunca lo remonta. */}
+                <div className={esANGED ? "grid grid-cols-2 gap-2" : ""}>
+                  <div className="space-y-0.5">
+                    <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight">Empresa</label>
+                    <select
+                      name="company"
+                      value={formCompany}
+                      onChange={(e) => setFormCompany(e.target.value)}
+                      required
+                      className="w-full bg-slate-50 border-none p-1.5 rounded-lg text-sm outline-none ring-1 ring-slate-200"
+                    >
+                      <option value="" disabled>Selecciona tu empresa...</option>
+                      {Object.keys(COMPANY_RULES).map(c => <option key={c} value={c}>{c}</option>)}
+                      <option value={OTHER_COMPANY}>{OTHER_COMPANY}</option>
+                    </select>
+                  </div>
+                  {/* Rango: solo con empresa de ANGED (es su convenio quien lo define).
+                      `key` fuerza a empezar de cero al cambiar de empresa: sin él, el
+                      rango ya elegido se quedaba pegado aunque no existiera en la
+                      empresa nueva (los de S. Express no son los de Supercor). */}
+                  {esANGED && (
                     <div className="space-y-0.5">
-                      <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight">Empresa</label>
-                      <select name="company" onChange={(e) => setFormCompany(e.target.value)} className="w-full bg-slate-50 border-none p-1.5 rounded-lg text-sm outline-none ring-1 ring-slate-200">
-                        {Object.keys(COMPANY_RULES).map(c => <option key={c} value={c}>{c}</option>)}
-                        <option value={OTHER_COMPANY}>{OTHER_COMPANY}</option>
+                      <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight">Rango</label>
+                      <select key={formCompany} name="rank" className="w-full bg-slate-50 border-none p-1.5 rounded-lg text-sm outline-none ring-1 ring-slate-200">
+                        {Object.keys(COMPANY_RULES[formCompany] || {}).map(r => <option key={r} value={r}>{r}</option>)}
                       </select>
                     </div>
-                    <InputGroup label="Nombre de tu empresa" name="companyName" maxLength={60} small icon={<Building2 size={14}/>} />
-                  </>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-0.5">
-                        <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight">Empresa</label>
-                        <select name="company" onChange={(e) => setFormCompany(e.target.value)} className="w-full bg-slate-50 border-none p-1.5 rounded-lg text-sm outline-none ring-1 ring-slate-200">
-                          {Object.keys(COMPANY_RULES).map(c => <option key={c} value={c}>{c}</option>)}
-                          <option value={OTHER_COMPANY}>{OTHER_COMPANY}</option>
-                        </select>
-                      </div>
-                      <div className="space-y-0.5">
-                        <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight">Rango</label>
-                        <select name="rank" className="w-full bg-slate-50 border-none p-1.5 rounded-lg text-sm outline-none ring-1 ring-slate-200">
-                          {Object.keys(COMPANY_RULES[formCompany] || {}).map(r => <option key={r} value={r}>{r}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                    <div className="space-y-0.5">
-                      <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight flex items-center gap-1">
-                        <Store size={10}/> Centro / Tienda
-                      </label>
-                      <div className="relative">
-                        <select
-                          name="store"
-                          className="w-full bg-slate-50 border-none p-1.5 pr-8 rounded-lg text-sm outline-none ring-1 ring-slate-200 appearance-none font-medium"
-                          defaultValue=""
-                          required
-                        >
-                          <option value="" disabled>Selecciona tu tienda...</option>
-                          {sortedStores.map(s => (
-                            <option key={s.name} value={s.name}>{formatStoreName(s.name)}</option>
-                          ))}
-                        </select>
-                        <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                          <ChevronDown size={14} />
-                        </div>
+                  )}
+                </div>
+
+                {/* Centro/tienda: igual que el rango, solo para ANGED. El `key`
+                    devuelve el desplegable a "Selecciona tu tienda..." al cambiar de
+                    empresa — si no, se podía enviar una tienda de Supercor con la
+                    empresa ECI ya seleccionada. */}
+                {esANGED && (
+                  <div className="space-y-0.5">
+                    <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight flex items-center gap-1">
+                      <Store size={10}/> Centro / Tienda
+                    </label>
+                    <div className="relative">
+                      <select
+                        key={formCompany}
+                        name="store"
+                        className="w-full bg-slate-50 border-none p-1.5 pr-8 rounded-lg text-sm outline-none ring-1 ring-slate-200 appearance-none font-medium"
+                        defaultValue=""
+                        required
+                      >
+                        <option value="" disabled>Selecciona tu tienda...</option>
+                        {sortedStores.map(s => (
+                          <option key={s.name} value={s.name}>{formatStoreName(s.name)}</option>
+                        ))}
+                      </select>
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                        <ChevronDown size={14} />
                       </div>
                     </div>
-                  </>
+                  </div>
+                )}
+
+                {/* Fuera de ANGED: solo el nombre que escriba. Ni rango ni centro —
+                    puede ser camarero o albañil, y no le calculan nada. */}
+                {esOtraEmpresa && (
+                  <InputGroup label="Nombre de empresa" name="companyName" maxLength={60} small icon={<Building2 size={14}/>} />
                 )}
                 <InputGroup label={`Contraseña (mín. ${MIN_PASSWORD})`} name="password" type="password" minLength={MIN_PASSWORD} small icon={<Lock size={14}/>} />
                 <InputGroup label="Repetir Contraseña" name="confirmPassword" type="password" minLength={MIN_PASSWORD} small icon={<ShieldCheck size={14}/>} />
