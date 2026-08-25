@@ -121,6 +121,62 @@ describe('computeShiftStats', () => {
   });
 });
 
+// BAJA LABORAL. Un día 'sick' guarda la jornada que el cuadrante tenía PROGRAMADA,
+// no la que se trabajó: en ANGED esas horas cuentan igual para el cómputo anual
+// aunque no se llegaran a trabajar. Estos tests fijan exactamente qué suma y qué no,
+// porque es la parte del cálculo donde un error corrompe el control anual de alguien.
+describe('computeShiftStats — baja laboral', () => {
+  test('una baja con horas suma horas y día trabajado, como si se hubiera trabajado', () => {
+    const shifts = [{ date: '2026-01-05', type: 'sick', hours: 8, turn: 'morning' }];
+    const stats = computeShiftStats(shifts, toMap(shifts), USER, NOW);
+    expect(stats.horasTotales).toBe(8);
+    expect(stats.diasTrabajados).toBe(1);
+    expect(stats.diasLibres).toBe(0);
+  });
+
+  test('una baja marcada como HA cuenta en el contador de HA', () => {
+    const shifts = [{ date: '2026-01-05', type: 'sick', hours: 9, turn: 'afternoon', isHA: true }];
+    const stats = computeShiftStats(shifts, toMap(shifts), USER, NOW);
+    expect(stats.contadorHA).toBe(1);
+  });
+
+  // 6 de enero: Epifanía. Si el cuadrante te programaba ese festivo, cuenta.
+  test('una baja en domingo o festivo cuenta como domingo/festivo trabajado', () => {
+    const shifts = [{ date: '2026-01-06', type: 'sick', hours: 8, turn: 'morning' }];
+    const stats = computeShiftStats(shifts, toMap(shifts), USER, NOW);
+    expect(stats.domingosCount).toBe(1);
+  });
+
+  test('una baja en un día que el cuadrante daba libre suma día libre, no horas', () => {
+    const shifts = [{ date: '2026-01-05', type: 'sick', hours: 0, turn: 'rest' }];
+    const stats = computeShiftStats(shifts, toMap(shifts), USER, NOW);
+    expect(stats.diasLibres).toBe(1);
+    expect(stats.diasTrabajados).toBe(0);
+    expect(stats.horasTotales).toBe(0);
+  });
+
+  // El tipo 'sick' ya existía en el modelo pero ninguna pantalla lo creaba. Los restos
+  // que pudiera haber no llevan horas ni turno: contarlos como día trabajado
+  // inventaría jornadas que nadie registró.
+  test('una baja ANTIGUA (sin horas ni turno) no suma nada', () => {
+    const shifts = [{ date: '2026-01-05', type: 'sick' }];
+    const stats = computeShiftStats(shifts, toMap(shifts), USER, NOW);
+    expect(stats.diasTrabajados).toBe(0);
+    expect(stats.diasLibres).toBe(0);
+    expect(stats.horasTotales).toBe(0);
+  });
+
+  test('las bajas se suman a las jornadas normales, no las sustituyen', () => {
+    const shifts = [
+      { date: '2026-01-02', type: 'work', hours: 8 },
+      { date: '2026-01-05', type: 'sick', hours: 7, turn: 'morning' },
+    ];
+    const stats = computeShiftStats(shifts, toMap(shifts), USER, NOW);
+    expect(stats.horasTotales).toBe(15);
+    expect(stats.diasTrabajados).toBe(2);
+  });
+});
+
 // Empresas de fuera de ANGED: no conocemos su convenio, así que NO se les puede
 // colar el de Supercor. O tienen los objetivos que ellos mismos han escrito, o
 // no tienen ninguno (el Resumen se pinta entonces como contadores, sin barras).

@@ -24,9 +24,21 @@ export const computeShiftStats = (shifts, shiftsMap, user, now = new Date()) => 
   let diasLibres = 0;
 
   shifts.forEach(s => {
-    if (s.type === 'work') {
+    // BAJA ('sick'): guarda la jornada que el cuadrante tenía PROGRAMADA, no la que
+    // se trabajó. En ANGED esa jornada cuenta igual para el cómputo anual aunque no
+    // se llegara a trabajar por estar de baja, así que suma exactamente como un día
+    // trabajado: horas, días, HA y domingo/festivo.
+    //
+    // Se exige `hours > 0` a propósito: las bajas ANTIGUAS (el tipo 'sick' existía en
+    // el modelo pero ninguna pantalla lo creaba) no llevan horas ni turno, y contarlas
+    // como día trabajado inventaría jornadas que nadie registró.
+    const bajaProgramada = s.type === 'sick' && s.turn !== 'rest' && (s.hours || 0) > 0;
+    // Y si lo programado era un día libre, la baja suma día libre.
+    const bajaEnDiaLibre = s.type === 'sick' && s.turn === 'rest';
+
+    if (s.type === 'work' || bajaProgramada) {
       diasTrabajados += 1;
-      horasTotalesDecimal += s.hours;
+      horasTotalesDecimal += (s.hours || 0);
       if (s.isHA) contadorHA += 1;
       const [y, m, d] = s.date.split('-');
       const dayOfWeek = new Date(y, m - 1, d).getDay();
@@ -34,7 +46,7 @@ export const computeShiftStats = (shifts, shiftsMap, user, now = new Date()) => 
       if (dayOfWeek === 0 || isHolidayDay) domingosCount += 1;
     }
     if (s.type === 'vacation') vacacionesCount += 1;
-    if (s.type === 'rest') diasLibres += 1;
+    if (s.type === 'rest' || bajaEnDiaLibre) diasLibres += 1;
   });
 
   const year = now.getFullYear();

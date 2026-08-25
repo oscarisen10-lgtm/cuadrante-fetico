@@ -4,7 +4,7 @@ import { getFormattedDate } from '../../utils/dateUtils';
 /**
  * DateDetailPanel — Shows details and action buttons for selected dates.
  */
-export function DateDetailPanel({ selectedDates, shiftsMap, setSelectedDates, markMulti, openEditHours, deleteSelectedDates }) {
+export function DateDetailPanel({ selectedDates, shiftsMap, setSelectedDates, markMulti, openEditHours, openBaja, deleteSelectedDates }) {
   if (selectedDates.length === 0) return null;
 
   let dObj, statusText, statusColor, hoursText;
@@ -37,9 +37,12 @@ export function DateDetailPanel({ selectedDates, shiftsMap, setSelectedDates, ma
       statusColor = "bg-purple-100 text-purple-700 border-purple-200";
       hoursText = "Libre";
     } else if (s?.type === 'sick') {
-      statusText = "BAJA LABORAL";
+      // Una baja guarda la jornada que TENÍAS PROGRAMADA, así que si llevaba horas
+      // se enseñan (son las que cuentan para el cómputo anual). Si el cuadrante te
+      // daba libre ese día, se dice así en vez de mostrar "0h 0m".
+      statusText = s.isHA ? "BAJA · DÍA HA" : "BAJA LABORAL";
       statusColor = "bg-purple-100 text-purple-700 border-purple-200";
-      hoursText = "Baja";
+      hoursText = s.turn === 'rest' ? "Libre" : `${Math.floor(s.hours || 0)}h ${Math.round(((s.hours || 0) % 1) * 60)}m`;
     } else if (s?.type === 'rest') {
       statusText = isQuality ? "CALIDAD" : "DESCANSO";
       statusColor = isQuality ? "bg-green-100 text-green-700 border-green-200" : "bg-amber-100 text-amber-700 border-amber-200";
@@ -49,14 +52,17 @@ export function DateDetailPanel({ selectedDates, shiftsMap, setSelectedDates, ma
     let sumHours = 0;
     selectedDates.forEach(date => {
       const s = shiftsMap[date];
-      if (s?.type === 'work') sumHours += s.hours;
+      // Las bajas suman igual que las jornadas: sus horas son las que el cuadrante
+      // tenía programadas y cuentan para el cómputo anual (ver computeShiftStats).
+      if (s?.type === 'work' || s?.type === 'sick') sumHours += (s.hours || 0);
     });
     statusText = "SELECCIÓN MÚLTIPLE";
     statusColor = "bg-indigo-100 text-indigo-700 border-indigo-200";
     hoursText = sumHours > 0 ? `${Math.floor(sumHours)}h ${Math.round((sumHours % 1) * 60)}m` : "Varios";
   }
 
-  const isHoursHighlighted = (selectedDates.length === 1 && shiftsMap[selectedDates[0]]?.type === 'work') || 
+  const tipoConHoras = (t) => t === 'work' || t === 'sick';
+  const isHoursHighlighted = (selectedDates.length === 1 && tipoConHoras(shiftsMap[selectedDates[0]]?.type)) ||
                              (selectedDates.length > 1 && hoursText !== "Varios");
 
   return (
@@ -86,10 +92,18 @@ export function DateDetailPanel({ selectedDates, shiftsMap, setSelectedDates, ma
           <div className={`text-3xl font-black font-mono ${isHoursHighlighted ? 'text-slate-800' : 'text-slate-400'}`}>{hoursText}</div>
         </div>
 
+        {/* Dos columnas emparejadas a propósito: a la izquierda lo que se registra
+            como jornada (Día Libre / Ajustar Horas), a la derecha las ausencias
+            (Vacaciones / Baja). Antes "Ajustar Horas" ocupaba las dos columnas y
+            rompía esa lectura. */}
         <div className="grid grid-cols-2 gap-3 animate-in fade-in duration-300" role="toolbar" aria-label="Acciones para las fechas seleccionadas">
-          <button onClick={() => markMulti('rest')} className="btn3d text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest" style={{ background: 'linear-gradient(180deg,#fbbf24,#d97706)', boxShadow: '0 6px 14px rgba(217,119,6,0.4), inset 0 1.5px 1px rgba(255,255,255,0.45)' }} aria-label="Marcar como día libre">Marcar Libre</button>
+          <button onClick={() => markMulti('rest')} className="btn3d text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest" style={{ background: 'linear-gradient(180deg,#fbbf24,#d97706)', boxShadow: '0 6px 14px rgba(217,119,6,0.4), inset 0 1.5px 1px rgba(255,255,255,0.45)' }} aria-label="Marcar como día libre">Día Libre</button>
           <button onClick={() => markMulti('vacation')} className="btn3d text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest" style={{ background: 'linear-gradient(180deg,#a855f7,#7c3aed)', boxShadow: '0 6px 14px rgba(124,58,237,0.4), inset 0 1.5px 1px rgba(255,255,255,0.4)' }} aria-label="Marcar como vacaciones">Vacaciones</button>
-          <button onClick={() => openEditHours(selectedDates[0])} className="btn3d col-span-2 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest" style={{ background: 'linear-gradient(180deg,#3b82f6,#2563eb)', boxShadow: '0 6px 14px rgba(37,99,235,0.4), inset 0 1.5px 1px rgba(255,255,255,0.4)' }} aria-label="Ajustar horas trabajadas">Ajustar Horas</button>
+          <button onClick={() => openEditHours(selectedDates[0])} className="btn3d text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest" style={{ background: 'linear-gradient(180deg,#3b82f6,#2563eb)', boxShadow: '0 6px 14px rgba(37,99,235,0.4), inset 0 1.5px 1px rgba(255,255,255,0.4)' }} aria-label="Ajustar horas trabajadas">Ajustar Horas</button>
+          {/* Morado SUAVE, hermano del de Vacaciones pero más claro: es una ausencia
+              como aquella, pero no la misma cosa, y el texto va en morado oscuro
+              porque sobre este tono el blanco no tendría contraste suficiente. */}
+          <button onClick={() => openBaja(selectedDates[0])} className="btn3d py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest" style={{ background: 'linear-gradient(180deg,#e9d5ff,#d8b4fe)', color: '#6b21a8', boxShadow: '0 6px 14px rgba(168,85,247,0.25), inset 0 1.5px 1px rgba(255,255,255,0.7)' }} aria-label="Marcar como baja laboral y registrar la jornada programada">Baja</button>
           <button onClick={deleteSelectedDates} className="btn3d col-span-2 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest" style={{ background: 'linear-gradient(180deg,#fb7185,#e11d48)', boxShadow: '0 6px 14px rgba(225,29,72,0.4), inset 0 1.5px 1px rgba(255,255,255,0.4)' }} aria-label="Borrar registro de las fechas seleccionadas">Borrar Registro</button>
         </div>
       </div>

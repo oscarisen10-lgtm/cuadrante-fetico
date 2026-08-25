@@ -70,6 +70,13 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
   const [editHH, setEditHH] = useState("0");
   const [editmm, setEditmm] = useState("0");
   const [editTurn, setEditTurn] = useState("morning");
+  // HA a mano: en "Ajustar Horas" se propone según el umbral del convenio, pero el
+  // usuario puede corregirlo, y en una baja NO hay jornada real de la que deducirlo
+  // (lo marcaba el cuadrante), así que ahí lo decide él.
+  const [editHA, setEditHA] = useState(false);
+  // 'work' = Ajustar Horas · 'sick' = Baja. El editor es el mismo; cambia lo que se
+  // guarda y qué opciones se ofrecen (ver HoursEditor).
+  const [editMode, setEditMode] = useState('work');
   const [showFestivos, setShowFestivos] = useState(false);
   // Cuentas PENDIENTES: la agenda SE VE con normalidad; el aviso salta solo al
   // intentar REGISTRAR algo (libre, vacaciones, ajustar horas, borrar). Ver
@@ -87,37 +94,53 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
   // (antes cada celda recorría STORES en su propia llamada a isHoliday()).
   const holidaySet = useMemo(() => new Set(holidays.map(h => h.date)), [holidays]);
 
-  const openEditHours = useCallback((dateStr) => {
+  // Abre el editor. `mode` decide si lo que se registra es una jornada trabajada
+  // ('work') o la jornada PROGRAMADA durante una baja ('sick'): el formulario es el
+  // mismo, así que se comparte en vez de duplicarlo.
+  const abrirEditor = useCallback((dateStr, mode) => {
     if (!requireActive()) return;
     const s = shiftsMap[dateStr];
-    const totalHoursDecimal = (s?.type === 'work' && s.hours > 0) ? s.hours : 6.75;
+    // Se parte de lo que ya hubiera guardado ese día si es del mismo tipo; si no,
+    // de la jornada típica (6h45) para no obligar a teclear desde cero.
+    const mismoTipo = s?.type === mode;
+    const totalHoursDecimal = (mismoTipo && s.hours > 0) ? s.hours : 6.75;
+    setEditMode(mode);
     setEditingDay(dateStr);
     setEditHH(Math.floor(totalHoursDecimal).toString());
     setEditmm(Math.round((totalHoursDecimal % 1) * 60).toString());
-    setEditTurn(s?.turn || 'morning');
+    setEditTurn(mismoTipo ? (s.turn || 'morning') : 'morning');
+    // HA: si el día ya lo era, se respeta. Si no, se propone según el umbral del
+    // convenio para las horas de partida (que es lo que hacía antes por su cuenta).
+    setEditHA(mismoTipo ? !!s.isHA : (totalHoursDecimal * 60) >= CONFIG.UMBRAL_DIA_HA_MINUTOS);
   }, [shiftsMap, requireActive]);
 
+  const openEditHours = useCallback((dateStr) => abrirEditor(dateStr, 'work'), [abrirEditor]);
+  const openBaja = useCallback((dateStr) => abrirEditor(dateStr, 'sick'), [abrirEditor]);
+
   const saveEditedHours = useCallback(() => {
-    const hoursDecimal = (parseInt(editHH) || 0) + ((parseInt(editmm) || 0) / 60);
+    // En una baja marcada como "día libre" el cuadrante no programaba horas: se
+    // guardan a 0 y sin HA, aunque el editor tuviera algo escrito de antes.
+    const esLibre = editMode === 'sick' && editTurn === 'rest';
+    const hoursDecimal = esLibre ? 0 : (parseInt(editHH) || 0) + ((parseInt(editmm) || 0) / 60);
     const targetDates = selectedDates.length > 0 ? selectedDates : (editingDay ? [editingDay] : []);
-    
+
     const filtered = shifts.filter(s => !targetDates.includes(s.date));
-    
+
     const newEntries = targetDates.map((date) => ({
-      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now() + Math.random(), 
-      date: date, 
-      type: 'work', 
-      hours: hoursDecimal, 
-      isHA: (hoursDecimal * 60) >= CONFIG.UMBRAL_DIA_HA_MINUTOS, 
-      turn: editTurn 
+      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now() + Math.random(),
+      date: date,
+      type: editMode,
+      hours: hoursDecimal,
+      isHA: esLibre ? false : editHA,
+      turn: editTurn
     }));
-    
+
     const newShifts = [...filtered, ...newEntries];
-    
+
     setEditingDay(null);
     setSelectedDates([]);
     saveToCloud({ shifts: newShifts });
-  }, [editHH, editmm, editTurn, selectedDates, editingDay, shifts, saveToCloud]);
+  }, [editHH, editmm, editTurn, editHA, editMode, selectedDates, editingDay, shifts, saveToCloud]);
 
   const markMulti = useCallback((type) => {
     if (!requireActive()) return;
@@ -271,6 +294,7 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
               setSelectedDates={setSelectedDates}
               markMulti={markMulti}
               openEditHours={openEditHours}
+              openBaja={openBaja}
               deleteSelectedDates={deleteSelectedDates}
               user={user}
             />
@@ -342,9 +366,12 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
         editHH={editHH}
         editmm={editmm}
         editTurn={editTurn}
+        editHA={editHA}
+        editMode={editMode}
         setEditHH={setEditHH}
         setEditmm={setEditmm}
         setEditTurn={setEditTurn}
+        setEditHA={setEditHA}
         setEditingDay={setEditingDay}
         saveEditedHours={saveEditedHours}
       />
