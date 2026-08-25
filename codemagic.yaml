@@ -64,6 +64,16 @@ workflows:
           # la FUNCIÓN que lo escribe (quién puede gestionar a quién, qué degrada una
           # cuenta a pendiente, el enfriamiento de los push). Sin ellos, una regresión
           # de autorización en functions/ no la paraba nada antes de producción.
+          #
+          # Repite la comprobación de Java 21 del paso anterior EN VEZ DE asumir que
+          # el JAVA_HOME exportado allí sigue activo aquí: Codemagic normalmente
+          # encadena el entorno entre pasos del mismo build, pero este paso también
+          # depende del emulador de Firestore y no vale la pena dejarlo colgado de un
+          # comportamiento entre pasos que no se puede verificar sin ejecutar el CI.
+          if ! java -version 2>&1 | grep -qE '"(2[1-9]|[3-9][0-9])'; then
+            export JAVA_HOME="$(/usr/libexec/java_home -v 21)"
+            export PATH="$JAVA_HOME/bin:$PATH"
+          fi
           # Necesitan functions/node_modules: el paso de instalación solo hace la raíz
           # en algunos runners, así que se asegura aquí.
           npm --prefix functions install

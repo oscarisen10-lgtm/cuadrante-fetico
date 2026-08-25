@@ -399,6 +399,25 @@ export default function App() {
     };
   }, [loading]);
 
+  // ¿Está la app delante del usuario ahora mismo? Empieza en `true` (se arranca en
+  // primer plano). Solo lo toca el listener de appStateChange, más abajo.
+  //
+  // Es ESTADO, no un ref, a propósito: tiene que poder disparar el efecto de abajo
+  // cuando la app vuelve a primer plano (un ref cambiado no re-ejecuta ningún
+  // efecto por sí solo, así que con un ref el diálogo de Face ID no volvería a
+  // saltar nunca solo al reabrir la app).
+  //
+  // Y existe para que ese auto-disparo NUNCA se intente en segundo plano:
+  // `appStateChange` con isActive:false se dispara cuando la app YA ha entrado en
+  // background (en iOS es literalmente el evento didEnterBackgroundNotification,
+  // según la documentación del plugin), y pedirle a LocalAuthentication que
+  // muestre Face ID en ese momento falla — el sistema no deja abrir UI de una app
+  // que no está en primer plano. Sin esta guarda, poner isUnlocked=false al ir a
+  // segundo plano dispararía el efecto de abajo DE INMEDIATO (mientras la app aún
+  // no es visible), la verificación fallaría en silencio, y al volver el usuario
+  // vería "Error al verificar identidad" en vez del diálogo saltando limpio.
+  const [isForeground, setIsForeground] = useState(true);
+
   // Depende de uid (estable), NO del objeto `user` entero: `user` cambia de
   // referencia con CADA actualización de perfil (incluida la del custom claim
   // de admin, que llega un instante después del login — ver useAuth.js). Si el
@@ -409,14 +428,14 @@ export default function App() {
   // le interesa: "hay alguien nuevo, comprueba su huella una vez".
   const uid = user?.uid;
   useEffect(() => {
-    if (!loading) {
+    if (!loading && isForeground) {
       if (uid && settings?.useBiometric && !isUnlocked) {
         verifyBiometric();
       } else if (uid && !settings?.useBiometric) {
         setIsUnlocked(true);
       }
     }
-  }, [loading, uid, settings?.useBiometric, isUnlocked, verifyBiometric]);
+  }, [loading, uid, settings?.useBiometric, isUnlocked, isForeground, verifyBiometric]);
 
   // Re-arma el bloqueo biométrico (auditoría 22-ago-2026, F-01). `isUnlocked` es
   // estado de React de ESTE componente, que nunca se desmonta entre sesiones (la
@@ -431,12 +450,20 @@ export default function App() {
   // Capacitor normalmente NO se destruye al pasar la app a segundo plano —sigue
   // vivo en memoria—, así que sin este listener "Bloqueo Biométrico" solo pedía
   // huella/FaceID la PRIMERA vez que se abría la app en todo el proceso, nunca al
-  // reabrirla después de minimizarla. Con esto, cada vez que la app deja de estar
-  // en primer plano se vuelve a exigir la verificación al volver.
+  // reabrirla después de minimizarla.
+  //
+  // Al pasar a segundo plano, `isUnlocked` e `isForeground` bajan a false EN EL
+  // MISMO evento: React agrupa las dos actualizaciones y el efecto de arriba, al
+  // reaccionar al cambio, ve ya los dos valores finales — así nunca llega a
+  // intentar verifyBiometric con la app invisible. Al volver a primer plano solo
+  // cambia isForeground; isUnlocked sigue en false (se puso al ir a background),
+  // así que el efecto de arriba se re-dispara SOLO, con la app ya visible, y ahí
+  // sí abre el diálogo de Face ID/huella.
   useEffect(() => {
     if (!settings?.useBiometric) return;
     const listenerPromise = CapacitorApp.addListener('appStateChange', ({ isActive }) => {
       if (!isActive) setIsUnlocked(false);
+      setIsForeground(isActive);
     });
     return () => { listenerPromise.then((l) => l.remove()).catch(() => {}); };
   }, [settings?.useBiometric]);
