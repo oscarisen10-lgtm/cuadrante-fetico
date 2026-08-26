@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, CalendarDays, ChevronDown, ChevronUp, Lock } from 'lucide-react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, CalendarDays, ChevronDown, ChevronUp, Lock, FileDown } from 'lucide-react';
 import { CONFIG, FESTIVOS_NACIONALES, hasKnownConvenio } from '../constants/config';
 import { MUNICIPAL_HOLIDAYS, formatStoreName, resolveUserCity } from '../constants/stores';
 import { MonthGrid, WeekdayHeader } from './calendar/CalendarGrid';
@@ -7,6 +7,8 @@ import { DateDetailPanel } from './calendar/DateDetailPanel';
 import { HoursEditor } from './calendar/HoursEditor';
 import { ActivationGateModal } from './LockedView';
 import { useActivationGate } from '../hooks/useActivationGate';
+import { computeShiftStats } from '../hooks/useShifts';
+import { toast } from '../services/toastBus';
 
 /**
  * getAllYearHolidays — Collects all common + municipal holidays for the year.
@@ -70,10 +72,12 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
   const [editHH, setEditHH] = useState("0");
   const [editmm, setEditmm] = useState("0");
   const [editTurn, setEditTurn] = useState("morning");
-  // HA a mano: en "Ajustar Horas" se propone según el umbral del convenio, pero el
-  // usuario puede corregirlo, y en una baja NO hay jornada real de la que deducirlo
-  // (lo marcaba el cuadrante), así que ahí lo decide él.
+  // HA: lo decide el umbral del convenio (8:30) mientras se teclean las horas, igual
+  // que hacía la app antes de que existiera el interruptor. El interruptor sigue ahí
+  // para corregirlo —hace falta en la baja, donde no hay jornada real de la que
+  // deducirlo—, y en cuanto se toca manda él: `haManual` apaga el automático.
   const [editHA, setEditHA] = useState(false);
+  const [haManual, setHaManual] = useState(false);
   // 'work' = Ajustar Horas · 'sick' = Baja. El editor es el mismo; cambia lo que se
   // guarda y qué opciones se ofrecen (ver HoursEditor).
   const [editMode, setEditMode] = useState('work');
@@ -109,13 +113,33 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
     setEditHH(Math.floor(totalHoursDecimal).toString());
     setEditmm(Math.round((totalHoursDecimal % 1) * 60).toString());
     setEditTurn(mismoTipo ? (s.turn || 'morning') : 'morning');
-    // HA: si el día ya lo era, se respeta. Si no, se propone según el umbral del
-    // convenio para las horas de partida (que es lo que hacía antes por su cuenta).
-    setEditHA(mismoTipo ? !!s.isHA : (totalHoursDecimal * 60) >= CONFIG.UMBRAL_DIA_HA_MINUTOS);
+    // HA: se parte de lo que dice el umbral para esas horas. Si el día ya estaba
+    // guardado con un HA que CONTRADICE al umbral, es que en su día se corrigió a
+    // mano: se respeta esa decisión y el automático no vuelve a pisarla.
+    const haPorUmbral = (totalHoursDecimal * 60) >= CONFIG.UMBRAL_DIA_HA_MINUTOS;
+    const haInicial = mismoTipo ? !!s.isHA : haPorUmbral;
+    setEditHA(haInicial);
+    setHaManual(haInicial !== haPorUmbral);
   }, [shiftsMap, requireActive]);
 
   const openEditHours = useCallback((dateStr) => abrirEditor(dateStr, 'work'), [abrirEditor]);
   const openBaja = useCallback((dateStr) => abrirEditor(dateStr, 'sick'), [abrirEditor]);
+
+  // Auto-HA: mientras no se toque el interruptor, el HA sigue al umbral del convenio
+  // según se van tecleando horas y minutos. Poner una jornada de más de 8:30 la marca
+  // sola como HA —suma en el contador del Resumen y se pinta con el color HA en la
+  // agenda— sin tener que acordarse de darle al botón.
+  useEffect(() => {
+    if (!editingDay || haManual) return;
+    const minutos = (parseInt(editHH) || 0) * 60 + (parseInt(editmm) || 0);
+    setEditHA(minutos >= CONFIG.UMBRAL_DIA_HA_MINUTOS);
+  }, [editingDay, haManual, editHH, editmm]);
+
+  // Tocar el interruptor deja el HA en manos del usuario para el resto de la edición.
+  const cambiarEditHA = useCallback((valor) => {
+    setHaManual(true);
+    setEditHA(valor);
+  }, []);
 
   const saveEditedHours = useCallback(() => {
     // En una baja marcada como "día libre" el cuadrante no programaba horas: se
@@ -157,6 +181,38 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
     setSelectedDates([]);
     saveToCloud({ shifts: newShifts });
   }, [shifts, selectedDates, saveToCloud, requireActive]);
+
+  // ── Exportar el año a PDF ──
+  // El generador y jspdf van en su propio trozo: se descargan al pulsar, no al
+  // abrir la app (ver services/pdfCuadrante.js).
+  const [exportando, setExportando] = useState(false);
+  const exportarAnio = useCallback(async () => {
+    const anio = currentDate.getFullYear();
+    setExportando(true);
+    try {
+      const [{ construirPdfAnual, nombreFichero }, { descargarArchivo }] = await Promise.all([
+        import('../services/pdfCuadrante'),
+        import('../services/descargarArchivo'),
+      ]);
+
+      // Las estadísticas se recalculan SOLO para el año que se exporta: las de la
+      // app cubren toda la ventana cargada (12-13 meses, que se solapan con el año
+      // anterior) y el papel enseñaría una cuadrícula de un año con los totales de
+      // otro. Como fecha de corte, hoy si es el año en curso y el 31-dic si ya pasó.
+      const turnosDelAnio = shifts.filter((t) => t.date?.startsWith(String(anio)));
+      const finDeAnio = new Date(anio, 11, 31);
+      const hoy = new Date();
+      const stats = computeShiftStats(turnosDelAnio, shiftsMap, user, finDeAnio > hoy ? hoy : finDeAnio);
+
+      const blob = await construirPdfAnual({ anio, shiftsMap, user, stats });
+      const resultado = await descargarArchivo(blob, nombreFichero(anio, user), `Mi Cuadrante ${anio}`);
+      if (resultado !== 'cancelado') toast(`Cuadrante de ${anio} generado.`, 'success');
+    } catch (e) {
+      toast('No se pudo generar el PDF: ' + (e?.message || e), 'error');
+    } finally {
+      setExportando(false);
+    }
+  }, [currentDate, shifts, shiftsMap, user]);
 
   const handleDayClick = useCallback((dateStr) => {
     setSelectedDates(prev => 
@@ -256,6 +312,19 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
                 })()}
               </div>
             ) : (
+              <>
+              <div className="px-3 pt-3">
+                <button
+                  onClick={exportarAnio}
+                  disabled={exportando}
+                  className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white transition-transform active:scale-[0.98] ${exportando ? 'opacity-60' : ''}`}
+                  style={{ background: 'linear-gradient(180deg,#34d399,#059669 58%,#047857)', boxShadow: '0 6px 14px rgba(5,150,105,0.4), inset 0 1.5px 1px rgba(255,255,255,0.45)' }}
+                  aria-label={`Descargar el cuadrante de ${currentDate.getFullYear()} en PDF`}
+                >
+                  <FileDown size={14} />
+                  {exportando ? 'Generando…' : `Descargar ${currentDate.getFullYear()} en PDF`}
+                </button>
+              </div>
               <div className="p-3 grid grid-cols-3 gap-x-2 gap-y-4 pb-4" role="grid" aria-label="Calendario anual">
                 {Array.from({ length: 12 }).map((_, m) => {
                   const isLocked = permissionState !== 'granted' && [0, 7, 9].includes(m);
@@ -284,6 +353,7 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
                   </div>
                 )})}
               </div>
+              </>
             )}
           </div>
         </div>
@@ -371,7 +441,7 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
         setEditHH={setEditHH}
         setEditmm={setEditmm}
         setEditTurn={setEditTurn}
-        setEditHA={setEditHA}
+        setEditHA={cambiarEditHA}
         setEditingDay={setEditingDay}
         saveEditedHours={saveEditedHours}
       />

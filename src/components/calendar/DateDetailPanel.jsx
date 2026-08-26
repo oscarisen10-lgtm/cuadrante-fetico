@@ -92,19 +92,19 @@ export function DateDetailPanel({ selectedDates, shiftsMap, setSelectedDates, ma
           <div className={`text-3xl font-black font-mono ${isHoursHighlighted ? 'text-slate-800' : 'text-slate-400'}`}>{hoursText}</div>
         </div>
 
-        {/* Dos columnas emparejadas a propósito: a la izquierda lo que se registra
-            como jornada (Día Libre / Ajustar Horas), a la derecha las ausencias
-            (Vacaciones / Baja). Antes "Ajustar Horas" ocupaba las dos columnas y
-            rompía esa lectura. */}
+        {/* "Ajustar Horas" ocupa la fila entera y va la primera: es la acción del
+            día a día, la que se usa de verdad. Debajo, en dos columnas, los tipos de
+            día que se marcan de golpe (Día Libre / Vacaciones) y, en la última fila,
+            Baja y el borrado, que son los casos raros. */}
         <div className="grid grid-cols-2 gap-3 animate-in fade-in duration-300" role="toolbar" aria-label="Acciones para las fechas seleccionadas">
+          <button onClick={() => openEditHours(selectedDates[0])} className="btn3d col-span-2 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest" style={{ background: 'linear-gradient(180deg,#3b82f6,#2563eb)', boxShadow: '0 6px 14px rgba(37,99,235,0.4), inset 0 1.5px 1px rgba(255,255,255,0.4)' }} aria-label="Ajustar horas trabajadas">Ajustar Horas</button>
           <button onClick={() => markMulti('rest')} className="btn3d text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest" style={{ background: 'linear-gradient(180deg,#fbbf24,#d97706)', boxShadow: '0 6px 14px rgba(217,119,6,0.4), inset 0 1.5px 1px rgba(255,255,255,0.45)' }} aria-label="Marcar como día libre">Día Libre</button>
           <button onClick={() => markMulti('vacation')} className="btn3d text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest" style={{ background: 'linear-gradient(180deg,#a855f7,#7c3aed)', boxShadow: '0 6px 14px rgba(124,58,237,0.4), inset 0 1.5px 1px rgba(255,255,255,0.4)' }} aria-label="Marcar como vacaciones">Vacaciones</button>
-          <button onClick={() => openEditHours(selectedDates[0])} className="btn3d text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest" style={{ background: 'linear-gradient(180deg,#3b82f6,#2563eb)', boxShadow: '0 6px 14px rgba(37,99,235,0.4), inset 0 1.5px 1px rgba(255,255,255,0.4)' }} aria-label="Ajustar horas trabajadas">Ajustar Horas</button>
           {/* Morado SUAVE, hermano del de Vacaciones pero más claro: es una ausencia
               como aquella, pero no la misma cosa, y el texto va en morado oscuro
               porque sobre este tono el blanco no tendría contraste suficiente. */}
           <button onClick={() => openBaja(selectedDates[0])} className="btn3d py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest" style={{ background: 'linear-gradient(180deg,#e9d5ff,#d8b4fe)', color: '#6b21a8', boxShadow: '0 6px 14px rgba(168,85,247,0.25), inset 0 1.5px 1px rgba(255,255,255,0.7)' }} aria-label="Marcar como baja laboral y registrar la jornada programada">Baja</button>
-          <button onClick={deleteSelectedDates} className="btn3d col-span-2 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest" style={{ background: 'linear-gradient(180deg,#fb7185,#e11d48)', boxShadow: '0 6px 14px rgba(225,29,72,0.4), inset 0 1.5px 1px rgba(255,255,255,0.4)' }} aria-label="Borrar registro de las fechas seleccionadas">Borrar Registro</button>
+          <button onClick={deleteSelectedDates} className="btn3d text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest" style={{ background: 'linear-gradient(180deg,#fb7185,#e11d48)', boxShadow: '0 6px 14px rgba(225,29,72,0.4), inset 0 1.5px 1px rgba(255,255,255,0.4)' }} aria-label="Borrar registro de las fechas seleccionadas">Borrar Registro</button>
         </div>
       </div>
     </div>

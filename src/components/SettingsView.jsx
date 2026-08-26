@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, ShieldCheck, Users, HelpCircle, Target } from 'lucide-react';
+import { Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, ShieldCheck, Users, HelpCircle, Target, Share2, Link2 } from 'lucide-react';
 import { COMPANY_RULES, isAdminUser, hasKnownConvenio, CUSTOM_TARGET_FIELDS } from '../constants/config';
 import { STORES, S_ROMERO_STORES, ECI_STORES, formatStoreName } from '../constants/stores';
 import { deleteUserAccount, cambiarMiTienda } from '../services/firebaseService';
 import { firestoreCacheMode } from '../firebase';
 import { toast } from '../services/toastBus';
 import { setHapticsEnabled, isHapticsEnabled, hapticLight } from '../utils/haptics';
+import { compartirPorWhatsApp, copiarEnlace } from '../services/compartir';
 
 export const SettingsView = React.memo(function SettingsView({ user, settings, saveToCloud, stopAlarm, pushToken, pushTokenError, permissionState, requestTokenManually, isDelegado = false, onOpenGuide }) {
   const isAdmin = isAdminUser(user);
@@ -335,6 +336,38 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
              </div>
              <span className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-md shrink-0">Ver</span>
           </button>
+
+          {/* Compartir — el único sitio fijo desde el que se recomienda la app. Se
+              manda /descargar, no la ficha de una tienda: quien lo recibe puede
+              tener Android o iPhone (ver services/compartir.js). */}
+          <div className="flex flex-col gap-3 bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
+             <div className="flex flex-col">
+                <span className="text-xs font-bold text-white uppercase leading-none flex items-center gap-1.5">
+                  <Share2 size={14} className="text-emerald-500"/> Compartir con compañeros
+                </span>
+                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Pásales la app para que se la descarguen</span>
+             </div>
+             <div className="flex gap-2">
+                <button
+                  onClick={() => { hapticLight(); compartirPorWhatsApp(); }}
+                  className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-b from-emerald-500 to-emerald-700 text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-[0_4px_10px_rgba(5,150,105,0.4)] active:scale-95 transition-transform"
+                  aria-label="Compartir la app por WhatsApp"
+                >
+                  <Share2 size={13}/> WhatsApp
+                </button>
+                <button
+                  onClick={async () => {
+                    hapticLight();
+                    if (await copiarEnlace()) toast('Enlace copiado. Ya puedes pegarlo donde quieras.', 'success');
+                    else toast('Tu navegador no deja copiar. Comparte por WhatsApp.', 'warning');
+                  }}
+                  className="px-4 flex items-center justify-center gap-2 bg-white/10 text-white/70 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 active:scale-95 transition-transform"
+                  aria-label="Copiar el enlace de descarga"
+                >
+                  <Link2 size={13}/> Copiar
+                </button>
+             </div>
+          </div>
 
           <div className="flex justify-between items-center bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20">
              <div className="flex flex-col">

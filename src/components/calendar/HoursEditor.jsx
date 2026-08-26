@@ -90,9 +90,10 @@ export function HoursEditor({
           {esBaja && turnoBtn('rest', 'Día libre')}
         </div>
 
-        {/* HA a mano. En "Ajustar Horas" se deduce del umbral del convenio, pero en una
-            baja no hay jornada real de la que deducirlo: lo dice el cuadrante, así que
-            lo marca el usuario. Se ofrece en los dos modos para poder corregirlo. */}
+        {/* El interruptor se mueve solo: al pasar de 8:30 el día se marca como HA sin
+            tocar nada (lo decide CalendarView según el umbral del convenio). Sigue
+            estando para corregirlo a mano —imprescindible en la baja, donde no hay
+            jornada real de la que deducirlo—, y en cuanto se toca, manda el usuario. */}
         {!esLibre && (
           <button
             onClick={() => setEditHA(!editHA)}

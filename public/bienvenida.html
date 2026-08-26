@@ -5,6 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mi Cuadrante — Registro horario y gestión de turnos</title>
     <meta name="description" content="Mi Cuadrante: registra tu jornada, consulta tu cuadrante y recibe noticias, todo desde el móvil.">
+
+    <!-- Vista previa al compartir el enlace (WhatsApp, Telegram, redes). La imagen
+         debe ser JPG/PNG y absoluta: WhatsApp no renderiza WebP ni rutas relativas. -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Mi Cuadrante">
+    <meta property="og:locale" content="es_ES">
+    <meta property="og:url" content="https://mi-calendario-fe.web.app/descargar">
+    <meta property="og:title" content="Mi Cuadrante — tus turnos y tus horas en el móvil">
+    <meta property="og:description" content="Ficha tu jornada, consulta tu cuadrante, tus findes de calidad y los festivos de tu centro. Gratis para Android y iPhone.">
+    <meta property="og:image" content="https://mi-calendario-fe.web.app/img/compartir-card.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Mi Cuadrante — tus turnos, tus horas y tu convenio, siempre en el móvil">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Mi Cuadrante — tus turnos y tus horas en el móvil">
+    <meta name="twitter:description" content="Ficha tu jornada, consulta tu cuadrante y los festivos de tu centro. Gratis para Android y iPhone.">
+    <meta name="twitter:image" content="https://mi-calendario-fe.web.app/img/compartir-card.jpg">
+    <meta name="theme-color" content="#059669">
     <style>
         * { box-sizing: border-box; }
         body {
@@ -36,6 +54,24 @@
             padding: 10px 18px; border-radius: 10px; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0;
         }
         .links a:hover { background: #d1fae5; }
+        /* Descarga. El botón de la plataforma detectada se resalta (.principal) y el
+           otro queda como alternativa: quien llega desde WhatsApp no debería tener que
+           pensar cuál es el suyo. Sin JS se ven los dos por igual, que es lo correcto. */
+        .descarga { text-align: center; margin-top: 22px; }
+        .descarga h2 { margin-bottom: 6px; }
+        .tiendas { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 18px; }
+        .tienda {
+            display: inline-flex; align-items: center; gap: 10px; text-decoration: none;
+            padding: 14px 22px; border-radius: 14px; font-weight: 800; font-size: 0.95rem;
+            background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; transition: transform .12s ease;
+        }
+        .tienda:active { transform: translateY(2px); }
+        .tienda.principal {
+            background: linear-gradient(180deg, #10b981, #047857); color: #fff; border-color: transparent;
+            box-shadow: 0 10px 22px -8px rgba(5,150,105,0.65);
+        }
+        .tienda svg { width: 22px; height: 22px; fill: currentColor; }
+        .gratis { margin-top: 14px; font-size: 0.8rem; color: #6b7280; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
         footer { text-align: center; padding: 30px 20px; font-size: 0.8rem; color: #9ca3af; }
         footer a { color: #9ca3af; }
     </style>
@@ -75,6 +111,22 @@
             </div>
         </div>
 
+        <div class="card descarga">
+            <h2>Descárgala gratis</h2>
+            <p class="lead">Disponible para Android y iPhone.</p>
+            <div class="tiendas">
+                <a class="tienda" id="btn-android" href="https://play.google.com/store/apps/details?id=app.netlify.guileless_malabi_40bf81.twa">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.6 1.8a1 1 0 0 0-.5.9v18.6a1 1 0 0 0 .5.9l10.1-10.2L3.6 1.8Zm11.5 8.6 2.9-2.9-11-6.2c-.2-.1-.4-.1-.6 0l8.7 9.1Zm0 3.2-8.7 9.1c.2.1.4.1.6 0l11-6.2-2.9-2.9Zm5.5-3.1-2.4-1.4-3.1 3.1 3.1 3.1 2.4-1.4c.7-.4.7-1.4 0-1.8-.7-.4 0 0 0 0Z"/></svg>
+                    Google Play
+                </a>
+                <a class="tienda" id="btn-ios" href="https://apps.apple.com/app/id6767951333">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.4 12.7c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9-.7 0-1.8-.9-3-.8-1.5 0-2.9.9-3.7 2.3-1.6 2.7-.4 6.8 1.1 9 .8 1.1 1.7 2.3 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7c1.3 0 2.1-1.1 2.8-2.2.9-1.3 1.3-2.5 1.3-2.6 0 0-2.5-1-2.5-3.6ZM14.2 5.9c.6-.8 1-1.9.9-3-.9 0-2.1.6-2.7 1.4-.6.7-1.1 1.8-1 2.9 1 .1 2.1-.5 2.8-1.3Z"/></svg>
+                    App Store
+                </a>
+            </div>
+            <p class="gratis">Gratis · Sin anuncios</p>
+        </div>
+
         <div class="links">
             <a href="/soporte.html">Soporte y preguntas frecuentes</a>
             <a href="/privacidad.html">Política de privacidad</a>
@@ -85,5 +137,21 @@
     <footer>
         Mi Cuadrante © 2026 — FETICO
     </footer>
+
+    <script>
+        (function () {
+            var ua = navigator.userAgent || '';
+            var esIOS = /iPad|iPhone|iPod/.test(ua) ||
+                        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPadOS se hace pasar por Mac
+            var esAndroid = /Android/.test(ua);
+            if (!esIOS && !esAndroid) return;               // escritorio: los dos por igual
+            var id = esIOS ? 'btn-ios' : 'btn-android';
+            var el = document.getElementById(id);
+            if (el) {
+                el.classList.add('principal');
+                el.parentNode.insertBefore(el, el.parentNode.firstChild);
+            }
+        })();
+    </script>
 </body>
 </html>
