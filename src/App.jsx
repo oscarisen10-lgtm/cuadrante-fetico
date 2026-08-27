@@ -9,7 +9,7 @@ import { useNews } from './hooks/useNews';
 import { useTimer } from './hooks/useTimer';
 import { useShifts } from './hooks/useShifts';
 import { useNotifications } from './hooks/useNotifications';
-import { Clock, Calendar as CalendarIcon, PieChart, FileText, Settings, LogOut, WifiOff, Fingerprint, X, Newspaper, ShieldCheck, ClipboardList, BarChart3 } from 'lucide-react';
+import { Clock, Calendar as CalendarIcon, PieChart, FileText, Settings, LogOut, WifiOff, Fingerprint, X, Newspaper, ShieldCheck, ClipboardList, BarChart3, Receipt } from 'lucide-react';
 import { getFormattedDate } from './utils/dateUtils';
 import { isAdminUser } from './constants/config';
 import { markFichado } from './services/firebaseService';
@@ -27,6 +27,7 @@ const DelegadoNoticiasView = lazy(() => import('./components/DelegadoNoticiasVie
 const AdminView = lazy(() => import('./components/AdminView').then(m => ({ default: m.AdminView })));
 const CensoView = lazy(() => import('./components/CensoView').then(m => ({ default: m.CensoView })));
 const EstadisticasView = lazy(() => import('./components/EstadisticasView').then(m => ({ default: m.EstadisticasView })));
+const NominaView = lazy(() => import('./components/NominaView').then(m => ({ default: m.NominaView })));
 // El bocadillo del tutorial solo sale la primera vez que se abre cada pantalla:
 // cargarlo aparte deja el arranque de siempre intacto para quien ya lo ha visto.
 const TipBubble = lazy(() => import('./components/TipBubble').then(m => ({ default: m.TipBubble })));
@@ -58,7 +59,9 @@ function NavigationBar({ adminMode, delegadoMode }) {
       : delegadoMode
         ? { path: '/censo', icon: <ClipboardList />, label: 'Censo' }
         : { path: '/calendar', icon: <CalendarIcon />, label: 'Agenda' },
-    { path: '/licencias', icon: <FileText />,  label: 'Permisos' },
+    adminMode || delegadoMode
+      ? { path: '/nomina', icon: <Receipt />, label: 'Nómina' }
+      : { path: '/licencias', icon: <FileText />,  label: 'Permisos' },
     { path: '/settings',  icon: <Settings />,  label: 'Ajustes' },
   ];
 
@@ -250,7 +253,7 @@ function AppContent({ user, authHook }) {
                 <LicenciasView user={user} permissionState={permissionState} requestTokenManually={requestTokenManually} isActive={isActive} />
               } />
               <Route path="/settings" element={
-                <SettingsView user={user} settings={settings} saveToCloud={saveToCloud} stopAlarm={stopAlarm} pushToken={pushToken} pushTokenError={pushTokenError} permissionState={permissionState} requestTokenManually={requestTokenManually} isDelegado={isDelegado} onOpenGuide={restartTips} />
+                <SettingsView user={user} settings={settings} saveToCloud={saveToCloud} pushToken={pushToken} pushTokenError={pushTokenError} permissionState={permissionState} requestTokenManually={requestTokenManually} isDelegado={isDelegado} onOpenGuide={restartTips} />
               } />
               <Route path="/delegados" element={
                 isDelegado ? <DelegadoNoticiasView user={user} delegado={delegado} /> : <Navigate to="/dashboard" replace />
@@ -260,6 +263,11 @@ function AppContent({ user, authHook }) {
               } />
               <Route path="/censo" element={
                 isDelegado ? <CensoView user={user} delegado={delegado} /> : <Navigate to="/dashboard" replace />
+              } />
+              <Route path="/nomina" element={
+                isAdmin || isDelegado
+                  ? <NominaView user={user} saveToCloud={saveToCloud} />
+                  : <Navigate to="/dashboard" replace />
               } />
               <Route path="/estadisticas" element={
                 isAdmin ? <EstadisticasView /> : <Navigate to="/dashboard" replace />

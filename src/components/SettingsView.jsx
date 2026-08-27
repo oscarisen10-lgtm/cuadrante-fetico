@@ -8,7 +8,7 @@ import { toast } from '../services/toastBus';
 import { setHapticsEnabled, isHapticsEnabled, hapticLight } from '../utils/haptics';
 import { compartirPorWhatsApp, copiarEnlace } from '../services/compartir';
 
-export const SettingsView = React.memo(function SettingsView({ user, settings, saveToCloud, stopAlarm, pushToken, pushTokenError, permissionState, requestTokenManually, isDelegado = false, onOpenGuide }) {
+export const SettingsView = React.memo(function SettingsView({ user, settings, saveToCloud, pushToken, pushTokenError, permissionState, requestTokenManually, isDelegado = false, onOpenGuide }) {
   const isAdmin = isAdminUser(user);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -136,7 +136,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                     className="w-full bg-white/10 border border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] p-2.5 rounded-xl text-xs outline-none text-white placeholder:text-white/25 font-medium"
                   />
                   <span className="text-[8px] text-white/30 font-bold uppercase tracking-tight ml-1 pt-1 leading-tight">
-                    ¿Trabajas en Supercor, S. Romero, S. Express o ECI? Habla con tu delegado de FETICO para que te pase a tu empresa
+                    ¿Trabajas en Supercor, S. Romero, S. Express o ECI? Habla con tu delegado para que te pase a tu empresa
                   </span>
                </div>
              ) : (
@@ -252,33 +252,20 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
             </div>
           )}
 
-          <div data-tour="set-sync" className="flex justify-between items-center bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
-             <div className="flex flex-col">
-                <span className="text-xs font-bold text-white uppercase leading-none flex items-center gap-1.5"><RefreshCw size={14} className="text-emerald-500"/> Sincronización</span>
-                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Sincroniza las noticias y avisos</span>
-             </div>
-             {permissionState === 'granted' ? (
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-3 py-1.5 rounded-lg font-black uppercase">Activada</span>
-             ) : (
-                <button onClick={requestTokenManually} className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase active:scale-95 shadow-md">
-                   Permitir
-                </button>
-             )}
-          </div>
-
-          <div className="flex justify-between items-center bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
-            <div className="flex flex-col">
-                <span className="text-xs font-bold text-white uppercase leading-none">Alarmas Locales</span>
-                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Vibracion al terminar descanso</span>
+          {/* Solo mientras el permiso NO esté concedido: una vez activado, este recuadro
+              no ofrecía ninguna acción, solo decía "Activada" y ocupaba sitio. El paso
+              del tutorial que lo señala es `optional`, así que se salta si no está. */}
+          {permissionState !== 'granted' && (
+            <div data-tour="set-sync" className="flex justify-between items-center bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
+               <div className="flex flex-col">
+                  <span className="text-xs font-bold text-white uppercase leading-none flex items-center gap-1.5"><RefreshCw size={14} className="text-emerald-500"/> Sincronización</span>
+                  <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Sincroniza las noticias y avisos</span>
+               </div>
+               <button onClick={requestTokenManually} className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase active:scale-95 shadow-md">
+                  Permitir
+               </button>
             </div>
-            <button onClick={() => {
-                const newSettings = {...settings, notifications: !settings.notifications};
-                saveToCloud({settings: newSettings});
-                if(!newSettings.notifications) stopAlarm?.();
-            }} className={`w-12 h-6 rounded-full relative transition-colors ${settings.notifications ? 'bg-emerald-500' : 'bg-white/20'}`}>
-               <div className={`absolute top-1 size-4 bg-white rounded-full transition-all ${settings.notifications ? 'left-7' : 'left-1'}`}></div>
-            </button>
-          </div>
+          )}
 
           <div className="flex justify-between items-center bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
             <div className="flex flex-col">
@@ -366,13 +353,6 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                 >
                   <Link2 size={13}/> Copiar
                 </button>
-             </div>
-          </div>
-
-          <div className="flex justify-between items-center bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20">
-             <div className="flex flex-col">
-                <span className="text-xs font-bold text-emerald-400 uppercase leading-none">Versión App</span>
-                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Versión {__APP_VERSION__} (Estable)</span>
              </div>
           </div>
 
@@ -471,6 +451,10 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
            </div>
         </div>
       </div>
+
+      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-300 text-center -mt-1">
+        Versión {__APP_VERSION__}
+      </p>
 
       {/* Modal de confirmación de eliminación */}
       {showDeleteModal && (

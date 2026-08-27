@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { BarChart3, Users, Bell, Activity, Newspaper, Send, RefreshCw, Apple, Smartphone, Globe } from 'lucide-react';
+import { BarChart3, Users, Bell, Activity, Newspaper, Send, RefreshCw, Apple, Smartphone, Globe, Timer } from 'lucide-react';
 import { fetchAdminStats } from '../services/firebaseService';
 import { toast } from '../services/toastBus';
 import { LoadingLogo } from './UIComponents';
@@ -106,6 +106,15 @@ export const EstadisticasView = React.memo(function EstadisticasView() {
               registraban actividad: cuentan como inactivas hasta que se actualicen.
             </p>
             <PlatformSplit ios={stats?.activos7dIos} android={stats?.activos7dAndroid} />
+          </Panel>
+
+          <Panel icon={<Timer size={14} className="text-amber-600" />} title="Uso de Fichar">
+            <div className="flex justify-between items-center bg-amber-500/10 rounded-2xl px-3.5 py-3">
+              <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Han fichado alguna vez</span>
+              <span className="text-lg font-black tracking-tighter text-amber-700">
+                {stats?.fichadores ?? '—'}{stats?.total ? ` / ${stats.total}` : ''}
+              </span>
+            </div>
           </Panel>
 
           <Panel icon={<Bell size={14} className="text-indigo-600" />} title="Push activo">

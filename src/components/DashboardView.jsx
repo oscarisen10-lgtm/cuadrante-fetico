@@ -65,7 +65,7 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
 
   const [formTitle, setFormTitle] = useState("");
   const [formDesc, setFormDesc] = useState("");
-  const [formTag, setFormTag] = useState("Fetico");
+  const [formTag, setFormTag] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null); 
   const [isLoading, setIsLoading] = useState(false);
@@ -121,7 +121,7 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
       });
       setFormTitle("");
       setFormDesc("");
-      setFormTag("Fetico");
+      setFormTag("");
       setSelectedFile(null);
       setPreviewUrl(null);
       setShowAddNewsModal(false);

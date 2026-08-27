@@ -391,6 +391,7 @@ export const SCREEN_TIPS = {
       },
       {
         target: '[data-tour="set-sync"]',
+        optional: true,
         text: (
           <p>
             La <strong>sincronización</strong> es la que te trae los avisos y las noticias de tu
