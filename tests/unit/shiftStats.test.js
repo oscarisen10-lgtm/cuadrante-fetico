@@ -4,6 +4,9 @@
 // fecha real. No necesita red ni Firebase. Se ejecuta con: npm test
 import { describe, test, expect } from 'vitest';
 import { computeShiftStats } from '../../src/hooks/useShifts.js';
+import {
+  NON_ANGED_COMPANIES, OTHER_COMPANY, isNamedOtherCompany, isKnownCompany, hasKnownConvenio,
+} from '../../src/constants/config.js';
 
 // Construye el índice date -> turno igual que el hook.
 const toMap = (shifts) => {
@@ -196,6 +199,28 @@ describe('computeShiftStats — empresa no verificada', () => {
   test('companyVerified manda sobre el nombre: escribir "Supercor" no da su convenio', () => {
     const stats = computeShiftStats([], {}, { company: 'Supercor', companyVerified: false, rank: 'Jefes' }, NOW);
     expect(stats.targets).toBeNull();
+  });
+
+  // Las 21 cadenas del desplegable (Mercadona, Lidl…) están ahí por comodidad al
+  // registrarse, no porque sepamos su convenio. Si alguna se colara en
+  // COMPANY_RULES, sus usuarios verían objetivos INVENTADOS —los de Supercor— y un
+  // objetivo falso es peor que ningún objetivo.
+  test('ninguna de las empresas del desplegable de fuera tiene convenio', () => {
+    NON_ANGED_COMPANIES.forEach((company) => {
+      expect(isKnownCompany(company)).toBe(false);
+      expect(hasKnownConvenio({ company, companyVerified: false })).toBe(false);
+      expect(computeShiftStats([], {}, { company, companyVerified: false }, NOW).targets).toBeNull();
+    });
+  });
+
+  test('la lista de fuera no se solapa con las de ANGED y no tiene repetidos', () => {
+    expect(new Set(NON_ANGED_COMPANIES).size).toBe(NON_ANGED_COMPANIES.length);
+    expect(NON_ANGED_COMPANIES).not.toContain(OTHER_COMPANY);
+    expect(isNamedOtherCompany('Mercadona')).toBe(true);
+    expect(isNamedOtherCompany('Supercor')).toBe(false);
+    // "Otra empresa" NO está en la lista: es el comodín para escribirlo a mano, y
+    // de ahí depende que Ajustes enseñe el campo de texto (ver segundaColumna).
+    expect(isNamedOtherCompany(OTHER_COMPANY)).toBe(false);
   });
 
   test('los objetivos escritos a mano se sanean (basura, negativos y topes)', () => {

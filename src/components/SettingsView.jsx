@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, ShieldCheck, Users, HelpCircle, Target, Share2, Link2, CalendarDays } from 'lucide-react';
-import { COMPANY_RULES, isAdminUser, hasKnownConvenio, CUSTOM_TARGET_FIELDS, OTHER_COMPANY } from '../constants/config';
+import { COMPANY_RULES, isAdminUser, hasKnownConvenio, CUSTOM_TARGET_FIELDS, OTHER_COMPANY, NON_ANGED_COMPANIES, isKnownCompany, isNamedOtherCompany } from '../constants/config';
 import { storesForCompany, formatStoreName } from '../constants/stores';
 import { deleteUserAccount, cambiarMiTienda } from '../services/firebaseService';
 import { firestoreCacheMode } from '../firebase';
@@ -31,6 +31,20 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
   const currentCompany = user?.company || "Supercor";
   const currentRank = user?.rank || "Personal de fresco";
   const currentStore = user?.store || "";
+
+  // Qué marca el desplegable de empresa. Quien está fuera de ANGED puede tener el
+  // nombre de una cadena de la lista (Mercadona) o uno escrito a mano ("Bar Paco"):
+  // en el segundo caso no hay opción que le corresponda, así que se marca "Otra
+  // empresa" y el nombre real vive en el campo de texto de al lado.
+  const empresaDeLaLista = isNamedOtherCompany(user?.company);
+  const valorEmpresa = esOtraEmpresa
+    ? (empresaDeLaLista ? user.company : OTHER_COMPANY)
+    : currentCompany;
+
+  // ¿Hay algo que enseñar junto a la empresa? El rango si es de ANGED, o el nombre
+  // a mano si su empresa no está en la lista. Con Mercadona no hay ni una cosa ni
+  // la otra y el desplegable ocupa el ancho entero.
+  const segundaColumna = !esOtraEmpresa || !empresaDeLaLista;
 
   // Solo los campos que de verdad cambian: `user` lleva `uid` e `isAdminClaim`
   // (los añade useAuth al leer el snapshot), y si se hiciera spread del objeto
@@ -72,12 +86,15 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
   // van juntas: cada empresa tiene sus centros, así que la tienda se vacía y hay que
   // reelegirla. Y desde el 28-ago-2026 también cubre entrar y salir de ANGED.
   const handleCompanyChange = (newCompany) => {
-    if (newCompany === OTHER_COMPANY) {
+    // Fuera de ANGED es todo lo que no tiene convenio conocido: "Otra empresa" y
+    // también las cadenas que salen por su nombre (Mercadona, Lidl…). Todas reciben
+    // el mismo trato — sin tienda, sin rango y con la cuenta activa.
+    if (!isKnownCompany(newCompany)) {
       // Fuera de ANGED no hay convenio: el servidor vacía tienda y rango. La cuenta
       // se queda activa (ahí fuera no hay delegado que pudiera reactivarla).
       handleStoreChange(
-        { company: OTHER_COMPANY, store: "" },
-        { company: OTHER_COMPANY, store: "", rank: "", companyVerified: false }
+        { company: newCompany, store: "" },
+        { company: newCompany, store: "", rank: "", companyVerified: false }
       );
       return;
     }
@@ -143,50 +160,63 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                  pero no existía ninguna pantalla —ni de delegado ni de admin— capaz de
                  moverle. Ahora se entra y se sale por aquí, y la verificación del
                  delegado la sigue garantizando la function (ver cambiarMiTienda). */}
-             <div className="grid grid-cols-2 gap-3">
+             <div className={segundaColumna ? "grid grid-cols-2 gap-3" : ""}>
                <div className="flex flex-col space-y-1">
                   <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1">Empresa</span>
                   <select
-                    value={esOtraEmpresa ? OTHER_COMPANY : currentCompany}
+                    value={valorEmpresa}
                     disabled={cambiandoTienda}
                     onChange={(e) => handleCompanyChange(e.target.value)}
                     className="w-full bg-white/10 border border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] p-2 rounded-xl text-xs outline-none text-white appearance-none"
                   >
-                    {Object.keys(COMPANY_RULES).map(c => <option key={c} value={c} className="text-slate-800">{c}</option>)}
-                    <option value={OTHER_COMPANY} className="text-slate-800">{OTHER_COMPANY}</option>
+                    {/* Agrupadas como en el registro: son 26 y el grupo explica por qué
+                        unas piden centro y rango y otras no. */}
+                    <optgroup label="Con convenio en la app">
+                      {Object.keys(COMPANY_RULES).map(c => <option key={c} value={c} className="text-slate-800">{c}</option>)}
+                    </optgroup>
+                    <optgroup label="Otras empresas">
+                      {NON_ANGED_COMPANIES.map(c => <option key={c} value={c} className="text-slate-800">{c}</option>)}
+                      <option value={OTHER_COMPANY} className="text-slate-800">{OTHER_COMPANY}</option>
+                    </optgroup>
                   </select>
                </div>
-               <div className="flex flex-col space-y-1">
-                  {esOtraEmpresa ? (
-                    <>
-                      <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1">Nombre</span>
-                      <input
-                        type="text"
-                        value={companyDraft ?? (user?.company === OTHER_COMPANY ? "" : (user?.company || ""))}
-                        maxLength={60}
-                        placeholder="Escribe tu empresa"
-                        onChange={(e) => setCompanyDraft(e.target.value)}
-                        onBlur={() => {
-                          if (companyDraft === null) return;
-                          setCompanyDraft(null);
-                          handleProfileChange({ company: companyDraft.trim() || OTHER_COMPANY, companyVerified: false });
-                        }}
-                        className="w-full bg-white/10 border border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] p-2 rounded-xl text-xs outline-none text-white placeholder:text-white/25 font-medium"
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1">Rango</span>
-                      <select
-                        value={currentRank}
-                        onChange={(e) => handleProfileChange({ rank: e.target.value })}
-                        className="w-full bg-white/10 border border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] p-2 rounded-xl text-xs outline-none text-white appearance-none"
-                      >
-                        {Object.keys(COMPANY_RULES[currentCompany] || {}).map(r => <option key={r} value={r} className="text-slate-800">{r}</option>)}
-                      </select>
-                    </>
-                  )}
-               </div>
+               {/* La segunda columna solo existe si tiene algo que decir: el rango
+                   (ANGED) o el nombre a mano (empresa que no está en la lista). Quien
+                   elige Mercadona no necesita ninguna de las dos, y una celda vacía a
+                   media pantalla se lee como un campo que falta. */}
+               {segundaColumna && (
+                 <div className="flex flex-col space-y-1">
+                    {esOtraEmpresa ? (
+                      <>
+                        <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1">Nombre</span>
+                        <input
+                          type="text"
+                          value={companyDraft ?? (user?.company === OTHER_COMPANY ? "" : (user?.company || ""))}
+                          maxLength={60}
+                          placeholder="Escribe tu empresa"
+                          onChange={(e) => setCompanyDraft(e.target.value)}
+                          onBlur={() => {
+                            if (companyDraft === null) return;
+                            setCompanyDraft(null);
+                            handleProfileChange({ company: companyDraft.trim() || OTHER_COMPANY, companyVerified: false });
+                          }}
+                          className="w-full bg-white/10 border border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] p-2 rounded-xl text-xs outline-none text-white placeholder:text-white/25 font-medium"
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1">Rango</span>
+                        <select
+                          value={currentRank}
+                          onChange={(e) => handleProfileChange({ rank: e.target.value })}
+                          className="w-full bg-white/10 border border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] p-2 rounded-xl text-xs outline-none text-white appearance-none"
+                        >
+                          {Object.keys(COMPANY_RULES[currentCompany] || {}).map(r => <option key={r} value={r} className="text-slate-800">{r}</option>)}
+                        </select>
+                      </>
+                    )}
+                 </div>
+               )}
              </div>
 
              {esOtraEmpresa ? (
@@ -266,12 +296,6 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                  className="w-full bg-white/10 border border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] p-2.5 rounded-xl text-xs outline-none text-white font-medium"
                  aria-label="Fecha de alta en la empresa"
                />
-               <span className="text-[8px] text-white/30 font-bold uppercase tracking-tight ml-1 pt-1 leading-tight">
-                 El día que entraste en la empresa. Si entraste a mitad de año, tus
-                 objetivos del Resumen (domingos y festivos, HA, findes de calidad…)
-                 se ajustan a la parte del año que llevas
-                 {esOtraEmpresa ? '.' : ', y de aquí sale también la parte que te corresponde de las pagas de verano y navidad.'}
-               </span>
              </div>
           </div>
 

@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { User, Lock, Mail, Store, ShieldCheck, KeyRound, X, ChevronDown, Building2 } from 'lucide-react';
 import { loginUser, registerUser, resetPassword } from '../services/firebaseService';
 import { InputGroup } from './UIComponents';
-import { COMPANY_RULES, OTHER_COMPANY, isKnownCompany } from '../constants/config';
+import { COMPANY_RULES, OTHER_COMPANY, NON_ANGED_COMPANIES, isKnownCompany } from '../constants/config';
 import { storesForCompany, formatStoreName } from '../constants/stores';
 import appLogo from '../../icons/icon-192.webp';
 
@@ -119,13 +119,22 @@ export default function AuthView() {
           setTimeout(() => setRecoveryError(""), 3000);
           return;
         }
-        const otraEmpresa = selectedCompany === OTHER_COMPANY;
+        // Fuera de ANGED es TODO lo que no está en COMPANY_RULES: tanto "Otra empresa"
+        // como las cadenas que salen por su nombre (Mercadona, Lidl…). Comprobar solo
+        // `=== OTHER_COMPANY`, como se hacía antes de añadirlas, habría metido a quien
+        // eligiera "Mercadona" por la rama de ANGED: con el convenio de Supercor, una
+        // tienda por defecto y la cuenta esperando a un delegado que no existe.
+        const otraEmpresa = !isKnownCompany(selectedCompany);
 
         const newUserProfile = otraEmpresa
           ? {
               email: emailInput,
               fullName: formData.get('fullName') || 'Compañero/a',
-              company: formData.get('companyName')?.trim() || OTHER_COMPANY,
+              // Si viene del desplegable ya trae nombre; "Otra empresa" es la única
+              // que lo pide por escrito.
+              company: selectedCompany === OTHER_COMPANY
+                ? (formData.get('companyName')?.trim() || OTHER_COMPANY)
+                : selectedCompany,
               // Marca explícita de "no conocemos su convenio": manda sobre el
               // nombre, que lo escribe el usuario y podría coincidir con una de
               // ANGED. Ver hasKnownConvenio().
@@ -224,8 +233,16 @@ export default function AuthView() {
                       className="w-full bg-slate-50 border-none p-1.5 rounded-lg text-sm outline-none ring-1 ring-slate-200"
                     >
                       <option value="" disabled>Selecciona tu empresa...</option>
-                      {Object.keys(COMPANY_RULES).map(c => <option key={c} value={c}>{c}</option>)}
-                      <option value={OTHER_COMPANY}>{OTHER_COMPANY}</option>
+                      {/* Agrupadas porque son 26: sin separar, encontrar la tuya en una
+                          lista plana es un scroll a ciegas. El grupo también dice la
+                          verdad de por qué unas piden centro y rango y otras no. */}
+                      <optgroup label="Con convenio en la app">
+                        {Object.keys(COMPANY_RULES).map(c => <option key={c} value={c}>{c}</option>)}
+                      </optgroup>
+                      <optgroup label="Otras empresas">
+                        {NON_ANGED_COMPANIES.map(c => <option key={c} value={c}>{c}</option>)}
+                        <option value={OTHER_COMPANY}>{OTHER_COMPANY}</option>
+                      </optgroup>
                     </select>
                   </div>
                   {/* Rango: solo con empresa de ANGED (es su convenio quien lo define).

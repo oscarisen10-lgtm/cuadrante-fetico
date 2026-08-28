@@ -22,6 +22,34 @@ html, body {
   overscroll-behavior-y: contain;
 }
 
+/* ── iOS: campos de fecha (input[type=date]) ────────────────────────────────
+   En Android e iOS NO se comportan igual. En WKWebView el campo trae su PROPIA
+   anchura intrínseca (la del formato de fecha del sistema) y la impone por
+   encima del `w-full` de Tailwind: el recuadro se sale por la derecha de los
+   demás campos y su contenido sale centrado en vez de alineado a la izquierda.
+   Se veía en Ajustes → Mi Puesto → Antigüedad, desencajado respecto a "Centro /
+   Tienda" y "Sección", y en el mismo campo del registro.
+
+   El arreglo es quitarle el aspecto nativo y anular esa anchura intrínseca:
+   `min-width: 0` es la pieza imprescindible — sin ella el ancho mínimo del
+   control gana a `width: 100%` y el campo sigue desbordando.
+   Va aquí y no en las clases de cada campo para que valga también para los que
+   se añadan después. */
+input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+/* El contenedor del valor también se estira solo en iOS y vuelve a centrarlo. */
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+  min-width: 0;
+}
+
 /* Safe area: la gestiona ENTERA el CSS, nunca el WebView. En capacitor.config.json
    iOS va con contentInset "never" a propósito: con "always" el WKWebView aplicaba
    los insets por su cuenta y se sumaban a estos, dejando un hueco del doble arriba

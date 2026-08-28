@@ -76,6 +76,45 @@ export const tieneFindeLargoDe4Dias = (rank) => RANGOS_FINDE_LARGO_4_DIAS.includ
 // mano en Ajustes (profile.customTargets) o el Resumen va sin objetivos.
 export const OTHER_COMPANY = "Otra empresa";
 
+// Cadenas de fuera de ANGED que salen POR SU NOMBRE en el desplegable, en vez de
+// obligar a escribirlo a mano en "Otra empresa". Es solo comodidad de registro: a
+// efectos de la app reciben EXACTAMENTE el mismo trato que "Otra empresa"
+// —companyVerified = false, sin tienda, sin rango, cuenta activa desde el alta—
+// porque de su convenio no sabemos nada. La lista NO es una promesa de convenio.
+//
+// Escribirlas aquí evita además que el mismo sitio acabe guardado de diez formas
+// distintas ("mercadona", "MERCADONA", "Mercadona S.A."), que es lo que pasa
+// cuando cada uno lo teclea.
+//
+// Orden alfabético a propósito: son 21 y la gente busca la suya de un vistazo.
+export const NON_ANGED_COMPANIES = [
+  "Ahorramas",
+  "Alcampo",
+  "Aldi",
+  "Alimerka",
+  "BM Supermercados",
+  "Caprabo",
+  "Condis",
+  "Consum",
+  "Costco",
+  "Covirán",
+  "Dia",
+  "Eroski",
+  "Family Cash",
+  "Froiz",
+  "Gadis",
+  "Herbolarios Navarro",
+  "HiperDino",
+  "Lidl",
+  "Mercadona",
+  "Supermercados MAS",
+  "Veritas"
+];
+
+// ¿Es una de las cadenas de arriba? Sirve para saber si el nombre ya viene del
+// desplegable (y no hay que pedirlo por escrito).
+export const isNamedOtherCompany = (company) => NON_ANGED_COMPANIES.includes(company);
+
 export const isKnownCompany = (company) =>
   Object.prototype.hasOwnProperty.call(COMPANY_RULES, company);
 
