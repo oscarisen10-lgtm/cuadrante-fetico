@@ -134,11 +134,106 @@ describe('cambiarMiTienda', () => {
   });
 
   // Estas cuentas nacen ACTIVAS sin que ningún delegado las verifique, a cambio de
-  // quedarse sin tienda. Dejarles ponerse una sería saltarse al delegado.
-  test('una cuenta de fuera de ANGED NO puede asignarse tienda', async () => {
+  // quedarse sin tienda. Pedir tienda "a secas", sin declarar una empresa de ANGED,
+  // NO se la da: si no, sería el atajo para saltarse al delegado.
+  test('una cuenta de fuera de ANGED no se lleva tienda si no declara empresa', async () => {
+    const res = await fns.cambiarMiTienda.run(req(FUERA_UID, { store: TIENDA_A }));
+
+    expect(res.store).toBe('');
+    const d = await perfil(FUERA_UID);
+    expect(d.profile.store).toBe('');
+    expect(d.profile.companyVerified).toBe(false);
+  });
+
+  // El camino de vuelta (28-ago-2026). Antes esto se rechazaba en seco y quien se
+  // registraba en "Otra empresa" se quedaba encerrado ahí para siempre.
+  test('de fuera de ANGED a una empresa de ANGED: entra, pero PENDIENTE de verificar', async () => {
+    const res = await fns.cambiarMiTienda.run(
+      req(FUERA_UID, { company: 'S. Romero', store: TIENDA_A, rank: 'Jefes' })
+    );
+
+    expect(res.pendiente).toBe(true);
+    const d = await perfil(FUERA_UID);
+    expect(d.profile.store).toBe(TIENDA_A);
+    expect(d.profile.company).toBe('S. Romero');
+    expect(d.profile.companyVerified).toBe(true);
+    // Lo que impide que sea un atajo: la cuenta estaba ACTIVA y vuelve a pendiente.
+    expect(d.membership.active).toBe(false);
+    expect(d.membership.reason).toBe('alta-en-anged');
+  });
+
+  // Paso intermedio del formulario: se elige empresa y la tienda queda por elegir.
+  // No debe degradar la cuenta: sin tienda, ningún delegado la vería en su censo
+  // para poder activarla, y se quedaría atascada en pendiente para siempre.
+  test('elegir empresa de ANGED sin tienda todavía NO manda la cuenta a pendiente', async () => {
+    const res = await fns.cambiarMiTienda.run(
+      req(FUERA_UID, { company: 'Supercor', store: '' })
+    );
+
+    expect(res.pendiente).toBe(false);
+    expect((await perfil(FUERA_UID)).membership.active).toBe(true);
+  });
+
+  // La ida. Vaciar la tienda es lo importante: si se quedara puesta, seguiría
+  // leyendo las noticias de su antiguo delegado y contando en su censo.
+  test('de ANGED a "Otra empresa": vacía tienda y rango, y la cuenta SIGUE activa', async () => {
+    await db.collection('users').doc(USER_CENTRO).set({
+      profile: { fullName: 'Usuario Centro', store: TIENDA_A, company: 'Supercor', rank: 'Jefes' },
+      membership: { active: true },
+    });
+
+    const res = await fns.cambiarMiTienda.run(
+      req(USER_CENTRO, { company: 'Otra empresa', store: '' })
+    );
+
+    expect(res.pendiente).toBe(false);
+    const d = await perfil(USER_CENTRO);
+    expect(d.profile.store).toBe('');
+    expect(d.profile.rank).toBe('');
+    expect(d.profile.companyVerified).toBe(false);
+    // Fuera de ANGED no hay delegado que pudiera reactivarla: degradarla sería
+    // encerrarla para siempre.
+    expect(d.membership.active).toBe(true);
+  });
+
+  // Un delegado que se fuera conservaría su doc `delegados/{uid}` con sus tiendas:
+  // seguiría gestionando el censo de una empresa en la que ya no dice trabajar.
+  test('un DELEGADO no puede pasarse a una empresa de fuera de ANGED', async () => {
+    await db.collection('users').doc(DELEGADO_UID).set({
+      profile: { fullName: 'Delegada', store: TIENDA_A, company: 'Supercor' },
+      membership: { active: true },
+    });
+
     await expect(
-      fns.cambiarMiTienda.run(req(FUERA_UID, { store: TIENDA_A }))
-    ).rejects.toThrow(/permission-denied|fuera de ANGED/i);
+      fns.cambiarMiTienda.run(req(DELEGADO_UID, { company: 'Otra empresa', store: '' }))
+    ).rejects.toThrow(/failed-precondition|retirarte/i);
+  });
+
+  // Con Supercor y Exprés separados (28-ago-2026), una llamada directa podía declarar
+  // una empresa y una tienda que no se corresponden, y colarse en el censo de un
+  // delegado que no es el suyo. El desplegable nunca ofrecería esa combinación.
+  test('rechaza una tienda que no es de la empresa declarada', async () => {
+    await expect(
+      // PINEA es de S. Romero, no de ECI.
+      fns.cambiarMiTienda.run(req(USER_CENTRO, { company: 'ECI', store: TIENDA_A }))
+    ).rejects.toThrow(/invalid-argument|no es de esa empresa/i);
+  });
+
+  // Hasta el 28-ago-2026 el desplegable ofrecía TODAS las tiendas a quien elegía
+  // "Supercor", así que hay usuarios registrados como Supercor en centros que ahora
+  // son Exprés. Validar contra su empresa GUARDADA les dejaría sin poder cambiarse
+  // de tienda nunca más: la comprobación solo mira la empresa de la propia llamada.
+  test('no bloquea a quien ya tiene una empresa y una tienda que no casan', async () => {
+    await db.collection('users').doc(USER_CENTRO).set({
+      // BARQUILLO es de Exprés; su perfil dice Supercor. Combinación heredada real.
+      profile: { fullName: 'Usuario Centro', store: 'BARQUILLO', company: 'Supercor' },
+      membership: { active: true },
+    });
+
+    const res = await fns.cambiarMiTienda.run(req(USER_CENTRO, { store: 'ODONNEL' }));
+
+    expect(res.success).toBe(true);
+    expect((await perfil(USER_CENTRO)).profile.store).toBe('ODONNEL');
   });
 
   // F-04: antes solo se validaba la longitud y el desplegable del cliente era la

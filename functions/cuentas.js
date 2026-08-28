@@ -13,7 +13,7 @@ const functionsV1 = require("firebase-functions/v1");
 const { admin, db, ENFORCE_APP_CHECK } = require("./lib/firebase");
 const { NEWS_TOPIC, tokensFromProfile } = require("./lib/push");
 const { isAdminToken, requireAuth, getDelegadoDoc, isUserActive } = require("./lib/auth");
-const { isValidStore } = require("./lib/validStores");
+const { isValidStore, isAngedCompany, storeBelongsToCompany } = require("./lib/validStores");
 
 /**
  * purgeUserData — Borra de Firestore TODO lo asociado a un uid (perfil + subcolecciones,
@@ -115,6 +115,30 @@ exports.deleteMyAccount = onCall({
  * el único camino: cambiar de tienda DEVUELVE LA CUENTA A PENDIENTE, para que el
  * delegado de la tienda nueva la verifique. Admin y delegados quedan exentos (si no,
  * un delegado se bloquearía a sí mismo su propia pestaña al corregir su tienda).
+ *
+ * ── CAMBIO DE EMPRESA EN LOS DOS SENTIDOS (28-ago-2026) ──────────────────────
+ * Antes esta función RECHAZABA en seco a las cuentas de fuera de ANGED
+ * (companyVerified === false): quien se registraba en "Otra empresa" se quedaba
+ * ahí para siempre, y nadie —ni el delegado, pese a lo que decía el aviso de
+ * Ajustes— tenía forma de sacarle. Ahora se permiten los dos caminos:
+ *
+ *   Otra empresa → ANGED: se marca companyVerified = true y la cuenta VUELVE A
+ *     PENDIENTE en cuanto elige una tienda real. Esto es lo que impide que el
+ *     camino sea un atajo para saltarse al delegado: esas cuentas nacen activas
+ *     porque nadie puede verificarlas, así que al entrar en una tienda concreta
+ *     —que es lo que da acceso a las noticias del delegado y le mete en su
+ *     censo— hay que pasar por la verificación como cualquier alta.
+ *
+ *   ANGED → Otra empresa: se marca companyVerified = false y se vacían tienda y
+ *     rango EN LA MISMA ESCRITURA. Vaciar la tienda es imprescindible: si se
+ *     quedara puesta, el usuario seguiría leyendo las noticias de su antiguo
+ *     delegado y contando en su censo mientras declara trabajar en otro sitio.
+ *     La cuenta SE QUEDA ACTIVA: fuera de ANGED no hay ningún delegado que
+ *     pudiera reactivarla, así que degradarla sería encerrarla para siempre.
+ *
+ * La combinación empresa/tienda se valida contra el catálogo (storeBelongsToCompany):
+ * sin eso, una llamada directa podía declarar "ECI" con una tienda de Exprés y
+ * colarse en el censo de un delegado que no es el suyo.
  */
 exports.cambiarMiTienda = onCall({ maxInstances: 10, enforceAppCheck: ENFORCE_APP_CHECK }, async (request) => {
   const uid = requireAuth(request, HttpsError);
@@ -140,50 +164,103 @@ exports.cambiarMiTienda = onCall({ maxInstances: 10, enforceAppCheck: ENFORCE_AP
   const data = snap.data();
   const profile = data.profile || {};
 
-  // Las cuentas de fuera de ANGED nacen ACTIVAS sin que ningún delegado las verifique,
-  // y a cambio quedan encerradas SIN tienda (ver esAltaNoVerificada en firestore.rules).
-  // Dejarlas ponerse una tienda real sería saltarse al delegado por la puerta de atrás.
-  if (profile.companyVerified === false) {
+  // ¿Se pide cambiar de empresa, o solo de tienda? Se distingue "no viene empresa"
+  // de "viene una", porque no son lo mismo: un perfil antiguo puede no tener
+  // `company` guardada, y tratar esa ausencia como "está fuera de ANGED" le
+  // vaciaría la tienda sin que nadie lo hubiera pedido.
+  const companyRaw = request.data?.company;
+  const companyPedida = typeof companyRaw === "string" && companyRaw.trim()
+    ? companyRaw.trim()
+    : null;
+  if (companyPedida && companyPedida.length > 80) {
+    throw new HttpsError("invalid-argument", "Empresa no válida.");
+  }
+
+  const eraNoVerificada = profile.companyVerified === false;
+  const company = companyPedida ?? String(profile.company || "");
+
+  // `saleDeAnged` mira el DESTINO. Sin empresa pedida se conserva el estado actual:
+  // esta llamada es entonces un simple cambio de tienda.
+  const saleDeAnged = companyPedida ? !isAngedCompany(companyPedida) : eraNoVerificada;
+
+  // Fuera de ANGED nadie tiene tienda: es lo que las reglas llaman
+  // esAltaNoVerificada, y lo que impide leer las noticias de un delegado ajeno.
+  const storeFinal = saleDeAnged ? "" : store;
+
+  // La pertenencia SOLO se comprueba contra la empresa que llega en ESTA llamada,
+  // nunca contra la que ya tuviera guardada.
+  //
+  // ⚠️ No es un matiz: hasta el 28-ago-2026 el desplegable ofrecía TODAS las tiendas
+  // a quien elegía "Supercor" (ese era el fallo de Exprés), así que hay usuarios ya
+  // registrados como Supercor trabajando en centros que ahora clasificamos como
+  // Exprés. Validar contra su empresa guardada les dejaría sin poder cambiarse de
+  // tienda nunca más — les romperíamos la app por corregir un dato nuestro.
+  if (!saleDeAnged && companyPedida && !storeBelongsToCompany(storeFinal, companyPedida)) {
+    throw new HttpsError("invalid-argument", "Esa tienda no es de esa empresa.");
+  }
+
+  // Un delegado que se marchara de ANGED conservaría su doc `delegados/{uid}` con
+  // sus tiendas: seguiría gestionando el censo de una empresa en la que ya no dice
+  // trabajar. Que el admin le retire primero.
+  const esDelegado = !!(await getDelegadoDoc(uid));
+  if (saleDeAnged && esDelegado) {
     throw new HttpsError(
-      "permission-denied",
-      "Tu cuenta es de una empresa de fuera de ANGED y no puede asignarse una tienda."
+      "failed-precondition",
+      "Eres delegado: el administrador tiene que retirarte antes de cambiarte a una empresa de fuera."
     );
   }
 
-  // Sin cambio real no se toca membership: así abrir Ajustes y reelegir la misma
-  // tienda no devuelve la cuenta a pendiente sin motivo. Se normaliza porque un perfil
-  // antiguo puede no tener el campo, y `undefined === ""` sería un falso cambio.
-  if (String(profile.store || "") === store) {
-    return { success: true, store, pendiente: !isUserActive(data) };
+  // Sin cambio real no se toca membership: así abrir Ajustes y reelegir lo mismo no
+  // devuelve la cuenta a pendiente sin motivo. Se normaliza porque un perfil antiguo
+  // puede no tener los campos, y `undefined === ""` sería un falso cambio.
+  const mismaEmpresa = String(profile.company || "") === company &&
+                       eraNoVerificada === saleDeAnged;
+  if (String(profile.store || "") === storeFinal && mismaEmpresa) {
+    return { success: true, store: storeFinal, pendiente: !isUserActive(data) };
   }
 
-  // Admin y delegados no se degradan: se quedarían sin acceso a su propia gestión.
-  const esDelegado = !!(await getDelegadoDoc(uid));
-  const mantieneActiva = isAdminToken(request.auth.token) || esDelegado;
+  const update = { profile: { store: storeFinal } };
 
-  const update = { profile: { store } };
-
-  const company = request.data?.company;
-  if (typeof company === "string" && company.trim() && company.length <= 80) {
-    update.profile.company = company.trim();
+  // La empresa solo se toca si se ha pedido cambiarla. Escribir `company` y
+  // `companyVerified` en un simple cambio de tienda le pondría empresa a perfiles
+  // antiguos que no la tenían, y eso decide su convenio.
+  if (companyPedida) {
+    update.profile.company = companyPedida;
+    update.profile.companyVerified = !saleDeAnged;
   }
+
+  // El rango es del convenio: fuera de ANGED no significa nada y se vacía.
   const rank = request.data?.rank;
-  if (typeof rank === "string" && rank.trim() && rank.length <= 80) {
+  if (saleDeAnged) {
+    update.profile.rank = "";
+  } else if (typeof rank === "string" && rank.trim() && rank.length <= 80) {
     update.profile.rank = rank.trim();
   }
 
-  if (!mantieneActiva) {
+  // ¿Hay que devolver la cuenta a PENDIENTE?
+  //   - Admin y delegados nunca: se quedarían sin acceso a su propia gestión.
+  //   - Quien SALE de ANGED tampoco: ahí fuera no hay delegado que pueda
+  //     reactivarle, así que degradarle sería encerrarle para siempre.
+  //   - Solo cuando acaba en una tienda REAL. Con la tienda vacía (paso
+  //     intermedio: se elige empresa y luego centro) la cuenta sería invisible
+  //     para todo delegado —el censo va por tienda— y se quedaría atascada en
+  //     pendiente sin que nadie pudiera verla para activarla.
+  const exento = isAdminToken(request.auth.token) || esDelegado;
+  const pasaAPendiente = !exento && !saleDeAnged && storeFinal !== "" &&
+                         storeFinal !== "Centro sin definir";
+
+  if (pasaAPendiente) {
     update.membership = {
       active: false,
       updatedAt: Date.now(),
       updatedBy: uid,
-      reason: "cambio-de-tienda",
+      reason: eraNoVerificada ? "alta-en-anged" : "cambio-de-tienda",
     };
   }
 
   await ref.set(update, { merge: true });
 
-  return { success: true, store, pendiente: !mantieneActiva };
+  return { success: true, store: storeFinal, pendiente: pasaAPendiente };
 });
 
 /**

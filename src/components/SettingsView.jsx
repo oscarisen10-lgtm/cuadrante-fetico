@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, ShieldCheck, Users, HelpCircle, Target, Share2, Link2, CalendarDays } from 'lucide-react';
-import { COMPANY_RULES, isAdminUser, hasKnownConvenio, CUSTOM_TARGET_FIELDS } from '../constants/config';
+import { COMPANY_RULES, isAdminUser, hasKnownConvenio, CUSTOM_TARGET_FIELDS, OTHER_COMPANY } from '../constants/config';
 import { storesForCompany, formatStoreName } from '../constants/stores';
 import { deleteUserAccount, cambiarMiTienda } from '../services/firebaseService';
 import { firestoreCacheMode } from '../firebase';
@@ -45,23 +45,47 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
   // delegado de la tienda nueva. Admin y delegados no se degradan.
   const [cambiandoTienda, setCambiandoTienda] = useState(false);
 
-  const handleStoreChange = async (updates) => {
+  // `localPatch` existe porque el servidor hace MÁS que lo enviado: al salir de ANGED
+  // vacía también rango y marca companyVerified. Pintar solo `updates` dejaría la
+  // pantalla a medias (seguiría enseñando el desplegable de rango de una empresa que
+  // ya no es la suya) hasta que llegara el snapshot.
+  const handleStoreChange = async (updates, localPatch = updates) => {
     setCambiandoTienda(true);
     try {
       const res = await cambiarMiTienda(updates);
       // El servidor ya lo ha guardado: píntalo sin esperar al onSnapshot. Sin esto,
       // el desplegable seguía en la empresa vieja hasta que llegara el snapshot —y
       // si la conexión estaba dormida, hasta reabrir la app.
-      applyProfileLocally(updates);
+      applyProfileLocally(localPatch);
       if (res?.pendiente) {
-        toast('Tienda actualizada. Tu cuenta queda pendiente de que la verifique el delegado de tu nueva tienda.', 'warning');
+        toast('Guardado. Tu cuenta queda pendiente de que la verifique el delegado de tu nueva tienda.', 'warning');
       } else {
-        toast('Tienda actualizada.', 'success');
+        toast('Guardado.', 'success');
       }
     } catch (error) {
-      toast('No se pudo cambiar la tienda: ' + (error?.message || error), 'error');
+      toast('No se pudo guardar el cambio: ' + (error?.message || error), 'error');
     }
     setCambiandoTienda(false);
+  };
+
+  // Cambiar de EMPRESA pasa por la misma function que la tienda, porque las dos cosas
+  // van juntas: cada empresa tiene sus centros, así que la tienda se vacía y hay que
+  // reelegirla. Y desde el 28-ago-2026 también cubre entrar y salir de ANGED.
+  const handleCompanyChange = (newCompany) => {
+    if (newCompany === OTHER_COMPANY) {
+      // Fuera de ANGED no hay convenio: el servidor vacía tienda y rango. La cuenta
+      // se queda activa (ahí fuera no hay delegado que pudiera reactivarla).
+      handleStoreChange(
+        { company: OTHER_COMPANY, store: "" },
+        { company: OTHER_COMPANY, store: "", rank: "", companyVerified: false }
+      );
+      return;
+    }
+    const firstRank = Object.keys(COMPANY_RULES[newCompany] || {})[0];
+    handleStoreChange(
+      { company: newCompany, rank: firstRank, store: "" },
+      { company: newCompany, rank: firstRank, store: "", companyVerified: true }
+    );
   };
 
   // Los campos de texto se guardan al SALIR del campo (onBlur), no en cada tecla:
@@ -109,53 +133,49 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                 <span className="text-xs font-bold text-white uppercase leading-none">{esOtraEmpresa ? "Mi Empresa" : "Mi Puesto"}</span>
              </div>
 
-             {/* Fuera de ANGED: SOLO el nombre de la empresa. Ni rango, ni centro,
-                 ni sección — no calculan nada y pueden no venir a cuento (un
-                 camarero no tiene "sección de charcutería"). Tampoco se ofrece el
-                 desplegable de empresas: pasarse a una de ANGED desde aquí se
-                 saltaría la verificación del delegado, porque la cuenta ya nació
-                 activa. Ese camino se cierra en el cliente a propósito. */}
-             {esOtraEmpresa ? (
+             {/* Fuera de ANGED no se enseñan rango, centro ni sección: no calculan nada
+                 y pueden no venir a cuento (un camarero no tiene "sección de
+                 charcutería"). Lo que sí se enseña siempre es la EMPRESA.
+
+                 Empresa: SIEMPRE visible, también fuera de ANGED. Hasta el 28-ago-2026
+                 quien se registraba en "Otra empresa" solo veía un campo de texto y se
+                 quedaba encerrado ahí; el aviso le decía que hablara con su delegado,
+                 pero no existía ninguna pantalla —ni de delegado ni de admin— capaz de
+                 moverle. Ahora se entra y se sale por aquí, y la verificación del
+                 delegado la sigue garantizando la function (ver cambiarMiTienda). */}
+             <div className="grid grid-cols-2 gap-3">
                <div className="flex flex-col space-y-1">
                   <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1">Empresa</span>
-                  <input
-                    type="text"
-                    value={companyDraft ?? (user?.company || "")}
-                    maxLength={60}
-                    placeholder="Escribe tu empresa"
-                    onChange={(e) => setCompanyDraft(e.target.value)}
-                    onBlur={() => {
-                      if (companyDraft === null) return;
-                      setCompanyDraft(null);
-                      handleProfileChange({ company: companyDraft.trim(), companyVerified: false });
-                    }}
-                    className="w-full bg-white/10 border border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] p-2.5 rounded-xl text-xs outline-none text-white placeholder:text-white/25 font-medium"
-                  />
-                  <span className="text-[8px] text-white/30 font-bold uppercase tracking-tight ml-1 pt-1 leading-tight">
-                    ¿Trabajas en Supercor, S. Romero, S. Express o ECI? Habla con tu delegado para que te pase a tu empresa
-                  </span>
+                  <select
+                    value={esOtraEmpresa ? OTHER_COMPANY : currentCompany}
+                    disabled={cambiandoTienda}
+                    onChange={(e) => handleCompanyChange(e.target.value)}
+                    className="w-full bg-white/10 border border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] p-2 rounded-xl text-xs outline-none text-white appearance-none"
+                  >
+                    {Object.keys(COMPANY_RULES).map(c => <option key={c} value={c} className="text-slate-800">{c}</option>)}
+                    <option value={OTHER_COMPANY} className="text-slate-800">{OTHER_COMPANY}</option>
+                  </select>
                </div>
-             ) : (
-               <>
-                 <div className="grid grid-cols-2 gap-3">
-                   <div className="flex flex-col space-y-1">
-                      <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1">Empresa</span>
-                      <select
-                        value={currentCompany}
-                        disabled={cambiandoTienda}
-                        onChange={(e) => {
-                          const newCompany = e.target.value;
-                          const firstRank = Object.keys(COMPANY_RULES[newCompany] || {})[0];
-                          // Cambiar de empresa vacía la tienda (cada empresa tiene sus
-                          // centros), así que también pasa por la function.
-                          handleStoreChange({ company: newCompany, rank: firstRank, store: "" });
+               <div className="flex flex-col space-y-1">
+                  {esOtraEmpresa ? (
+                    <>
+                      <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1">Nombre</span>
+                      <input
+                        type="text"
+                        value={companyDraft ?? (user?.company === OTHER_COMPANY ? "" : (user?.company || ""))}
+                        maxLength={60}
+                        placeholder="Escribe tu empresa"
+                        onChange={(e) => setCompanyDraft(e.target.value)}
+                        onBlur={() => {
+                          if (companyDraft === null) return;
+                          setCompanyDraft(null);
+                          handleProfileChange({ company: companyDraft.trim() || OTHER_COMPANY, companyVerified: false });
                         }}
-                        className="w-full bg-white/10 border border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] p-2 rounded-xl text-xs outline-none text-white appearance-none"
-                      >
-                        {Object.keys(COMPANY_RULES).map(c => <option key={c} value={c} className="text-slate-800">{c}</option>)}
-                      </select>
-                   </div>
-                   <div className="flex flex-col space-y-1">
+                        className="w-full bg-white/10 border border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] p-2 rounded-xl text-xs outline-none text-white placeholder:text-white/25 font-medium"
+                      />
+                    </>
+                  ) : (
+                    <>
                       <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1">Rango</span>
                       <select
                         value={currentRank}
@@ -164,8 +184,17 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                       >
                         {Object.keys(COMPANY_RULES[currentCompany] || {}).map(r => <option key={r} value={r} className="text-slate-800">{r}</option>)}
                       </select>
-                   </div>
-                 </div>
+                    </>
+                  )}
+               </div>
+             </div>
+
+             {esOtraEmpresa ? (
+               <span className="text-[8px] text-white/30 font-bold uppercase tracking-tight ml-1 leading-tight">
+                 Al pasarte a una empresa de ANGED, tu cuenta queda pendiente de que la verifique el delegado de tu centro
+               </span>
+             ) : (
+               <>
 
                  <div className="flex flex-col space-y-1 mt-1">
                    <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1 flex items-center gap-1">
