@@ -1,6 +1,32 @@
 import React, { useState } from 'react';
-import { Phone, Mail, Bell, BellOff, UserCheck, UserX, ChevronDown, ChevronUp } from 'lucide-react';
+import { Phone, Mail, Bell, BellOff, UserCheck, UserX, ChevronDown, ChevronUp, Activity, UserMinus } from 'lucide-react';
 import { formatStoreName } from '../constants/stores';
+
+const DIA_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Cómo se resume "cuándo abrió la app por última vez".
+ *
+ * `null` NO es "hace mucho": es que su app no sella actividad (anteriores a agosto
+ * de 2026). Pintarlo como abandono acusaría de baja a gente que quizá entra a
+ * diario, así que tiene su propia etiqueta gris.
+ */
+const resumenActividad = (lastActiveAt) => {
+  if (typeof lastActiveAt !== 'number') {
+    return {
+      label: 'Sin datos',
+      tone: 'text-slate-400 bg-slate-50',
+      title: 'Su versión de la app no registra actividad (anterior a agosto de 2026). No significa que no la use.',
+    };
+  }
+  const dias = Math.floor((Date.now() - lastActiveAt) / DIA_MS);
+  const fecha = new Date(lastActiveAt).toLocaleDateString('es-ES');
+  const title = `Última vez que abrió la app: ${fecha}`;
+  if (dias <= 7) return { label: 'Activo', tone: 'text-emerald-600 bg-emerald-50', title };
+  if (dias <= 30) return { label: `Hace ${dias} días`, tone: 'text-slate-500 bg-slate-50', title };
+  if (dias <= 60) return { label: `Hace ${dias} días`, tone: 'text-amber-600 bg-amber-50', title };
+  return { label: `Hace ${dias} días`, tone: 'text-rose-600 bg-rose-50', title };
+};
 
 /**
  * UserCard — Ficha de usuario compartida por la pestaña "Usuarios" (delegado y
@@ -17,6 +43,7 @@ import { formatStoreName } from '../constants/stores';
  */
 export const UserCard = React.memo(function UserCard({ u, collapsible = false, busy = false, onToggleActive, onExpel }) {
   const [open, setOpen] = useState(!collapsible);
+  const actividad = resumenActividad(u.lastActiveAt);
 
   const meta = (
     <>
@@ -92,6 +119,26 @@ export const UserCard = React.memo(function UserCard({ u, collapsible = false, b
             >
               {u.hasPush ? <Bell size={11} /> : <BellOff size={11} />} Push
             </span>
+          </div>
+
+          {/* Última vez que abrió la app, y si sus dispositivos ya no existen para
+              Firebase. Es lo más cerca que se puede estar de saber quién la ha
+              desinstalado: nadie lo notifica. */}
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <span
+              className={`flex items-center gap-1.5 text-[9px] font-black uppercase px-2 py-1.5 rounded-xl ${actividad.tone}`}
+              title={actividad.title}
+            >
+              <Activity size={11} /> {actividad.label}
+            </span>
+            {u.pushMuerto && (
+              <span
+                className="flex items-center gap-1.5 text-[9px] font-black uppercase px-2 py-1.5 rounded-xl text-rose-600 bg-rose-50"
+                title="Firebase rechazó sus dispositivos al enviarle un aviso: probablemente desinstaló la app. Se corrige solo si vuelve a abrirla."
+              >
+                <UserMinus size={11} /> Posible baja
+              </span>
+            )}
           </div>
 
           {/* Expulsar (se fue de la empresa) / Readmitir (solo la ve el admin) */}

@@ -47,19 +47,29 @@ const MAX_DEVICE_TOKENS = 5;
  * arrayUnion evita leer antes de escribir y es seguro si dos dispositivos coinciden.
  * El campo viejo se borra en la misma escritura para que un token que ya no es de
  * nadie no siga recibiendo las push de esta cuenta.
+ *
+ * Registrar un token es además la PRUEBA de que la app está instalada y abierta,
+ * así que apaga `pushMuerto` — la marca que pone el backend cuando FCM le dice que
+ * los tokens de esta cuenta ya no existen (ver purgeDeadTokens). Sin esto, quien
+ * desinstalara y volviera a instalar se quedaría marcado como baja para siempre.
  */
 const saveDeviceToken = async (uid, token, tokensActuales) => {
   const previos = Array.isArray(tokensActuales) ? tokensActuales : [];
   if (previos.includes(token)) return;
 
   const ref = doc(db, 'users', uid);
+  const comunes = {
+    'profile.fcmToken': deleteField(),
+    'profile.pushMuerto': deleteField(),
+    'profile.pushMuertoAt': deleteField(),
+  };
   if (previos.length >= MAX_DEVICE_TOKENS) {
     // Solo en este caso raro se escribe el array entero (arrayUnion no puede recortar).
     const recortado = [...previos.slice(previos.length - MAX_DEVICE_TOKENS + 1), token];
-    await updateDoc(ref, { 'profile.fcmTokens': recortado, 'profile.fcmToken': deleteField() });
+    await updateDoc(ref, { ...comunes, 'profile.fcmTokens': recortado });
     return;
   }
-  await updateDoc(ref, { 'profile.fcmTokens': arrayUnion(token), 'profile.fcmToken': deleteField() });
+  await updateDoc(ref, { ...comunes, 'profile.fcmTokens': arrayUnion(token) });
 };
 
 export const useNotifications = (user) => {

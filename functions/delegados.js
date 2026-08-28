@@ -64,6 +64,16 @@ async function withPanelCache(docId, wantsFresh, compute) {
 // profile.lastActiveAt al arrancar (ver recordActivity en el cliente).
 const ACTIVOS_VENTANA_DIAS = 7;
 
+// Ventanas de ABANDONO. No existe ninguna señal fiable de "ha desinstalado la
+// app": ni Google ni Apple la mandan. Lo más cercano es cruzar dos indicios:
+//   - lleva mucho sin abrir la app (lastActiveAt viejo), y
+//   - su push está muerto (profile.pushMuerto, que pone purgeDeadTokens cuando
+//     FCM responde que sus tokens ya no existen).
+// Ninguno de los dos es prueba: se puede tener la app instalada y no abrirla en
+// dos meses. Por eso se dan por separado y NO se llaman "desinstalaciones".
+const INACTIVOS_VENTANAS_DIAS = [30, 60];
+const DIA_MS = 24 * 60 * 60 * 1000;
+
 /**
  * Actividad de cada delegado: cuántas noticias ha publicado y cuántos push ha
  * lanzado. Ambos viven en `noticiasTienda`; los push son los docs con
@@ -139,11 +149,19 @@ exports.adminStats = onCall({
     // problema de entrega está en iOS o en Android.
     let pushIos = 0, pushAndroid = 0;
     let activos7d = 0, activos7dIos = 0, activos7dAndroid = 0;
+    // Abandono: inactivos por ventana, sin sello de actividad, y push muerto.
+    const inactivos = {};       // { 30: {total, ios, android}, 60: {...} }
+    INACTIVOS_VENTANAS_DIAS.forEach((dias) => { inactivos[dias] = { total: 0, ios: 0, android: 0 }; });
+    let sinActividad = 0, pushMuerto = 0, pushMuertoIos = 0, pushMuertoAndroid = 0;
 
-    const desde7d = Date.now() - ACTIVOS_VENTANA_DIAS * 24 * 60 * 60 * 1000;
+    const ahora = Date.now();
+    const desde7d = ahora - ACTIVOS_VENTANA_DIAS * DIA_MS;
 
     const stream = db().collection("users")
-      .select("profile.platform", "profile.hasFichado", ...TOKEN_FIELDS, "profile.lastActiveAt")
+      .select(
+        "profile.platform", "profile.hasFichado", ...TOKEN_FIELDS,
+        "profile.lastActiveAt", "profile.pushMuerto",
+      )
       .stream();
 
     for await (const d of stream) {
@@ -159,13 +177,36 @@ exports.adminStats = onCall({
         if (p.platform === "ios") pushIos += 1;
         else if (p.platform === "android") pushAndroid += 1;
       }
-      // lastActiveAt lo empezó a escribir la app el 05-ago-2026: las builds
-      // anteriores no lo tienen y cuentan como inactivas hasta que se actualicen.
-      if (typeof p.lastActiveAt === "number" && p.lastActiveAt >= desde7d) {
+
+      // Push muerto: FCM confirmó que sus tokens ya no existen (ver purgeDeadTokens).
+      // Es el indicio MÁS fuerte de app desinstalada, aunque tampoco es prueba:
+      // también sale al reinstalar o tras meses sin abrirla.
+      if (p.pushMuerto === true) {
+        pushMuerto += 1;
+        if (p.platform === "ios") pushMuertoIos += 1;
+        else if (p.platform === "android") pushMuertoAndroid += 1;
+      }
+
+      // lastActiveAt lo empezó a escribir la app el 05-ago-2026. Quien no lo tenga
+      // NO es un inactivo: es un desconocido (app vieja). Mezclarlos inflaría el
+      // recuento de abandono con gente que quizá entra a diario.
+      if (typeof p.lastActiveAt !== "number") {
+        sinActividad += 1;
+        continue;
+      }
+      if (p.lastActiveAt >= desde7d) {
         activos7d += 1;
         if (p.platform === "ios") activos7dIos += 1;
         else if (p.platform === "android") activos7dAndroid += 1;
       }
+      // Ventanas acumulativas: quien lleva 70 días cuenta en la de 30 y en la de 60.
+      INACTIVOS_VENTANAS_DIAS.forEach((dias) => {
+        if (p.lastActiveAt < ahora - dias * DIA_MS) {
+          inactivos[dias].total += 1;
+          if (p.platform === "ios") inactivos[dias].ios += 1;
+          else if (p.platform === "android") inactivos[dias].android += 1;
+        }
+      });
     }
 
     const delegados = await contarDelegadosConActividad();
@@ -175,6 +216,8 @@ exports.adminStats = onCall({
       conPush, pushIos, pushAndroid,
       activos7d, activos7dIos, activos7dAndroid,
       ventanaDias: ACTIVOS_VENTANA_DIAS,
+      inactivos, ventanasInactividad: INACTIVOS_VENTANAS_DIAS, sinActividad,
+      pushMuerto, pushMuertoIos, pushMuertoAndroid,
       ...delegados,
     };
   });
@@ -193,6 +236,9 @@ exports.adminStats = onCall({
 const LIST_USERS_FIELDS = [
   "profile.fullName", "profile.email", "profile.phone", "profile.section",
   "profile.store", ...TOKEN_FIELDS, "profile.platform", "membership",
+  // Para distinguir a quien sigue usando la app de quien la tiene abandonada o
+  // desinstalada. Un recuento dice cuántos son; esto dice QUIÉNES.
+  "profile.lastActiveAt", "profile.pushMuerto",
 ];
 
 // timeout/memoria por encima del global: la opción "Total" del admin recorre todos
@@ -257,6 +303,10 @@ exports.delegadoListUsers = onCall({
       store: p.store || "Sin tienda",
       platform: p.platform || "",
       hasPush: tokensFromProfile(p).length > 0,
+      // null = app anterior a agosto de 2026, que no sellaba actividad. NO es lo
+      // mismo que "lleva mucho sin entrar", y la app lo distingue al pintarlo.
+      lastActiveAt: typeof p.lastActiveAt === "number" ? p.lastActiveAt : null,
+      pushMuerto: p.pushMuerto === true,
       active: isUserActive(data),
       expelled: !!(data.membership && data.membership.expelled),
     };

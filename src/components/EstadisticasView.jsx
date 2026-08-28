@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { BarChart3, Users, Bell, Activity, Newspaper, Send, RefreshCw, Apple, Smartphone, Globe, Timer } from 'lucide-react';
+import { BarChart3, Users, Bell, Activity, Newspaper, Send, RefreshCw, Apple, Smartphone, Globe, Timer, UserMinus } from 'lucide-react';
 import { fetchAdminStats } from '../services/firebaseService';
 import { toast } from '../services/toastBus';
 import { LoadingLogo } from './UIComponents';
@@ -75,6 +75,7 @@ export const EstadisticasView = React.memo(function EstadisticasView() {
 
   const delegados = stats?.delegadosActividad || [];
   const ventana = stats?.ventanaDias ?? 7;
+  const ventanasInactividad = stats?.ventanasInactividad ?? [30, 60];
 
   return (
     <div className="flex flex-col gap-5 animate-in fade-in duration-300 pb-20">
@@ -106,6 +107,42 @@ export const EstadisticasView = React.memo(function EstadisticasView() {
               registraban actividad: cuentan como inactivas hasta que se actualicen.
             </p>
             <PlatformSplit ios={stats?.activos7dIos} android={stats?.activos7dAndroid} />
+          </Panel>
+
+          {/* Abandono. A propósito NO se llama "desinstalaciones": no existe ninguna
+              señal fiable de eso (ni Google ni Apple la mandan), así que se enseñan
+              los dos indicios por separado y se dice qué significa cada uno. */}
+          <Panel icon={<UserMinus size={14} className="text-rose-600" />} title="Posibles bajas">
+            <div className="space-y-2">
+              {ventanasInactividad.map((dias) => (
+                <div key={dias} className="flex justify-between items-center bg-rose-500/10 rounded-2xl px-3.5 py-3">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+                    Sin abrir la app en {dias} días
+                  </span>
+                  <span className="text-lg font-black tracking-tighter text-rose-700">
+                    {stats?.inactivos?.[dias]?.total ?? '—'}
+                  </span>
+                </div>
+              ))}
+              <div className="flex justify-between items-center bg-slate-500/10 rounded-2xl px-3.5 py-3">
+                <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+                  Push muerto (sin ningún dispositivo)
+                </span>
+                <span className="text-lg font-black tracking-tighter text-slate-700">{stats?.pushMuerto ?? '—'}</span>
+              </div>
+              <PlatformSplit ios={stats?.pushMuertoIos} android={stats?.pushMuertoAndroid} />
+            </div>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 leading-relaxed mt-3">
+              Ni Apple ni Google avisan cuando alguien desinstala. «Push muerto» es lo más
+              parecido: sus dispositivos ya no existen para Firebase. También sale al
+              reinstalar o tras meses sin abrirla, así que es un indicio, no una baja
+              confirmada. Se descubre al enviarle un aviso, no antes.
+            </p>
+            {stats?.sinActividad > 0 && (
+              <p className="text-[8px] text-slate-400 uppercase font-bold tracking-tight mt-2 leading-tight">
+                {stats.sinActividad} sin registro de actividad (apps anteriores a agosto de 2026): no cuentan como inactivos
+              </p>
+            )}
           </Panel>
 
           <Panel icon={<Timer size={14} className="text-amber-600" />} title="Uso de Fichar">

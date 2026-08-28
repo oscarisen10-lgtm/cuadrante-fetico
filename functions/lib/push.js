@@ -6,7 +6,7 @@
  * del dominio de los iconos o el de `apns-push-type: alert`— había que acordarse
  * de aplicarlo tres veces. Aquí vive una sola vez.
  */
-const { admin } = require("./firebase");
+const { admin, db } = require("./firebase");
 
 // Topic de FCM para el broadcast de noticias. Enviar a un topic cuesta UNA llamada y
 // CERO lecturas de Firestore (antes cada push leía TODA la colección de usuarios para
@@ -109,9 +109,84 @@ const SEND_CONCURRENCY = 5;
 const TOKENS_PER_MULTICAST = 500; // máximo que admite sendEachForMulticast
 
 /**
+ * Códigos de FCM que significan "este token ya NO existe", frente a un fallo
+ * pasajero (red, cuota, servicio caído) que NO debe borrar nada.
+ *
+ * Es la ÚNICA señal de desinstalación que existe: ni Google ni Apple avisan
+ * cuando alguien borra la app. El token se queda guardado como si nada, y solo se
+ * descubre que está muerto al INTENTAR enviarle algo. Ojo: también sale al
+ * reinstalar (el token cambia) o tras meses de inactividad (Google los caduca
+ * solos), así que "token muerto" no es sinónimo exacto de "desinstalada".
+ */
+const DEAD_TOKEN_CODES = new Set([
+  "messaging/registration-token-not-registered",
+  "messaging/invalid-registration-token",
+  "messaging/invalid-argument",
+]);
+
+/**
+ * Borra de los perfiles los tokens que FCM ha dado por muertos, y marca
+ * `profile.pushMuerto` en quien se queda SIN ningún dispositivo.
+ *
+ * Mejor esfuerzo: es limpieza, nunca debe tumbar un envío que ya salió bien.
+ * `array-contains-any` e `in` admiten 30 valores, así que localizar a los dueños
+ * cuesta una consulta por cada 30 tokens en vez de una por token.
+ */
+async function purgeDeadTokens(deadTokens) {
+  const muertos = [...new Set(deadTokens)].filter(Boolean);
+  if (muertos.length === 0) return 0;
+
+  const porUsuario = new Map(); // uid -> { ref, muertos:Set }
+  const anota = (doc, token) => {
+    const acc = porUsuario.get(doc.id) || { ref: doc.ref, data: doc.data(), muertos: new Set() };
+    acc.muertos.add(token);
+    porUsuario.set(doc.id, acc);
+  };
+
+  for (let i = 0; i < muertos.length; i += 30) {
+    const lote = muertos.slice(i, i + 30);
+    // Los dos modelos a la vez: `fcmTokens` (array, actual) y `fcmToken` (string,
+    // apps anteriores al 28-ago-2026), que aún conviven.
+    const [porArray, porString] = await Promise.all([
+      db().collection("users").where("profile.fcmTokens", "array-contains-any", lote).select(...TOKEN_FIELDS).get(),
+      db().collection("users").where("profile.fcmToken", "in", lote).select(...TOKEN_FIELDS).get(),
+    ]);
+    const enLote = new Set(lote);
+    [porArray, porString].forEach((snap) => snap.forEach((doc) => {
+      tokensFromProfile(doc.data().profile)
+        .filter((t) => enLote.has(t))
+        .forEach((t) => anota(doc, t));
+    }));
+  }
+
+  let limpiados = 0;
+  for (const { ref, data, muertos: suyos } of porUsuario.values()) {
+    const vivos = tokensFromProfile(data.profile).filter((t) => !suyos.has(t));
+    const update = {
+      "profile.fcmTokens": vivos,
+      "profile.fcmToken": admin.firestore.FieldValue.delete(),
+    };
+    // Sin ningún dispositivo vivo: la app no está instalada en ninguna parte. Lo
+    // apaga el propio cliente en cuanto vuelva a registrar un token (ver
+    // saveDeviceToken), así que una reinstalación se corrige sola.
+    if (vivos.length === 0) {
+      update["profile.pushMuerto"] = true;
+      update["profile.pushMuertoAt"] = Date.now();
+    }
+    await ref.update(update).catch((e) => console.warn("purgeDeadTokens:", e.message));
+    limpiados += suyos.size;
+  }
+  return limpiados;
+}
+
+/**
  * Envío dirigido por token, en lotes paralelos.
- * Devuelve { ok, ko, total } — si `ok + ko < total`, el envío quedó INCOMPLETO y
- * quien llama debe registrarlo (no es lo mismo que un token muerto).
+ * Devuelve { ok, ko, total, muertos } — si `ok + ko < total`, el envío quedó
+ * INCOMPLETO (no es lo mismo que un token muerto) y quien llama debe registrarlo.
+ *
+ * De paso LIMPIA los tokens que FCM da por inexistentes: sin esto, un móvil que
+ * desinstaló la app seguía en la lista para siempre, contaba como "con push
+ * activo" en el panel de admin y se le reintentaba el envío en cada aviso.
  */
 async function sendToTokens(tokens, title, body) {
   const all = [...tokens];
@@ -124,6 +199,7 @@ async function sendToTokens(tokens, title, body) {
 
   let ok = 0;
   let ko = 0;
+  const muertos = [];
   for (let i = 0; i < chunks.length; i += SEND_CONCURRENCY) {
     const wave = chunks.slice(i, i + SEND_CONCURRENCY);
     // allSettled: que un lote falle entero no debe impedir el envío de los demás.
@@ -134,13 +210,32 @@ async function sendToTokens(tokens, title, body) {
       if (r.status === "fulfilled") {
         ok += r.value.successCount;
         ko += r.value.failureCount;
+        // El orden de `responses` es el de los tokens enviados: así se sabe QUÉ
+        // token concreto ha muerto, no solo cuántos fallaron.
+        r.value.responses.forEach((resp, j) => {
+          if (!resp.success && DEAD_TOKEN_CODES.has(resp.error && resp.error.code)) {
+            muertos.push(wave[idx][j]);
+          }
+        });
       } else {
+        // Lote caído entero: es un fallo de transporte, NO prueba de que los
+        // tokens estén muertos. No se borra ninguno.
         ko += wave[idx].length;
         console.error("sendToTokens: un lote completo falló:", r.reason && r.reason.message);
       }
     });
   }
-  return { ok, ko, total: all.length };
+
+  if (muertos.length > 0) {
+    try {
+      const limpiados = await purgeDeadTokens(muertos);
+      console.log(`sendToTokens: ${limpiados} tokens muertos retirados de los perfiles.`);
+    } catch (e) {
+      console.error("sendToTokens: no se pudieron limpiar los tokens muertos:", e.message);
+    }
+  }
+
+  return { ok, ko, total: all.length, muertos: muertos.length };
 }
 
 /**
@@ -169,5 +264,6 @@ async function tokensForStores(db, stores) {
 
 module.exports = {
   NEWS_TOPIC, TOKEN_FIELDS, buildMessage, sendToNewsTopic, sendToTokens,
-  tokensForStores, tokensFromProfile, collectTokens,
+  tokensForStores, tokensFromProfile, collectTokens, purgeDeadTokens,
+  DEAD_TOKEN_CODES,
 };

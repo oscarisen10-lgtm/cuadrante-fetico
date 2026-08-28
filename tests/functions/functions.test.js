@@ -259,6 +259,105 @@ describe('cambiarMiTienda', () => {
 });
 
 // ───────────────────────────────────────────────────────────────────────────────
+// Limpieza de tokens muertos. Es la única señal de "app desinstalada" que existe:
+// nadie la notifica, solo se descubre al INTENTAR enviar. Lo delicado es no pasarse
+// borrando — un fallo de red no es un token muerto.
+describe('purgeDeadTokens', () => {
+  const push = require_(join(ROOT, 'functions', 'lib', 'push.js'));
+
+  test('retira solo el token muerto y deja vivos los demás del mismo usuario', async () => {
+    await db.collection('users').doc(USER_CENTRO).set({
+      profile: { fullName: 'Usuario Centro', store: TIENDA_A, fcmTokens: ['tok-vivo', 'tok-muerto'] },
+    });
+
+    await push.purgeDeadTokens(['tok-muerto']);
+
+    const p = (await perfil(USER_CENTRO)).profile;
+    expect(p.fcmTokens).toEqual(['tok-vivo']);
+    // Le queda un dispositivo: NO es una baja.
+    expect(p.pushMuerto).toBeUndefined();
+  });
+
+  test('sin ningún dispositivo vivo, marca pushMuerto', async () => {
+    await db.collection('users').doc(USER_CENTRO).set({
+      profile: { fullName: 'Usuario Centro', store: TIENDA_A, fcmTokens: ['tok-muerto'] },
+    });
+
+    await push.purgeDeadTokens(['tok-muerto']);
+
+    const p = (await perfil(USER_CENTRO)).profile;
+    expect(p.fcmTokens).toEqual([]);
+    expect(p.pushMuerto).toBe(true);
+    expect(typeof p.pushMuertoAt).toBe('number');
+  });
+
+  // Las apps anteriores al 28-ago-2026 guardan el token como string en `fcmToken`.
+  test('también limpia el campo antiguo fcmToken (string)', async () => {
+    await db.collection('users').doc(USER_BARNA).set({
+      profile: { fullName: 'Usuario Barna', store: TIENDA_B, fcmToken: 'tok-viejo-muerto' },
+    });
+
+    await push.purgeDeadTokens(['tok-viejo-muerto']);
+
+    const p = (await perfil(USER_BARNA)).profile;
+    expect(p.fcmToken).toBeUndefined();
+    expect(p.pushMuerto).toBe(true);
+  });
+
+  test('un token que no es de nadie no rompe ni toca a otros', async () => {
+    await db.collection('users').doc(USER_CENTRO).set({
+      profile: { fullName: 'Usuario Centro', store: TIENDA_A, fcmTokens: ['tok-vivo'] },
+    });
+
+    await expect(push.purgeDeadTokens(['tok-fantasma'])).resolves.toBe(0);
+    expect((await perfil(USER_CENTRO)).profile.fcmTokens).toEqual(['tok-vivo']);
+  });
+
+  // Sin esta distinción, una caída de FCM borraría los tokens de toda la plantilla.
+  test('solo son "muertos" los códigos de token inexistente, no un fallo cualquiera', () => {
+    expect(push.DEAD_TOKEN_CODES.has('messaging/registration-token-not-registered')).toBe(true);
+    expect(push.DEAD_TOKEN_CODES.has('messaging/invalid-registration-token')).toBe(true);
+    expect(push.DEAD_TOKEN_CODES.has('messaging/server-unavailable')).toBe(false);
+    expect(push.DEAD_TOKEN_CODES.has('messaging/internal-error')).toBe(false);
+    expect(push.DEAD_TOKEN_CODES.has('messaging/quota-exceeded')).toBe(false);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────────
+describe('adminStats — abandono', () => {
+  const hace = (dias) => Date.now() - dias * 24 * 60 * 60 * 1000;
+
+  test('cuenta inactivos por ventana sin mezclar a quien no sella actividad', async () => {
+    await limpiar('users');
+    await db.collection('users').doc('u-activo').set({
+      profile: { platform: 'ios', lastActiveAt: hace(2) },
+    });
+    await db.collection('users').doc('u-45dias').set({
+      profile: { platform: 'android', lastActiveAt: hace(45) },
+    });
+    await db.collection('users').doc('u-90dias').set({
+      profile: { platform: 'ios', lastActiveAt: hace(90), pushMuerto: true },
+    });
+    // App antigua: sin lastActiveAt. No es un inactivo, es un desconocido.
+    await db.collection('users').doc('u-sin-sello').set({
+      profile: { platform: 'android' },
+    });
+
+    const res = await fns.adminStats.run(req(ADMIN_UID, { refresh: true }, { admin: true }));
+
+    expect(res.total).toBe(4);
+    expect(res.activos7d).toBe(1);
+    // Acumulativas: el de 90 días cuenta en las dos ventanas; el de 45, solo en la de 30.
+    expect(res.inactivos[30].total).toBe(2);
+    expect(res.inactivos[60].total).toBe(1);
+    // Lo importante: el de la app antigua NO infla el abandono.
+    expect(res.sinActividad).toBe(1);
+    expect(res.pushMuerto).toBe(1);
+    expect(res.pushMuertoIos).toBe(1);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────────
 describe('delegadoSetActive', () => {
   test('un delegado SÍ puede activar a un usuario de su tienda', async () => {
     const res = await fns.delegadoSetActive.run(req(DELEGADO_UID, { uid: USER_CENTRO, active: true }));
