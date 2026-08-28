@@ -64,6 +64,19 @@ export const SCREEN_TIPS = {
           </p>
         ),
       },
+      // ── Objetivos recortados por la fecha de alta (solo altas de mitad de año) ──
+      {
+        target: '[data-tour="res-prorrateo"]',
+        optional: true,
+        text: (
+          <p>
+            Entraste con el año empezado, así que <strong>no te tocan los objetivos enteros</strong>:
+            se reparten en proporción a los días que llevas de alta. Si el tope de tu convenio son 22
+            domingos y festivos y entraste en julio, los tuyos son 11. La fecha sale de{' '}
+            <strong>Ajustes → Antigüedad</strong>.
+          </p>
+        ),
+      },
       {
         target: '[data-tour="res-horas"]',
         optional: true,

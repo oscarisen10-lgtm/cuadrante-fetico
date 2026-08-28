@@ -6,7 +6,7 @@ import {
 } from "firebase/auth";
 import {
   doc, setDoc, getDoc, updateDoc, onSnapshot, collection, addDoc, deleteDoc,
-  query, getDocs, writeBatch, orderBy, where, limit, deleteField
+  query, getDocs, writeBatch, orderBy, where, limit, deleteField, arrayRemove
 } from "firebase/firestore";
 
 /**
@@ -273,7 +273,18 @@ export const resetPassword = async (email) => {
   return await sendPasswordResetEmail(auth, email);
 };
 
-export const logoutUser = async () => {
+/**
+ * Cierra la sesión. Si se le pasa el token de push de ESTE dispositivo, lo retira
+ * antes del perfil: si no, el móvil seguiría recibiendo las notificaciones de la
+ * cuenta que acaba de salir (importante en un dispositivo compartido, y al cambiar
+ * de cuenta en el mismo teléfono). Mejor esfuerzo: un fallo aquí no impide salir.
+ */
+export const logoutUser = async (deviceToken) => {
+  if (deviceToken && auth.currentUser) {
+    await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+      'profile.fcmTokens': arrayRemove(deviceToken)
+    }).catch((e) => console.warn('No se pudo retirar el token de este dispositivo:', e?.message));
+  }
   return await signOut(auth);
 };
 

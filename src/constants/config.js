@@ -124,6 +124,89 @@ export const resolveTargets = (user) => {
   return normalizeCustomTargets(user?.customTargets);
 };
 
+// ─── Prorrateo por fecha de alta ────────────────────────────────────────────
+//
+// Los objetivos de arriba son de AÑO NATURAL COMPLETO. A quien entra a mitad de
+// año no le corresponden enteros: el convenio de ANGED fija el tope de domingos
+// y festivos en proporción al tiempo de contrato dentro del año, y las demás
+// figuras anuales (horas, días trabajados, días libres, HA y findes de calidad)
+// se reparten con el mismo criterio.
+//
+// Alguien de alta el 6 de julio de 2026 tiene 179 de los 365 días del año:
+//   179/365 × 22 = 10,78 → 11 domingos/festivos, no 22.
+//
+// Se prorratea por DÍAS NATURALES de contrato, no sobre las aperturas reales de
+// la tienda: el calendario de aperturas autorizadas no lo tenemos (cambia por
+// centro y por año) y ambos caminos dan la misma cifra — el tope de 22 ya es,
+// grosso modo, el 30% de las aperturas de un año completo.
+//
+// El dato sale de profile.fechaAlta, el MISMO campo de Ajustes que la nómina usa
+// para prorratear las pagas extra (ver nominaCalculo.proporcionPagaExtra). Quien
+// no lo haya rellenado conserva los objetivos enteros: es lo que le toca a la
+// inmensa mayoría (todo el que lleve más de un año) y recortarle el cuadrante por
+// un dato que no ha puesto sería peor que no prorratear.
+
+const MS_POR_DIA = 24 * 60 * 60 * 1000;
+
+// 'YYYY-MM-DD' → Date local A MEDIODÍA, para que el cambio de hora no mueva el día
+// al restar fechas. No se reutiliza `aFecha` de nomina.js a propósito: ese módulo
+// importa este, y el import de vuelta sería circular.
+const aFechaLocal = (iso) => {
+  const [y, m, d] = String(iso).split('-').map(Number);
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
+  const fecha = new Date(y, m - 1, d, 12, 0, 0, 0);
+  return Number.isNaN(fecha.getTime()) ? null : fecha;
+};
+
+// Métricas que se recortan. `custom` no es una métrica, es la marca de "objetivos
+// escritos a mano"; si se colara aquí, Math.round(true * 0,49) la pondría a 0 o 1
+// y el Resumen dejaría de saber de dónde vienen los objetivos.
+export const TARGETS_PRORRATEABLES = ["horas", "trabajados", "libres", "domingos", "calidad", "ha"];
+
+/**
+ * proporcionAnual — qué fracción del año natural se ha estado de alta.
+ *
+ * @param {string} fechaAlta  'YYYY-MM-DD' del alta en la empresa (profile.fechaAlta)
+ * @param {number} anio       año natural que se está mirando
+ * @returns {{proporcion:number, dias:number, diasAnio:number, desde:string, anio:number}|null}
+ *          null = año completo (sin fecha, fecha inválida, o alta anterior a ese año),
+ *          que es la señal de "no toques los objetivos".
+ */
+export const proporcionAnual = (fechaAlta, anio) => {
+  if (!fechaAlta) return null;
+  const alta = aFechaLocal(fechaAlta);
+  if (!alta) return null;
+
+  const inicio = new Date(anio, 0, 1, 12);
+  const fin = new Date(anio, 11, 31, 12);
+  const diasAnio = Math.round((fin - inicio) / MS_POR_DIA) + 1;  // 365, o 366 si es bisiesto
+
+  if (alta <= inicio) return null;                               // ya estaba de alta el 1 de enero
+  // Alta posterior a ese año: ese año todavía no estaba en la empresa. Sale 0, no
+  // null, para que el Resumen pueda decirlo en vez de enseñar objetivos completos.
+  if (alta > fin) return { proporcion: 0, dias: 0, diasAnio, desde: fechaAlta, anio };
+
+  const dias = Math.round((fin - alta) / MS_POR_DIA) + 1;        // el día del alta cuenta
+  return { proporcion: dias / diasAnio, dias, diasAnio, desde: fechaAlta, anio };
+};
+
+/**
+ * prorratearTargets — los objetivos recortados a la parte del año trabajada.
+ *
+ * Se redondea al entero más cercano, que es la práctica de cuadrante: 10,78 → 11.
+ * Devuelve un objeto NUEVO; los de COMPANY_RULES son constantes compartidas por
+ * todos los usuarios y mutarlos contaminaría al siguiente que las leyera.
+ */
+export const prorratearTargets = (targets, proporcion) => {
+  if (!targets || !Number.isFinite(proporcion)) return targets;
+  const out = { ...targets };
+  TARGETS_PRORRATEABLES.forEach((key) => {
+    const valor = Number(targets[key]) || 0;
+    if (valor > 0) out[key] = Math.round(valor * proporcion);
+  });
+  return out;
+};
+
 // Festivos de CONFIG.FESTIVOS que son autonómicos de Madrid, no nacionales.
 // Todas las empresas de ANGED están en la Comunidad de Madrid, así que a ellas
 // se les pintan todos. De un usuario de fuera no sabemos ni la comunidad, así

@@ -21,6 +21,37 @@ const NEWS_TOPIC = "noticias";
 // Calendario": sus iconos no existen allí y el link abría la app vieja.
 const WEB_BASE = "https://mi-calendario-fe.web.app";
 
+// Campos del perfil donde vive el token de este usuario. Hay que pedir LOS DOS en
+// cualquier .select() que vaya a recolectar tokens (ver tokensFromProfile).
+const TOKEN_FIELDS = ["profile.fcmToken", "profile.fcmTokens"];
+
+/**
+ * Todos los tokens FCM de un perfil, uno por dispositivo.
+ *
+ * ⚠️ Hasta el 28-ago-2026 esto era UN SOLO campo `fcmToken` (string): cada
+ * dispositivo que arrancaba lo sobrescribía, así que quien usaba la cuenta en el
+ * móvil y en la tablet solo recibía los envíos DIRIGIDOS en el último que la
+ * hubiera abierto (el topic de noticias nunca sufrió esto: FCM hace el fan-out).
+ * Ahora se guarda `fcmTokens` (array). Se leen los dos y se UNEN, no se elige uno:
+ * durante la transición conviven dispositivos con la app vieja (escriben el string)
+ * y con la nueva (escriben el array), y hay que llegar a todos.
+ */
+const tokensFromProfile = (profile) => {
+  if (!profile) return [];
+  const out = new Set();
+  if (Array.isArray(profile.fcmTokens)) {
+    profile.fcmTokens.forEach((t) => { if (typeof t === "string" && t) out.add(t); });
+  }
+  if (typeof profile.fcmToken === "string" && profile.fcmToken) out.add(profile.fcmToken);
+  return [...out];
+};
+
+/** Vuelca en un Set los tokens de todos los docs de usuario de un QuerySnapshot. */
+const collectTokens = (snap, into) => {
+  snap.forEach((d) => tokensFromProfile(d.data().profile).forEach((t) => into.add(t)));
+  return into;
+};
+
 /**
  * Payload común a todos los envíos. Devuelve el mensaje SIN destinatario: quien
  * llama añade `topic` o `tokens`.
@@ -127,16 +158,16 @@ async function tokensForStores(db, stores) {
   const snaps = await Promise.all(
     chunks.map((chunk) => db().collection("users")
       .where("profile.store", "in", chunk)
-      .select("profile.fcmToken")
+      .select(...TOKEN_FIELDS)
       .get())
   );
 
   const tokens = new Set();
-  snaps.forEach((snap) => snap.forEach((d) => {
-    const t = d.data().profile && d.data().profile.fcmToken;
-    if (t) tokens.add(t);
-  }));
+  snaps.forEach((snap) => collectTokens(snap, tokens));
   return tokens;
 }
 
-module.exports = { NEWS_TOPIC, buildMessage, sendToNewsTopic, sendToTokens, tokensForStores };
+module.exports = {
+  NEWS_TOPIC, TOKEN_FIELDS, buildMessage, sendToNewsTopic, sendToTokens,
+  tokensForStores, tokensFromProfile, collectTokens,
+};

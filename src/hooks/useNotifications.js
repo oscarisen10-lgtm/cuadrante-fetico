@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getToken, onMessage } from 'firebase/messaging';
 import { messaging, VAPID_KEY } from '../firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, deleteField } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
@@ -29,6 +29,37 @@ const getFcmTokenWithRetry = async (attempts = 5, delayMs = 1500) => {
     await new Promise((r) => setTimeout(r, delayMs));
   }
   throw new Error('No se pudo obtener el token FCM tras varios intentos');
+};
+
+// Máximo de dispositivos por cuenta. Cada reinstalación genera un token nuevo, así
+// que sin tope el array crecería para siempre con tokens muertos a los que se
+// seguiría intentando enviar. Se recorta por el principio (los más antiguos).
+const MAX_DEVICE_TOKENS = 5;
+
+/**
+ * Guarda el token de ESTE dispositivo en el perfil, junto a los de los demás.
+ *
+ * ⚠️ Antes era un único campo `profile.fcmToken` que cada dispositivo sobrescribía:
+ * quien tenía la cuenta en el móvil y en la tablet solo recibía los envíos DIRIGIDOS
+ * (p. ej. "nueva cuenta por activar") en el último que hubiera abierto la app.
+ * Ahora es `profile.fcmTokens`, un array con un token por dispositivo.
+ *
+ * arrayUnion evita leer antes de escribir y es seguro si dos dispositivos coinciden.
+ * El campo viejo se borra en la misma escritura para que un token que ya no es de
+ * nadie no siga recibiendo las push de esta cuenta.
+ */
+const saveDeviceToken = async (uid, token, tokensActuales) => {
+  const previos = Array.isArray(tokensActuales) ? tokensActuales : [];
+  if (previos.includes(token)) return;
+
+  const ref = doc(db, 'users', uid);
+  if (previos.length >= MAX_DEVICE_TOKENS) {
+    // Solo en este caso raro se escribe el array entero (arrayUnion no puede recortar).
+    const recortado = [...previos.slice(previos.length - MAX_DEVICE_TOKENS + 1), token];
+    await updateDoc(ref, { 'profile.fcmTokens': recortado, 'profile.fcmToken': deleteField() });
+    return;
+  }
+  await updateDoc(ref, { 'profile.fcmTokens': arrayUnion(token), 'profile.fcmToken': deleteField() });
 };
 
 export const useNotifications = (user) => {
@@ -74,12 +105,10 @@ export const useNotifications = (user) => {
       const currentToken = await getToken(messaging, { vapidKey: VAPID_KEY });
       if (currentToken) {
         setToken(currentToken);
-        // Escribe el token SOLO si cambió respecto al guardado (mismo criterio que
-        // recordAppOpen en useAuth): evita una escritura por cada apertura de la app.
-        if (auth.currentUser && currentToken !== user?.fcmToken) {
-          await updateDoc(doc(db, 'users', auth.currentUser.uid), {
-            'profile.fcmToken': currentToken
-          });
+        // Solo si este dispositivo no consta ya (mismo criterio que recordAppOpen en
+        // useAuth): evita una escritura por cada apertura de la app.
+        if (auth.currentUser) {
+          await saveDeviceToken(auth.currentUser.uid, currentToken, user?.fcmTokens);
         }
         // Web: la suscripción al topic la hace el backend (el SDK web no puede solo).
         // Mejor esfuerzo: si falla (p.ej. sin red), se reintenta en el próximo arranque.
@@ -91,7 +120,7 @@ export const useNotifications = (user) => {
     } catch (error) {
       setTokenError(error.message);
     }
-  }, [user?.fcmToken]);
+  }, [user?.fcmTokens]);
 
   useEffect(() => {
     if (!user || !user.uid) return;
@@ -113,11 +142,10 @@ export const useNotifications = (user) => {
           }
           setToken(fcmToken);
           setTokenError(null);
-          // Solo si cambió: en cada arranque el token suele ser el mismo, así que evitamos
-          // una escritura por apertura (a 50k usuarios, millones de escrituras/mes de más).
-          if (fcmToken !== user.fcmToken) {
-            updateDoc(doc(db, 'users', user.uid), { 'profile.fcmToken': fcmToken }).catch(()=>{});
-          }
+          // Solo si este dispositivo no consta ya: en cada arranque el token suele ser
+          // el mismo, así que evitamos una escritura por apertura (a 50k usuarios,
+          // millones de escrituras/mes de más).
+          saveDeviceToken(user.uid, fcmToken, user.fcmTokens).catch(()=>{});
         } catch (err) {
           // OJO: en iOS NO guardamos token.value (es APNs, no FCM) porque haría fallar
           // el envío desde el backend. Preferimos no guardar nada y reflejar el error.
@@ -126,9 +154,7 @@ export const useNotifications = (user) => {
           if (Capacitor.getPlatform() !== 'ios') {
             fcmToken = token.value;
             setToken(fcmToken);
-            if (fcmToken !== user.fcmToken) {
-              updateDoc(doc(db, 'users', user.uid), { 'profile.fcmToken': fcmToken }).catch(()=>{});
-            }
+            saveDeviceToken(user.uid, fcmToken, user.fcmTokens).catch(()=>{});
           } else {
             fcmToken = null;
           }

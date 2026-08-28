@@ -1,4 +1,4 @@
-import { DIAS_MES_NOMINA, PCT_TERCERA_BAJA_DIA21, TIPO_BAJA, cent } from './nomina';
+import { DIAS_MES_NOMINA, PCT_TERCERA_BAJA_DIA21, TIPO_BAJA, cent, MS_DIA, aFecha } from './nomina';
 
 /**
  * INCAPACIDAD TEMPORAL (bajas). Vive aparte del resto del motor porque es la
@@ -118,19 +118,6 @@ export const calcularIT = (bajas = [], bases = {}) => {
   return { retenido, recuperable, perdido, procesos, totalComunes: comunes.length };
 };
 
-/** Milisegundos de un día, para medir distancias entre fechas. */
-const MS_DIA = 24 * 60 * 60 * 1000;
-
-/** 'YYYY-MM-DD' -> Date local a mediodía.
- *
- *  A MEDIODÍA y no a medianoche a propósito: al sumar días con aritmética de
- *  milisegundos, un cambio de hora (los domingos de marzo y octubre) mueve la
- *  fecha ±1 hora, y desde las 00:00 eso salta al día anterior o siguiente.
- *  Partiendo de las 12:00 quedan 12 horas de margen a cada lado. */
-const aFecha = (iso) => {
-  const [y, m, d] = String(iso).split('-').map(Number);
-  return new Date(y, (m || 1) - 1, d || 1, 12, 0, 0, 0);
-};
 
 /**
  * diasDeLaBajaEnElMes — qué tramo de una baja cae dentro de un mes concreto.

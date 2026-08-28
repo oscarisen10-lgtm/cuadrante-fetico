@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
   GRUPOS_PROFESIONALES, antiguedadAnual, mensualDesdeAnual, precioDia, precioHora,
-  plusNocturnidadHora, TIPO_BAJA, tiposCotizacion, IRPF_MAXIMO, CATEGORIA_DEDUCCION,
+  plusNocturnidadHora, TIPO_BAJA, tiposCotizacion, IRPF_MAXIMO, CATEGORIA_DEDUCCION, MAX_CUATRIENIOS,
 } from '../../src/constants/nomina';
 import {
   calcularNomina, calcularNominaDelMes, calcularDeducciones,
-  netoPagaExtra, configDelMes, guardarMes,
+  netoPagaExtra, configDelMes, guardarMes, proporcionPagaExtra, cuatrieniosEnFecha,
 } from '../../src/constants/nominaCalculo';
 import { porcentajeDiaIT, calcularIT, desgloseMesConBajas } from '../../src/constants/nominaBajas';
 
@@ -642,5 +642,91 @@ describe('nómina — neto de las pagas extra', () => {
 
   it('respeta el tope de IRPF igual que las deducciones', () => {
     expect(netoPagaExtra(1000, 656).irpf).toBe(470);   // recortado al 47%
+  });
+});
+
+describe('nómina — pagas extra proporcionales al tiempo trabajado', () => {
+  it('los periodos de devengo son los del convenio', () => {
+    // Verano: 1 julio (año anterior) → 30 junio. Se adelanta el 15 de junio.
+    expect(proporcionPagaExtra(null, 'verano', 2026)).toMatchObject({
+      desde: '2025-07-01', hasta: '2026-06-30',
+    });
+    // Navidad: 1 enero → 31 diciembre. Se adelanta el 15 de diciembre.
+    expect(proporcionPagaExtra(null, 'navidad', 2026)).toMatchObject({
+      desde: '2026-01-01', hasta: '2026-12-31',
+    });
+  });
+
+  it('quien lleva más de un año cobra la paga entera', () => {
+    expect(proporcionPagaExtra('2015-03-10', 'verano', 2026).proporcion).toBe(1);
+    expect(proporcionPagaExtra('2015-03-10', 'navidad', 2026).proporcion).toBe(1);
+  });
+
+  it('un alta a mitad de periodo cobra solo su parte, por días naturales', () => {
+    // Alta el 1 de febrero de 2026: para la de verano quedan del 1-feb al 30-jun.
+    const v = proporcionPagaExtra('2026-02-01', 'verano', 2026);
+    expect(v.dias).toBe(150);
+    expect(v.diasPeriodo).toBe(365);
+    // Y para la de navidad, del 1-feb al 31-dic.
+    const n = proporcionPagaExtra('2026-02-01', 'navidad', 2026);
+    expect(n.dias).toBe(334);
+  });
+
+  it('el día del alta cuenta como trabajado', () => {
+    // Alta el último día del periodo: un día, no cero.
+    expect(proporcionPagaExtra('2026-06-30', 'verano', 2026).dias).toBe(1);
+  });
+
+  it('un alta posterior al periodo no genera paga', () => {
+    expect(proporcionPagaExtra('2026-09-01', 'verano', 2026).proporcion).toBe(0);
+  });
+
+  it('sin fecha de alta se asume paga entera, no cero', () => {
+    // Es lo que cobra la mayoría (quien lleva más de un año), y evita asustar
+    // con una cifra recortada a quien simplemente no ha rellenado el dato.
+    expect(proporcionPagaExtra(undefined, 'verano', 2026).proporcion).toBe(1);
+    expect(proporcionPagaExtra('', 'navidad', 2026).proporcion).toBe(1);
+  });
+});
+
+describe('nómina — la antigüedad se calcula desde la fecha de alta', () => {
+  it('un cuatrienio se cumple a los 4 años, no antes', () => {
+    // Alta el 1 de marzo de 2022, mirando 2026:
+    expect(cuatrieniosEnFecha('2022-03-01', 2026, 1)).toBe(0);   // feb-2026: 3 años y pico
+    expect(cuatrieniosEnFecha('2022-03-01', 2026, 2)).toBe(1);   // mar-2026: 4 años justos
+  });
+
+  it('se acumulan cada cuatro años', () => {
+    expect(cuatrieniosEnFecha('2010-01-01', 2026, 0)).toBe(4);   // 16 años
+    expect(cuatrieniosEnFecha('2006-01-01', 2026, 0)).toBe(5);   // 20 años
+  });
+
+  it('el aniversario a mitad de mes cuenta el mes SIGUIENTE', () => {
+    // Referencia = día 1 del mes, la lectura conservadora.
+    expect(cuatrieniosEnFecha('2022-03-15', 2026, 2)).toBe(0);   // el 1-mar aún no
+    expect(cuatrieniosEnFecha('2022-03-15', 2026, 3)).toBe(1);   // el 1-abr ya sí
+  });
+
+  it('nunca pasa del máximo de la tabla', () => {
+    expect(cuatrieniosEnFecha('1970-01-01', 2026, 0)).toBe(MAX_CUATRIENIOS);
+  });
+
+  it('sin fecha de alta no inventa antigüedad', () => {
+    expect(cuatrieniosEnFecha(null, 2026, 0)).toBe(0);
+    expect(cuatrieniosEnFecha('no-es-fecha', 2026, 0)).toBe(0);
+  });
+
+  it('configDelMes deriva la antigüedad de la fecha de alta', () => {
+    const n = guardarMes(null, { grupo: 'profesionales', cuatrienios: 0 }, 2026, 7);
+    expect(configDelMes(n, 2026, 7, '2018-01-01').cuatrienios).toBe(2);   // 8 años
+  });
+
+  it('sin fecha de alta respeta lo que hubiera guardado a mano', () => {
+    // Compatibilidad: a quien configuró los cuatrienios antes de que existiera el
+    // campo de fecha no se le puede borrar la antigüedad de la pantalla.
+    const n = guardarMes(null, { grupo: 'profesionales', cuatrienios: 3 }, 2026, 7);
+    expect(configDelMes(n, 2026, 7, null).cuatrienios).toBe(3);
+    // Pero en cuanto pone la fecha, manda ella.
+    expect(configDelMes(n, 2026, 7, '2024-01-01').cuatrienios).toBe(0);
   });
 });

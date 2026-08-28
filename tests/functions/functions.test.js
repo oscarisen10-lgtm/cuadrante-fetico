@@ -333,6 +333,21 @@ describe('adminSetDelegado', () => {
     expect((await db.collection('delegados').doc(DELEGADO_UID).get()).exists).toBe(false);
     expect((await perfil(DELEGADO_UID)).membership.active).toBe(true);
   });
+
+  // Si el delegado borró su cuenta y se hizo otra, su doc quedó bajo el uid VIEJO:
+  // buscarlo por el uid actual no lo encontraba y "retirar" decía que sí sin borrar
+  // nada, mientras el admin lo seguía viendo en su lista.
+  test('retirar borra también el doc huérfano de una cuenta recreada', async () => {
+    const email = 'recreado@delegado.com';
+    await db.collection('delegados').doc('uidViejo').set({
+      email, fullName: 'Recreado', stores: [TIENDA_A], active: true,
+    });
+    await auth.createUser({ uid: 'uidNuevo', email }).catch(() => {});
+
+    await fns.adminSetDelegado.run(req(ADMIN_UID, { email, remove: true }, { admin: true }));
+
+    expect((await db.collection('delegados').doc('uidViejo').get()).exists).toBe(false);
+  });
 });
 
 // ───────────────────────────────────────────────────────────────────────────────

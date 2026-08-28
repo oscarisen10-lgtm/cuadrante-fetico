@@ -10,7 +10,7 @@ import {
   assertSucceeds,
   assertFails,
 } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, arrayUnion, arrayRemove, deleteField } from 'firebase/firestore';
 import { beforeAll, afterAll, beforeEach, describe, test } from 'vitest';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -494,6 +494,27 @@ describe('La tienda no se puede cambiar desde el cliente', () => {
   test('el admin SÍ puede mover a alguien de tienda (soporte)', async () => {
     await assertSucceeds(
       updateDoc(doc(as('admin1', { admin: true }), 'users', BASE), { 'profile.store': 'Barcelona' })
+    );
+  });
+
+  // Forma EXACTA en que el cliente registra su dispositivo para las push (ver
+  // saveDeviceToken en useNotifications): añade al array y borra el campo viejo de
+  // un solo token. Si el candado de la tienda rechazara esto, el móvil no se
+  // guardaría nunca y no llegaría ninguna notificación.
+  test('un usuario puede registrar su token de push (array + borrar el campo viejo)', async () => {
+    await assertSucceeds(
+      updateDoc(doc(as(BASE), 'users', BASE), {
+        'profile.fcmTokens': arrayUnion('token-de-este-movil'),
+        'profile.fcmToken': deleteField(),
+      })
+    );
+  });
+
+  test('y retirarlo al cerrar sesión', async () => {
+    await assertSucceeds(
+      updateDoc(doc(as(BASE), 'users', BASE), {
+        'profile.fcmTokens': arrayRemove('token-de-este-movil'),
+      })
     );
   });
 });

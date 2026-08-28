@@ -11,7 +11,7 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 // problema con las funciones v2 del resto del backend.
 const functionsV1 = require("firebase-functions/v1");
 const { admin, db, ENFORCE_APP_CHECK } = require("./lib/firebase");
-const { NEWS_TOPIC } = require("./lib/push");
+const { NEWS_TOPIC, tokensFromProfile } = require("./lib/push");
 const { isAdminToken, requireAuth, getDelegadoDoc, isUserActive } = require("./lib/auth");
 const { isValidStore } = require("./lib/validStores");
 
@@ -22,9 +22,10 @@ const { isValidStore } = require("./lib/validStores");
  * igual que los dos caminos se solapen).
  */
 async function purgeUserData(uid) {
-  // Token FCM antes de borrar nada, para dar de baja el dispositivo del topic de noticias.
+  // Tokens FCM antes de borrar nada, para dar de baja del topic de noticias TODOS sus
+  // dispositivos (no solo uno: una misma cuenta puede estar en el móvil y en la tablet).
   const userSnap = await db().collection("users").doc(uid).get();
-  const fcmToken = (userSnap.exists && userSnap.data().profile && userSnap.data().profile.fcmToken) || null;
+  const fcmTokens = userSnap.exists ? tokensFromProfile(userSnap.data().profile) : [];
 
   // 1) Documento de usuario + subcolecciones (shifts, shiftMonths, usage) en una pasada.
   await db().recursiveDelete(db().collection("users").doc(uid));
@@ -46,9 +47,16 @@ async function purgeUserData(uid) {
     await batch.commit();
   }
 
-  // 4) Baja del topic de noticias (mejor esfuerzo: si falla, no aborta el borrado).
-  if (fcmToken) {
-    await admin.messaging().unsubscribeFromTopic(fcmToken, NEWS_TOPIC)
+  // 4) Su alta como delegado, si la tuviera. Sin esto quedaba un doc HUÉRFANO en
+  //    `delegados/{uidViejo}`: el admin lo seguía viendo en su lista, y "retirar" no
+  //    lo podía borrar porque adminSetDelegado resuelve el email al uid ACTUAL — que
+  //    tras recrear la cuenta es otro. Borrar es idempotente si no existe.
+  await db().collection("delegados").doc(uid).delete()
+    .catch((e) => console.warn("No se pudo borrar el doc de delegado:", e.message));
+
+  // 5) Baja del topic de noticias (mejor esfuerzo: si falla, no aborta el borrado).
+  if (fcmTokens.length > 0) {
+    await admin.messaging().unsubscribeFromTopic(fcmTokens, NEWS_TOPIC)
       .catch((e) => console.warn("No se pudo desuscribir del topic:", e.message));
   }
 }

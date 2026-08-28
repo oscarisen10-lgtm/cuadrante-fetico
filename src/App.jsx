@@ -13,6 +13,7 @@ import { Clock, Calendar as CalendarIcon, PieChart, FileText, Settings, LogOut, 
 import { getFormattedDate } from './utils/dateUtils';
 import { isAdminUser } from './constants/config';
 import { markFichado } from './services/firebaseService';
+import { reconnectFirestore } from './firebase';
 import { NavItem, LoadingLogo } from './components/UIComponents';
 import AuthView from './components/AuthView';
 import { ToastContainer, ConfirmDialog } from './components/Toast';
@@ -93,7 +94,7 @@ function NavigationBar({ adminMode, delegadoMode }) {
  */
 function AppContent({ user, authHook }) {
   const {
-    logoutUser, saveToCloud, isActive: memberActive, delegado,
+    logoutUser, saveToCloud, applyProfileLocally, isActive: memberActive, delegado,
     settings, shifts, activeShift, workTimeAccumulated, isBreakActive, breakStartTime
   } = authHook;
 
@@ -195,9 +196,10 @@ function AppContent({ user, authHook }) {
   }, [shifts, saveToCloud, setShowBreakFinishedMsg, stopAlarm]);
 
   const handleLogout = useCallback(async () => {
-    await logoutUser();
+    // Con el token, este dispositivo deja de recibir las push de la cuenta que sale.
+    await logoutUser(pushToken);
     setShowConfirmLogout(false);
-  }, [logoutUser]);
+  }, [logoutUser, pushToken]);
 
   return (
     /* Armazón de la app. En móvil la columna ocupa el 100% y el degradado de detrás no
@@ -253,7 +255,7 @@ function AppContent({ user, authHook }) {
                 <LicenciasView user={user} permissionState={permissionState} requestTokenManually={requestTokenManually} isActive={isActive} />
               } />
               <Route path="/settings" element={
-                <SettingsView user={user} settings={settings} saveToCloud={saveToCloud} pushToken={pushToken} pushTokenError={pushTokenError} permissionState={permissionState} requestTokenManually={requestTokenManually} isDelegado={isDelegado} onOpenGuide={restartTips} />
+                <SettingsView user={user} settings={settings} saveToCloud={saveToCloud} applyProfileLocally={applyProfileLocally} pushToken={pushToken} pushTokenError={pushTokenError} permissionState={permissionState} requestTokenManually={requestTokenManually} isDelegado={isDelegado} onOpenGuide={restartTips} />
               } />
               <Route path="/delegados" element={
                 isDelegado ? <DelegadoNoticiasView user={user} delegado={delegado} /> : <Navigate to="/dashboard" replace />
@@ -475,6 +477,28 @@ export default function App() {
     });
     return () => { listenerPromise.then((l) => l.remove()).catch(() => {}); };
   }, [settings?.useBiometric]);
+
+  // Reconecta Firestore al volver de segundo plano. Este listener va SIEMPRE, a
+  // diferencia del de arriba (que solo existe con el bloqueo biométrico activado).
+  // Con la conexión dormida los onSnapshot dejan de traer nada y la app enseña
+  // datos viejos —lo que se notaba al cambiar de empresa en Ajustes y tener que
+  // cerrarla y reabrirla—. Solo se hace tras un rato fuera: alternar de app un
+  // segundo no necesita tirar la conexión y volverla a montar.
+  useEffect(() => {
+    const MIN_BACKGROUND_MS = 30000;
+    let salioAlFondo = 0;
+    const listenerPromise = CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+      if (!isActive) {
+        salioAlFondo = Date.now();
+        return;
+      }
+      if (salioAlFondo && Date.now() - salioAlFondo > MIN_BACKGROUND_MS) {
+        reconnectFirestore();
+      }
+      salioAlFondo = 0;
+    });
+    return () => { listenerPromise.then((l) => l.remove()).catch(() => {}); };
+  }, []);
 
   if (loading) return (
     <div className="h-screen flex flex-col items-center justify-center" style={{ background: 'radial-gradient(circle at 50% 35%, #ecfdf5, #d1fae5 60%, #a7f3d0)' }} role="status" aria-label="Cargando aplicación">

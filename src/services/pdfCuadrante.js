@@ -197,6 +197,23 @@ function paginaResumen(doc, anio, stats) {
     doc.text(valor, x + 8, y + 22);
   });
 
+  // Objetivos recortados por la fecha de alta: sin decirlo, el papel enseña un tope
+  // de 11 domingos donde el convenio dice 22 y parece un error de la app.
+  const pro = stats?.prorrateo;
+  const anuales = stats?.targetsAnuales || {};
+  let yNota = 32 + 3 * (altoT + 6) + 4;
+  if (pro && Object.keys(objetivos).length) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    doc.setTextColor(...COLOR.suave);
+    const texto = pro.proporcion === 0
+      ? `Alta en la empresa el ${pro.desde}: en ${anio} aún no estaba dado de alta, por eso no se muestran objetivos.`
+      : `Objetivos prorrateados por la fecha de alta (${pro.desde}): ${pro.dias} de los ${pro.diasAnio} días de ${anio}` +
+        (anuales.domingos ? `. Tope de domingos y festivos del convenio a año completo: ${anuales.domingos}.` : '.');
+    doc.text(doc.splitTextToSize(texto, 270), 10, yNota);
+    yNota += 5;
+  }
+
   // Sin esta nota, alguien podría presentarlo como si fuera un parte de la empresa.
   // Las horas de los días editados a mano las declara el propio trabajador.
   doc.setFont('helvetica', 'italic');
@@ -208,7 +225,7 @@ function paginaResumen(doc, anio, stats) {
       'No sustituye ni equivale a un documento oficial de la empresa.',
       270
     ),
-    10, 32 + 3 * (altoT + 6) + 4
+    10, yNota
   );
 }
 

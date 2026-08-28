@@ -3,7 +3,7 @@ import { User, Lock, Mail, Store, ShieldCheck, KeyRound, X, ChevronDown, Buildin
 import { loginUser, registerUser, resetPassword } from '../services/firebaseService';
 import { InputGroup } from './UIComponents';
 import { COMPANY_RULES, OTHER_COMPANY, isKnownCompany } from '../constants/config';
-import { STORES, S_ROMERO_STORES, ECI_STORES, formatStoreName } from '../constants/stores';
+import { storesForCompany, formatStoreName } from '../constants/stores';
 import appLogo from '../../icons/icon-192.webp';
 
 // Registro público abierto. Se puso a `false` una temporada mientras la app estaba
@@ -13,11 +13,14 @@ import appLogo from '../../icons/icon-192.webp';
 // registro en esta pantalla, no cierra el alta por API.
 const ALLOW_REGISTRATION = true;
 
-// Longitud mínima de contraseña. Firebase acepta desde 6; aquí se exigen 8
-// (auditoría 22-ago-2026, F-12) porque 6 caracteres se rompen por fuerza bruta en
-// minutos y estas cuentas guardan datos laborales y de contacto. Solo afecta a
-// registros y cambios NUEVOS: a quien ya tiene cuenta no se le invalida la suya.
-const MIN_PASSWORD = 8;
+// Longitud mínima de contraseña: 6, el mínimo que acepta Firebase.
+//
+// La auditoría del 22-ago-2026 (F-12) lo subió a 8 por fuerza bruta, y Óscar lo
+// devolvió a 6 el 28-ago-2026: el registro lo hacen compañeros de tienda, muchas
+// veces con el delegado delante, y cada requisito extra es gente que se atasca y
+// no acaba de darse de alta. Decisión consciente, no un descuido — si se vuelve a
+// subir, que sea hablándolo con él.
+const MIN_PASSWORD = 6;
 
 const getFriendlyErrorMessage = (error, isRegistering) => {
   if (error.message && error.message.includes("Timeout")) {
@@ -71,17 +74,10 @@ export default function AuthView() {
   // antes salían los de Supercor por el valor por defecto.
   const esANGED = isKnownCompany(formCompany);
 
-  const sortedStores = useMemo(() => {
-    let filteredStores = STORES;
-    if (formCompany === "S. Romero") {
-      filteredStores = STORES.filter(s => S_ROMERO_STORES.includes(s.name));
-    } else if (formCompany === "ECI") {
-      filteredStores = STORES.filter(s => ECI_STORES.includes(s.name));
-    } else if (formCompany === "Supercor" || formCompany === "S. Express") {
-      filteredStores = STORES.filter(s => !S_ROMERO_STORES.includes(s.name) && !ECI_STORES.includes(s.name));
-    }
-    return [...filteredStores].sort((a, b) => a.name.localeCompare(b.name));
-  }, [formCompany]);
+  const sortedStores = useMemo(
+    () => [...storesForCompany(formCompany)].sort((a, b) => a.name.localeCompare(b.name)),
+    [formCompany]
+  );
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -139,14 +135,18 @@ export default function AuthView() {
               // nombre de una tienda real, se le colaran las noticias del
               // delegado de esa tienda (la consulta se salta si no hay tienda).
               store: "",
-              rank: ""
+              rank: "",
+              // De aquí sale la parte proporcional de las pagas extra para quien
+              // no lleva el periodo entero. Vacío = se asume paga completa.
+              fechaAlta: formData.get('fechaAlta') || ''
             }
           : {
               email: emailInput,
               fullName: formData.get('fullName') || 'Compañero/a',
               company: selectedCompany,
               store: formData.get('store') || "Centro sin definir",
-              rank: formData.get('rank') || "Personal base"
+              rank: formData.get('rank') || "Personal base",
+              fechaAlta: formData.get('fechaAlta') || ''
             };
 
         await registerUser(emailInput, pass, newUserProfile);
@@ -276,6 +276,24 @@ export default function AuthView() {
                 {esOtraEmpresa && (
                   <InputGroup label="Nombre de empresa" name="companyName" maxLength={60} small icon={<Building2 size={14}/>} />
                 )}
+                {/* Opcional: sin fecha se asume año completo — paga extra entera y
+                    objetivos del convenio sin recortar, que es lo de quien lleva más
+                    de un año. Solo cambia algo para las altas recientes, así que no
+                    se pide como obligatorio. */}
+                <div className="space-y-1.5 flex flex-col">
+                  <label htmlFor="input-fechaAlta" className="text-xs font-black text-emerald-600 uppercase ml-1 tracking-tight">
+                    Fecha de alta en la empresa
+                  </label>
+                  <input
+                    id="input-fechaAlta" name="fechaAlta" type="date"
+                    max={new Date().toISOString().slice(0, 10)}
+                    className="w-full px-3 border-none p-3 text-sm rounded-2xl outline-none text-slate-800 leading-none transition-all ring-1 ring-slate-200/80 shadow-[inset_0_2px_4px_rgba(15,23,42,0.07)] focus:ring-2 focus:ring-emerald-500"
+                    style={{ background: 'linear-gradient(180deg,#f6f7f9,#eef0f3)' }}
+                  />
+                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tight ml-1 leading-tight">
+                    Opcional. Ajusta tus objetivos del año y tus pagas de verano y navidad si entraste a mitad de año.
+                  </span>
+                </div>
                 <InputGroup label={`Contraseña (mín. ${MIN_PASSWORD})`} name="password" type="password" minLength={MIN_PASSWORD} small icon={<Lock size={14}/>} />
                 <InputGroup label="Repetir Contraseña" name="confirmPassword" type="password" minLength={MIN_PASSWORD} small icon={<ShieldCheck size={14}/>} />
               </>

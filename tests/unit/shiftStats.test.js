@@ -217,3 +217,99 @@ describe('computeShiftStats — empresa no verificada', () => {
     expect(stats.diasLibres).toBe(1);
   });
 });
+
+// PRORRATEO POR FECHA DE ALTA. Los objetivos de COMPANY_RULES son de año natural
+// completo; quien entra a mitad de año tiene su parte proporcional (el convenio de
+// ANGED fija el tope de domingos/festivos en proporción al tiempo de contrato, y el
+// resto de figuras anuales se reparte con el mismo criterio). Es dinero y descansos:
+// si el recorte se calcula mal, alguien acepta trabajar domingos que no le tocan.
+describe('computeShiftStats — prorrateo por fecha de alta', () => {
+  // 2026 tiene 365 días. Del 6 de julio al 31 de diciembre van 179.
+  const ALTA_6_JULIO = { ...USER, fechaAlta: '2026-07-06' };
+  const FIN_2026 = new Date(2026, 11, 31);
+
+  test('el caso del convenio: alta el 6 de julio de 2026 → 11 domingos/festivos, no 22', () => {
+    const stats = computeShiftStats([], {}, ALTA_6_JULIO, FIN_2026);
+    // 179/365 × 22 = 10,78 → 11
+    expect(stats.targets.domingos).toBe(11);
+    expect(stats.prorrateo.dias).toBe(179);
+    expect(stats.prorrateo.diasAnio).toBe(365);
+  });
+
+  test('se prorratean TODAS las figuras anuales, no solo los domingos', () => {
+    const stats = computeShiftStats([], {}, ALTA_6_JULIO, FIN_2026);
+    const p = 179 / 365;
+    expect(stats.targets).toEqual({
+      horas: Math.round(1770 * p),        // 868
+      trabajados: Math.round(258 * p),    // 127
+      libres: Math.round(76 * p),         // 37
+      domingos: 11,
+      calidad: Math.round(10 * p),        // 5
+      ha: Math.round(15 * p),             // 7
+    });
+  });
+
+  test('los objetivos SIN recortar siguen disponibles (el Resumen los enseña para explicarlo)', () => {
+    const stats = computeShiftStats([], {}, ALTA_6_JULIO, FIN_2026);
+    expect(stats.targetsAnuales).toEqual({ horas: 1770, domingos: 22, calidad: 10, trabajados: 258, libres: 76, ha: 15 });
+  });
+
+  test('quien ya estaba de alta el 1 de enero conserva los objetivos enteros', () => {
+    const veterano = { ...USER, fechaAlta: '2019-03-11' };
+    const stats = computeShiftStats([], {}, veterano, FIN_2026);
+    expect(stats.prorrateo).toBeNull();
+    expect(stats.targets.domingos).toBe(22);
+  });
+
+  test('un alta el 1 de enero del propio año tampoco recorta nada', () => {
+    const stats = computeShiftStats([], {}, { ...USER, fechaAlta: '2026-01-01' }, FIN_2026);
+    expect(stats.prorrateo).toBeNull();
+    expect(stats.targets.domingos).toBe(22);
+  });
+
+  test('sin fecha de alta (o con una ilegible) no se toca nada: objetivos completos', () => {
+    expect(computeShiftStats([], {}, USER, FIN_2026).prorrateo).toBeNull();
+    expect(computeShiftStats([], {}, { ...USER, fechaAlta: '' }, FIN_2026).prorrateo).toBeNull();
+    const basura = computeShiftStats([], {}, { ...USER, fechaAlta: 'ayer' }, FIN_2026);
+    expect(basura.prorrateo).toBeNull();
+    expect(basura.targets.domingos).toBe(22);
+  });
+
+  // El PDF exporta años pasados: si el alta es de 2026, en el cuadrante de 2025 esa
+  // persona no estaba en la empresa y no se le pueden enseñar objetivos de nadie.
+  test('en un año anterior al alta, todos los objetivos quedan a 0', () => {
+    const stats = computeShiftStats([], {}, ALTA_6_JULIO, new Date(2025, 11, 31));
+    expect(stats.prorrateo.proporcion).toBe(0);
+    expect(stats.targets).toEqual({ horas: 0, domingos: 0, calidad: 0, trabajados: 0, libres: 0, ha: 0 });
+  });
+
+  test('un año bisiesto cuenta 366 días', () => {
+    const stats = computeShiftStats([], {}, { ...USER, fechaAlta: '2028-07-01' }, new Date(2028, 11, 31));
+    expect(stats.prorrateo.diasAnio).toBe(366);
+    expect(stats.prorrateo.dias).toBe(184);   // del 1 de julio al 31 de diciembre
+  });
+
+  test('el recorte NO toca los objetivos del convenio: el siguiente usuario los ve enteros', () => {
+    computeShiftStats([], {}, ALTA_6_JULIO, FIN_2026);
+    const otro = computeShiftStats([], {}, USER, FIN_2026);
+    expect(otro.targets.domingos).toBe(22);
+  });
+
+  test('los objetivos escritos a mano se prorratean igual, y `custom` no se toca', () => {
+    const OTRA = {
+      company: 'Mercadona', companyVerified: false, rank: 'Reponedor',
+      customTargets: { horas: 1800, domingos: 20 }, fechaAlta: '2026-07-06',
+    };
+    const stats = computeShiftStats([], {}, OTRA, FIN_2026);
+    const p = 179 / 365;
+    expect(stats.targets.horas).toBe(Math.round(1800 * p));
+    expect(stats.targets.domingos).toBe(Math.round(20 * p));
+    expect(stats.targets.custom).toBe(true);
+  });
+
+  test('sin objetivos que recortar (empresa no verificada sin nada a mano), targets sigue siendo null', () => {
+    const OTRA = { company: 'Mercadona', companyVerified: false, fechaAlta: '2026-07-06' };
+    const stats = computeShiftStats([], {}, OTRA, FIN_2026);
+    expect(stats.targets).toBeNull();
+  });
+});

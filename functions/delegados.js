@@ -16,6 +16,7 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { admin, db, ENFORCE_APP_CHECK } = require("./lib/firebase");
 const { isAdminToken, isProtectedAdminAccount, requireAuth, getDelegadoDoc, isUserActive } = require("./lib/auth");
 const { VALID_STORES } = require("./lib/validStores");
+const { TOKEN_FIELDS, tokensFromProfile } = require("./lib/push");
 
 /** Lanza si quien llama no es el admin. */
 const requireAdmin = (request, mensaje) => {
@@ -142,7 +143,7 @@ exports.adminStats = onCall({
     const desde7d = Date.now() - ACTIVOS_VENTANA_DIAS * 24 * 60 * 60 * 1000;
 
     const stream = db().collection("users")
-      .select("profile.platform", "profile.hasFichado", "profile.fcmToken", "profile.lastActiveAt")
+      .select("profile.platform", "profile.hasFichado", ...TOKEN_FIELDS, "profile.lastActiveAt")
       .stream();
 
     for await (const d of stream) {
@@ -153,7 +154,7 @@ exports.adminStats = onCall({
       else if (p.platform === "web") web += 1;
       else desconocido += 1;
       if (p.hasFichado) fichadores += 1;
-      if (p.fcmToken) {
+      if (tokensFromProfile(p).length > 0) {
         conPush += 1;
         if (p.platform === "ios") pushIos += 1;
         else if (p.platform === "android") pushAndroid += 1;
@@ -191,7 +192,7 @@ exports.adminStats = onCall({
  */
 const LIST_USERS_FIELDS = [
   "profile.fullName", "profile.email", "profile.phone", "profile.section",
-  "profile.store", "profile.fcmToken", "profile.platform", "membership",
+  "profile.store", ...TOKEN_FIELDS, "profile.platform", "membership",
 ];
 
 // timeout/memoria por encima del global: la opción "Total" del admin recorre todos
@@ -255,7 +256,7 @@ exports.delegadoListUsers = onCall({
       section: p.section || "Sin especificar",
       store: p.store || "Sin tienda",
       platform: p.platform || "",
-      hasPush: !!p.fcmToken,
+      hasPush: tokensFromProfile(p).length > 0,
       active: isUserActive(data),
       expelled: !!(data.membership && data.membership.expelled),
     };
@@ -407,6 +408,22 @@ exports.adminSetDelegado = onCall({ maxInstances: 5, enforceAppCheck: ENFORCE_AP
     throw new HttpsError("invalid-argument", "Email no válido.");
   }
 
+  // Retirar va POR EMAIL, sin pasar por Auth. El doc se guarda en delegados/{uid},
+  // así que si la persona borró su cuenta y se hizo otra, el uid cambió y su doc
+  // viejo quedó huérfano: buscarlo por uid no lo encontraba nunca y "retirar" decía
+  // que sí sin borrar nada, mientras el admin lo seguía viendo en la lista.
+  if (request.data?.remove === true) {
+    const porEmail = await db().collection("delegados").where("email", "==", email).get();
+    const refs = porEmail.docs.map((d) => d.ref);
+    // Y el del uid actual aunque su doc no llevara email (docs antiguos).
+    const actual = await admin.auth().getUserByEmail(email).catch(() => null);
+    if (actual && !porEmail.docs.some((d) => d.id === actual.uid)) {
+      refs.push(db().collection("delegados").doc(actual.uid));
+    }
+    await Promise.all(refs.map((r) => r.delete()));
+    return { success: true, uid: actual ? actual.uid : null, removed: refs.length };
+  }
+
   let userRecord;
   try {
     userRecord = await admin.auth().getUserByEmail(email);
@@ -415,11 +432,6 @@ exports.adminSetDelegado = onCall({ maxInstances: 5, enforceAppCheck: ENFORCE_AP
   }
   const uid = userRecord.uid;
   const ref = db().collection("delegados").doc(uid);
-
-  if (request.data?.remove === true) {
-    await ref.delete();
-    return { success: true, uid, removed: true };
-  }
 
   // Validado contra el catálogo real (auditoría 22-ago-2026, F-04): antes solo se
   // comprobaba tipo/longitud, y solo el desplegable del cliente restringía a tiendas
@@ -470,14 +482,14 @@ exports.adminOverview = onCall({
 
   // .stream(): recuento incremental, memoria acotada aunque la colección crezca.
   const usersStream = db().collection("users")
-    .select("profile.store", "profile.fcmToken", "membership")
+    .select("profile.store", ...TOKEN_FIELDS, "membership")
     .stream();
 
   for await (const d of usersStream) {
     const data = d.data();
     const p = data.profile || {};
     total += 1;
-    if (p.fcmToken) conPush += 1;
+    if (tokensFromProfile(p).length > 0) conPush += 1;
     const expelled = !!(data.membership && data.membership.expelled);
     if (expelled) { expulsados += 1; continue; }
     const active = isUserActive(data);

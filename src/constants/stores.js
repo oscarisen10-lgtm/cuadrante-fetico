@@ -1,6 +1,9 @@
 export const STORES = [
   { name: "LAS MATAS", city: "Las Rozas de Madrid" },
-  { name: "REYES CAT", city: "San Sebastián de los Reyes" },
+  // "REYES CAT" es Supercor Reyes Católicos, que está en MAJADAHONDA (Avda. Reyes
+  // Católicos, 6), no en San Sebastián de los Reyes: el nombre abreviado despistaba.
+  // El municipio decide qué festivos locales ve el usuario (ver MUNICIPAL_HOLIDAYS).
+  { name: "REYES CAT", city: "Majadahonda" },
   { name: "MAJADAHONDA I", city: "Majadahonda" },
   { name: "MONTE PILAR", city: "Majadahonda" },
   { name: "PARQUE PINAR", city: "Pozuelo de Alarcón" },
@@ -27,7 +30,9 @@ export const STORES = [
   { name: "CLARA DEL REY", city: "Madrid" },
   { name: "DOCTOR FLEMING", city: "Madrid" },
   { name: "AVDA EUROPA", city: "Pozuelo de Alarcón" },
-  { name: "AVDA COMUNIDAD MADRID", city: "Las Rozas de Madrid" },
+  // Supercor Exprés Pozuelo, en Avda. de la Comunidad de Madrid, 3 (Pozuelo de
+  // Alarcón). El Exprés de Las Rozas es otro distinto: "LAS ROZAS" (C/ Chiapas, 2).
+  { name: "AVDA COMUNIDAD MADRID", city: "Pozuelo de Alarcón" },
   { name: "JR JIMENEZ", city: "Madrid" },
   { name: "RIVAS", city: "Rivas-Vaciamadrid" },
   { name: "SUANCES ALCALA 494", city: "Madrid" },
@@ -120,6 +125,70 @@ export const S_ROMERO_STORES = [
   "PTA HIERRO",
   "ZIELO"
 ];
+
+// Centros de SUPERCOR EXPRÉS. Hasta el 28-ago-2026 no existía esta lista y
+// "Supercor" y "S. Express" compartían rama en el filtro del desplegable, así que
+// quien elegía Exprés veía TODAS las tiendas (las de Supercor incluidas).
+// Contrastada con el listado oficial de establecimientos por bloques.
+export const SUPERCOR_EXPRESS_STORES = [
+  "3 CANTOS",
+  "ALCOBENDAS",
+  "ARAVACA",
+  "ARROYOFRESNO / CERRO M",
+  "AVDA COMUNIDAD MADRID",
+  "AVDA EUROPA",
+  "BARAJAS /CORONALES",
+  "BARQUILLO",
+  "CASTELLO",
+  "CEDIAL",
+  "CLARA DEL REY",
+  "COLMENAR VIEJO",
+  "CONDESA DE VENADITO",
+  "DIEGO DE LEON",
+  "DOCTOR FLEMING",
+  "EMBAJADORES",
+  "JR JIMENEZ",
+  "LAS ROZAS",
+  "LAS TABLAS",
+  "MARIA MAEZTU",
+  "MARQUES DE MONDEJAR",
+  "MARQUEZ DE LOZOYA",
+  "MERCADO DE SAN ANTON",
+  "MONFORTE LEMOS",
+  "MONTE CARMELO",
+  "NARVAEZ",
+  "NUÑEZ DE BALBOA",
+  "ODONNEL",
+  "PONZANO",
+  "PRADO SOMOSAGUAS",
+  "RIVAS",
+  "SAN SEBASTIAN REYES",
+  "SUANCES ALCALA 494",
+  "TORRELODONES",
+  "VALDEMARIN",
+  "VALLEHERMOSO",
+  "VILLALBA PUEBLO",
+  "VILLANUEVA CAÑADA",
+  "VILLAVICIOSA"
+];
+
+// Tiendas que ve cada empresa en el desplegable (registro y Ajustes). Vive aquí
+// y no duplicada en las dos vistas, que es como se coló el fallo de Exprés.
+// Supercor se calcula por RESTA: si algún día se añade una tienda a STORES y se
+// olvida clasificarla, aparece en Supercor en vez de desaparecer del todo.
+export const storesForCompany = (company) => {
+  if (company === "S. Romero") return STORES.filter(s => S_ROMERO_STORES.includes(s.name));
+  if (company === "ECI") return STORES.filter(s => ECI_STORES.includes(s.name));
+  if (company === "S. Express") return STORES.filter(s => SUPERCOR_EXPRESS_STORES.includes(s.name));
+  if (company === "Supercor") {
+    return STORES.filter(s =>
+      !S_ROMERO_STORES.includes(s.name) &&
+      !ECI_STORES.includes(s.name) &&
+      !SUPERCOR_EXPRESS_STORES.includes(s.name)
+    );
+  }
+  return STORES;
+};
 
 // Fiestas laborales de ámbito local. Fechas en formato MM-DD referidas al año en
 // curso (2026, BOCM 12-dic-2025). OJO: las de base religiosa se mueven con la

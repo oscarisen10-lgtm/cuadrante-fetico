@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ShieldCheck, Users, Bell, UserCheck, UserX, Plus, Trash2, RefreshCw, X, Mail, Store as StoreIcon, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
 import { fetchAdminOverview, saveDelegado } from '../services/firebaseService';
-import { STORES, S_ROMERO_STORES, ECI_STORES, formatStoreName } from '../constants/stores';
+import { STORES, storesForCompany, formatStoreName } from '../constants/stores';
 import { COMPANY_RULES } from '../constants/config';
 import { toast, confirm } from '../services/toastBus';
 import { LoadingLogo } from './UIComponents';
@@ -11,18 +11,10 @@ import { StoreUserManager } from './StoreUserManager';
 // perfil (ECI y cuentas auto-reparadas), para que el admin no pierda a nadie.
 const ALL_STORES = [...STORES.map((s) => s.name), "En construcción", "Centro sin definir"];
 
-// Tiendas de cada empresa (mismo filtro que en el registro y en Ajustes).
-const storesForCompany = (company) => {
-  let list;
-  if (company === "ECI") {
-    list = STORES.filter((s) => ECI_STORES.includes(s.name));
-  } else if (company === "S. Romero") {
-    list = STORES.filter((s) => S_ROMERO_STORES.includes(s.name));
-  } else {
-    list = STORES.filter((s) => !S_ROMERO_STORES.includes(s.name) && !ECI_STORES.includes(s.name));
-  }
-  return list.map((s) => s.name).sort((a, b) => a.localeCompare(b, 'es'));
-};
+// Nombres de las tiendas de una empresa, ordenados. El filtro por empresa vive en
+// constants/stores.js: aquí había una copia, y con ella el mismo fallo de Exprés.
+const storeNamesForCompany = (company) =>
+  storesForCompany(company).map((s) => s.name).sort((a, b) => a.localeCompare(b, 'es'));
 
 function StatCard({ icon, label, value, tone = "emerald" }) {
   const tones = {
@@ -278,7 +270,7 @@ export const AdminView = React.memo(function AdminView() {
                         aria-label="Centro / Tienda"
                       >
                         <option value="" disabled>Centro / Tienda...</option>
-                        {storesForCompany(modal.company).map((s) => <option key={s} value={s}>{formatStoreName(s)}</option>)}
+                        {storeNamesForCompany(modal.company).map((s) => <option key={s} value={s}>{formatStoreName(s)}</option>)}
                       </select>
                       <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"><ChevronDown size={13} /></div>
                     </div>

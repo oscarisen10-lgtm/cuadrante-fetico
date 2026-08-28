@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, FileText, SlidersHorizontal, HeartPulse, Pig
 import { eur, num4 } from '../constants/nomina';
 import {
   calcularNominaDelMes, calcularDeducciones, netoPagaExtra, configDelMes, guardarMes,
+  proporcionPagaExtra, cuatrieniosEnFecha,
 } from '../constants/nominaCalculo';
 import { calcularIT } from '../constants/nominaBajas';
 import { ModalConfigNomina } from './nomina/ModalConfigNomina';
@@ -83,8 +84,8 @@ export const NominaView = React.memo(function NominaView({ user, saveToCloud }) 
   // `cfg` es null y en vez de la tabla se enseña el aviso de "sin guardar" — antes
   // se repetía la misma nómina en los doce meses.
   const cfg = useMemo(
-    () => configDelMes(nominaGuardada, anioVisto, mesVisto),
-    [nominaGuardada, anioVisto, mesVisto],
+    () => configDelMes(nominaGuardada, anioVisto, mesVisto, user?.fechaAlta),
+    [nominaGuardada, anioVisto, mesVisto, user?.fechaAlta],
   );
   const nomina = useMemo(
     () => calcularNominaDelMes(cfg, anioVisto, mesVisto),
@@ -92,7 +93,15 @@ export const NominaView = React.memo(function NominaView({ user, saveToCloud }) 
   );
   // Para el formulario: lo del mes si ya está guardado, y si no lo último que se
   // usó, para no tener que reescribirlo entero cada mes.
-  const cfgFormulario = cfg || { ...(nominaGuardada || {}), meses: undefined };
+  const cfgFormulario = {
+    ...(cfg || { ...(nominaGuardada || {}), meses: undefined }),
+    fechaAlta: user?.fechaAlta || '',
+    // Para un mes sin guardar aún no hay `cfg`, pero la antigüedad se puede
+    // calcular igual: depende solo de la fecha de alta y del mes que se mira.
+    cuatrienios: user?.fechaAlta
+      ? cuatrieniosEnFecha(user.fechaAlta, anioVisto, mesVisto)
+      : (Number(cfg?.cuatrienios ?? nominaGuardada?.cuatrienios) || 0),
+  };
   const yaConfigurado = Boolean(nominaGuardada?.grupo);
 
   // Deducciones REALES: las cuatro de cotización salen de los tipos de ley del
@@ -307,16 +316,29 @@ export const NominaView = React.memo(function NominaView({ user, saveToCloud }) 
               lo que entra en la nómina de este mes. */}
           <div className="rounded-2xl overflow-hidden border border-slate-100">
             <SeccionTitulo>Pagas extra (no prorrateadas)</SeccionTitulo>
-            {[['Paga de Verano', nomina.pagaVerano], ['Paga de Navidad', nomina.pagaNavidad]].map(([nombre, bruto]) => {
-              const pe = netoPagaExtra(bruto, cfg?.tipoIrpf);
+            {[['Paga de Verano', nomina.pagaVerano, 'verano'], ['Paga de Navidad', nomina.pagaNavidad, 'navidad']].map(([nombre, bruto, cual]) => {
+              // Quien no lleva el periodo de devengo entero cobra solo su parte.
+              const prop = proporcionPagaExtra(user?.fechaAlta, cual, anioVisto);
+              const pe = netoPagaExtra(bruto * prop.proporcion, cfg?.tipoIrpf);
+              const parcial = prop.proporcion < 1;
               return (
                 <div key={nombre} className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100">
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[14px] text-slate-800 leading-tight">{nombre}</span>
+                    <span className="text-[14px] text-slate-800 leading-tight">
+                      {nombre}
+                      {parcial && (
+                        <span className="ml-1.5 text-[9px] font-black text-amber-600 uppercase tracking-widest">Parcial</span>
+                      )}
+                    </span>
                     <span className="text-[11px] text-slate-400 leading-tight mt-1">
                       Bruto {eur(pe.bruto)}
                       {pe.irpf > 0 && <> · IRPF −{eur(pe.irpf)}</>}
                     </span>
+                    {parcial && (
+                      <span className="text-[10px] text-amber-700 leading-snug mt-1">
+                        {prop.dias} de {prop.diasPeriodo} días devengados (desde tu alta)
+                      </span>
+                    )}
                   </div>
                   <div className="flex flex-col items-end shrink-0">
                     <span className="text-[15px] font-bold text-slate-800 tabular-nums whitespace-nowrap">{eur(pe.neto)}</span>
@@ -332,6 +354,9 @@ export const NominaView = React.memo(function NominaView({ user, saveToCloud }) 
                 {Number(cfg?.tipoIrpf) > 0
                   ? ' — y por eso al neto solo se le resta el IRPF, no la Seguridad Social: esa ya está pagada mes a mes.'
                   : '. Pon tu porcentaje de IRPF para ver el neto.'}
+                {' '}La de verano se gana del 1 de julio al 30 de junio y la de navidad del 1 de enero al 31 de diciembre;
+                la empresa las adelanta el 15 de junio y el 15 de diciembre.
+                {!user?.fechaAlta && ' Si llevas menos de un año, pon tu fecha de alta en Ajustes para ver la parte que te corresponde.'}
               </p>
             </div>
           </div>

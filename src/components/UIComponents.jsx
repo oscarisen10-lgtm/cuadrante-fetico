@@ -47,13 +47,18 @@ export function NavItem({ icon, label, isActive, onClick }) {
 
 // dataTour: marca opcional para que el tutorial pueda iluminar esta barra
 // (ver constants/screenTips).
-export function StatBar({ label, currentValue, totalValue, percentage, color, large = false, dataTour }) {
+// `hint`: aclaración pequeña junto a la etiqueta (p. ej. "de 22 al año" cuando el
+// objetivo está prorrateado por la fecha de alta). Si no se pasa, no se pinta nada.
+export function StatBar({ label, currentValue, totalValue, percentage, color, large = false, dataTour, hint }) {
   const clampedPercentage = Math.max(0, Math.min(percentage, 100));
 
   return (
     <div data-tour={dataTour} className="space-y-2.5 flex flex-col" role="meter" aria-label={label} aria-valuenow={clampedPercentage} aria-valuemin={0} aria-valuemax={100}>
       <div className="flex justify-between items-end leading-none">
-        <span className={`font-black uppercase ${large ? "text-xs text-slate-500 tracking-tight" : "text-[10px] text-slate-400 tracking-widest"}`}>{label}</span>
+        <span className={`font-black uppercase ${large ? "text-xs text-slate-500 tracking-tight" : "text-[10px] text-slate-400 tracking-widest"}`}>
+          {label}
+          {hint && <span className="ml-1.5 text-[9px] font-bold text-slate-400 normal-case tracking-tight">{hint}</span>}
+        </span>
         <span className={`font-bold text-slate-400 ${large ? "text-base mr-0.5" : "text-xs mr-1"}`}>
           {currentValue} <span className="text-slate-300">/</span> <span className={`${large ? "text-2xl font-black tracking-tighter" : "text-sm font-black"} text-slate-900`}>{totalValue}</span>
         </span>
@@ -80,10 +85,13 @@ export function StatBar({ label, currentValue, totalValue, percentage, color, la
 // Contador SIN objetivo: mismo encabezado que StatBar pero sin barra de progreso.
 // Lo usa el Resumen de quien trabaja en una empresa no verificada, de la que no
 // conocemos el convenio: se enseña lo que lleva hecho, no un objetivo inventado.
-export function StatCounter({ label, value, large = false, dataTour }) {
+export function StatCounter({ label, value, large = false, dataTour, hint }) {
   return (
     <div data-tour={dataTour} className="flex justify-between items-end leading-none">
-      <span className={`font-black uppercase ${large ? "text-xs text-slate-500 tracking-tight" : "text-[10px] text-slate-400 tracking-widest"}`}>{label}</span>
+      <span className={`font-black uppercase ${large ? "text-xs text-slate-500 tracking-tight" : "text-[10px] text-slate-400 tracking-widest"}`}>
+        {label}
+        {hint && <span className="ml-1.5 text-[9px] font-bold text-slate-400 normal-case tracking-tight">{hint}</span>}
+      </span>
       <span className={`${large ? "text-2xl font-black tracking-tighter" : "text-sm font-black"} text-slate-900`}>{value}</span>
     </div>
   );

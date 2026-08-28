@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown, X, Plus, Trash2, HeartPulse } from 'lucide-react';
 import {
-  GRUPOS_PROFESIONALES, MAX_CUATRIENIOS, TIPO_BAJA, PCT_NOCTURNIDAD,
+  GRUPOS_PROFESIONALES, TIPO_BAJA, PCT_NOCTURNIDAD,
   antiguedadAnual, mensualDesdeAnual, precioHora, plusNocturnidadHora,
   grupoPorId, etiquetaCuatrienio, eur, num4, num5, CUOTA_SINDICAL_POR_DEFECTO, IRPF_MAXIMO,
 } from '../../constants/nomina';
@@ -37,7 +37,9 @@ function CampoEuros({ id, label, valor, onChange, ayuda }) {
 /** Modal de configuración: de aquí sale toda la nómina. */
 export function ModalConfigNomina({ cfg, mesEtiqueta, onGuardar, onCerrar }) {
   const [g, setG] = useState(cfg.grupo || '');
-  const [c, setC] = useState(cfg.cuatrienios || 0);
+  // Ya no es editable: llega derivado de la fecha de alta (ver configDelMes).
+  const c = Number(cfg.cuatrienios) || 0;
+  const sinFechaAlta = !cfg.fechaAlta;
   // Los importes se llevan como texto mientras se teclean: un input numérico
   // controlado con Number() se pelea con el usuario en cuanto borra o escribe coma.
   const [puesto, setPuesto] = useState(cfg.complementoPuesto ?? '');
@@ -77,12 +79,26 @@ export function ModalConfigNomina({ cfg, mesEtiqueta, onGuardar, onCerrar }) {
   // tiene que enterarse, no ver un número corregido sin explicación.
   const irpfFueraDeRango = Number(irpf) > IRPF_MAXIMO;
 
+  // Con el modal abierto, la página de detrás no debe moverse. `overscroll-contain`
+  // ya corta el encadenado del gesto, pero en iOS el rebote elástico del body se
+  // cuela igual: bloquearlo aquí es lo que evita que la nómina se desplace por
+  // debajo mientras se rellena el formulario.
+  useEffect(() => {
+    const previo = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previo; };
+  }, []);
+
   return (
     <div className="fixed inset-0 z-[110] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in" role="dialog" aria-modal="true" aria-label="Configurar nómina">
-      <div className="bg-white rounded-[2rem] p-6 shadow-2xl w-full max-w-sm animate-in zoom-in-95 flex flex-col max-h-[85vh] overflow-y-auto">
+      {/* Tres zonas: cabecera y botón FIJOS, y solo el formulario con scroll.
+          Antes el bloque entero era un único `overflow-y-auto`, así que Guardar
+          quedaba al final de un formulario muy largo y había que bajar del todo
+          para alcanzarlo, medio tapado por el borde. */}
+      <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm animate-in zoom-in-95 flex flex-col max-h-[85vh] overflow-hidden">
         {/* El mes va en la cabecera porque Guardar afecta SOLO a ese mes: sin
             decirlo, se guardaría en agosto creyendo estar editando julio. */}
-        <div className="flex justify-between items-start mb-5 border-b border-slate-100 pb-3">
+        <div className="flex justify-between items-start px-6 pt-6 pb-3 border-b border-slate-100 shrink-0">
           <span className="flex flex-col min-w-0">
             <span className="text-xs font-black uppercase italic tracking-widest text-emerald-700">Configurar nómina</span>
             {mesEtiqueta && (
@@ -91,6 +107,11 @@ export function ModalConfigNomina({ cfg, mesEtiqueta, onGuardar, onCerrar }) {
           </span>
           <button onClick={onCerrar} className="p-2 bg-slate-50 rounded-full hover:bg-slate-200 text-slate-300 shrink-0" aria-label="Cerrar"><X size={18} /></button>
         </div>
+
+        {/* `overscroll-contain` corta el scroll chaining: sin él, al llegar al final
+            de esta lista el gesto se encadenaba a la nómina de detrás y parecía que
+            el modal se quedaba clavado mientras se movía el fondo. */}
+        <div className="flex-1 overflow-y-auto overscroll-contain px-6 pt-4">
 
         <div className="flex flex-col gap-1.5 mb-5">
           <label htmlFor="cfg-grupo" className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Grupo profesional</label>
@@ -112,22 +133,21 @@ export function ModalConfigNomina({ cfg, mesEtiqueta, onGuardar, onCerrar }) {
           )}
         </div>
 
+        {/* La antigüedad ya NO se elige: se calcula desde la fecha de alta, que se
+            pone una vez en Ajustes. Un desplegable a mano se queda obsoleto —nadie
+            vuelve aquí el día que cumple ocho años— y podía contradecir a la fecha. */}
         <div className="flex flex-col gap-1.5 mb-6">
-          <label htmlFor="cfg-antig" className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Antigüedad</label>
-          <select
-            id="cfg-antig" value={c} onChange={(e) => setC(Number(e.target.value))}
-            className="w-full bg-slate-50 ring-1 ring-slate-200 p-3 rounded-xl text-sm outline-none text-slate-800 focus:ring-2 focus:ring-emerald-500"
-          >
-            {Array.from({ length: MAX_CUATRIENIOS + 1 }).map((_, n) => (
-              <option key={n} value={n}>{etiquetaCuatrienio(n)}</option>
-            ))}
-          </select>
-          {c > 0 && (
-            <p className="text-[10px] text-slate-400 font-medium ml-1 mt-1 leading-snug">
-              Suma de los {c} {c === 1 ? 'tramo' : 'tramos'}: {eur(antiguedadAnual(c))} al año ={' '}
-              <span className="font-black text-slate-600">{eur(antMes)}</span> al mes
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Antigüedad</span>
+          <div className="bg-slate-50 ring-1 ring-slate-200 p-3 rounded-xl">
+            <p className="text-sm text-slate-800 leading-tight">{etiquetaCuatrienio(c)}</p>
+            <p className="text-[10px] text-slate-400 font-medium mt-1.5 leading-snug">
+              {sinFechaAlta
+                ? 'Se calcula sola con tu fecha de alta. Ponla en Ajustes → Mi Puesto.'
+                : c > 0
+                  ? <>Suma de los {c} {c === 1 ? 'tramo' : 'tramos'}: {eur(antiguedadAnual(c))} al año = <span className="font-black text-slate-600">{eur(antMes)}</span> al mes</>
+                  : 'Calculada con tu fecha de alta. Aún no llegas al primer cuatrienio.'}
             </p>
-          )}
+          </div>
         </div>
 
         {/* COMPLEMENTOS (16 pagas). Con nombre y tantos como haga falta: hay quien
@@ -395,6 +415,10 @@ export function ModalConfigNomina({ cfg, mesEtiqueta, onGuardar, onCerrar }) {
           </div>
         )}
 
+        </div>
+
+        {/* Fuera del área con scroll: siempre visible, sin tener que bajar a buscarlo. */}
+        <div className="px-6 pb-6 pt-4 border-t border-slate-100 shrink-0 bg-white">
         <button
           onClick={() => onGuardar({
             grupo: g, cuatrienios: c,
@@ -422,6 +446,7 @@ export function ModalConfigNomina({ cfg, mesEtiqueta, onGuardar, onCerrar }) {
         >
           {mesEtiqueta ? `Guardar ${mesEtiqueta}` : 'Guardar'}
         </button>
+        </div>
       </div>
     </div>
   );

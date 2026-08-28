@@ -96,6 +96,20 @@ export const antiguedadAnual = (n) => {
     : 0);
 };
 
+/** Milisegundos de un día, para medir distancias entre fechas. */
+export const MS_DIA = 24 * 60 * 60 * 1000;
+
+/** 'YYYY-MM-DD' -> Date local a mediodía.
+ *
+ *  A MEDIODÍA y no a medianoche a propósito: al sumar días con aritmética de
+ *  milisegundos, un cambio de hora (los domingos de marzo y octubre) mueve la
+ *  fecha ±1 hora, y desde las 00:00 eso salta al día anterior o siguiente.
+ *  Partiendo de las 12:00 quedan 12 horas de margen a cada lado. */
+export const aFecha = (iso) => {
+  const [y, m, d] = String(iso).split('-').map(Number);
+  return new Date(y, (m || 1) - 1, d || 1, 12, 0, 0, 0);
+};
+
 /** Redondeo a céntimos, como hace la nómina en cada línea. Lo usan los dos
  *  módulos de cálculo, así que vive con el resto de helpers numéricos. */
 export const cent = (n) => Math.round(n * 100) / 100;

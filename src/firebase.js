@@ -5,6 +5,8 @@ import {
   memoryLocalCache,
   persistentLocalCache,
   persistentMultipleTabManager,
+  disableNetwork,
+  enableNetwork,
 } from "firebase/firestore";
 import { getMessaging } from "firebase/messaging";
 import { getStorage } from "firebase/storage";
@@ -142,6 +144,24 @@ export const db = (() => {
     localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
   });
 })();
+
+// Despierta la conexión de Firestore. Con experimentalForceLongPolling (obligado
+// en los WebView de iOS/Android) la conexión puede quedarse colgada tras un rato
+// en segundo plano o un cambio de red: los onSnapshot dejan de recibir y la app
+// se queda con datos viejos hasta que el usuario la cierra y la vuelve a abrir.
+// Este ciclo la obliga a reabrirse; mientras tanto se sigue sirviendo la caché.
+let reconectando = false;
+export const reconnectFirestore = async () => {
+  if (reconectando) return;
+  reconectando = true;
+  try {
+    await disableNetwork(db);
+    await enableNetwork(db);
+  } catch (e) {
+    console.warn("No se pudo reconectar Firestore:", e?.message);
+  }
+  reconectando = false;
+};
 
 // Firebase Messaging solo funciona en navegadores con Service Worker.
 // iOS WKWebView (Capacitor nativo) NO lo soporta, así que getMessaging() lanzaría

@@ -10,7 +10,9 @@ const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { admin, db, ENFORCE_APP_CHECK } = require("./lib/firebase");
 const { ADMIN_EMAIL, requireAuth } = require("./lib/auth");
-const { NEWS_TOPIC, sendToNewsTopic, sendToTokens, tokensForStores } = require("./lib/push");
+const {
+  NEWS_TOPIC, TOKEN_FIELDS, sendToNewsTopic, sendToTokens, tokensForStores, collectTokens,
+} = require("./lib/push");
 
 /**
  * Migración ÚNICA a topics: suscribe al topic los tokens que ya estaban guardados en
@@ -25,12 +27,8 @@ async function ensureTopicMigration() {
   const marker = await markerRef.get();
   if (marker.exists) return;
 
-  const usersSnapshot = await db().collection("users").select("profile.fcmToken").get();
-  const tokens = [];
-  usersSnapshot.forEach((doc) => {
-    const profile = doc.data().profile;
-    if (profile && profile.fcmToken) tokens.push(profile.fcmToken);
-  });
+  const usersSnapshot = await db().collection("users").select(...TOKEN_FIELDS).get();
+  const tokens = [...collectTokens(usersSnapshot, new Set())];
 
   // subscribeToTopic admite hasta 1000 tokens por llamada.
   for (let i = 0; i < tokens.length; i += 1000) {
@@ -205,22 +203,18 @@ exports.notifyDelegadoNewUser = onDocumentCreated(
       const [delegadoSnaps, adminSnap] = await Promise.all([
         Promise.all(uidChunks.map((chunk) => db().collection("users")
           .where(admin.firestore.FieldPath.documentId(), "in", chunk)
-          .select("profile.fcmToken")
+          .select(...TOKEN_FIELDS)
           .get())),
         // Avisar TAMBIÉN al admin (siempre, por su email fijo), sea delegado o no.
         db().collection("users")
           .where("profile.email", "==", ADMIN_EMAIL)
-          .select("profile.fcmToken")
+          .select(...TOKEN_FIELDS)
           .limit(1)
           .get(),
       ]);
 
-      const collect = (snap) => snap.forEach((d) => {
-        const t = d.data().profile && d.data().profile.fcmToken;
-        if (t) tokens.add(t);
-      });
-      delegadoSnaps.forEach(collect);
-      collect(adminSnap);
+      delegadoSnaps.forEach((snap) => collectTokens(snap, tokens));
+      collectTokens(adminSnap, tokens);
 
       if (tokens.size === 0) return null;
 
@@ -252,14 +246,18 @@ exports.subscribeToNewsTopic = onCall({ maxInstances: 10, enforceAppCheck: ENFOR
 
   // El token debe ser TUYO (auditoría 22-ago-2026): antes cualquiera podía suscribir
   // un token ajeno al topic. Se rechaza solo si consta a nombre de OTRO usuario; si
-  // todavía no consta en ningún perfil se acepta, porque el cliente guarda
-  // profile.fcmToken y llama aquí casi a la vez y el orden no está garantizado.
-  const dueñoSnap = await db().collection("users")
-    .where("profile.fcmToken", "==", token)
-    .select()
-    .limit(1)
-    .get();
-  if (!dueñoSnap.empty && dueñoSnap.docs[0].id !== uid) {
+  // todavía no consta en ningún perfil se acepta, porque el cliente guarda el token
+  // y llama aquí casi a la vez y el orden no está garantizado.
+  //
+  // Se busca en los DOS campos: `fcmTokens` (array, un token por dispositivo) es el
+  // modelo actual, y `fcmToken` (string) el de las apps anteriores al 28-ago-2026.
+  const [porArray, porString] = await Promise.all([
+    db().collection("users").where("profile.fcmTokens", "array-contains", token).select().limit(1).get(),
+    db().collection("users").where("profile.fcmToken", "==", token).select().limit(1).get(),
+  ]);
+  const ajeno = [porArray, porString]
+    .some((snap) => !snap.empty && snap.docs[0].id !== uid);
+  if (ajeno) {
     throw new HttpsError("permission-denied", "Ese dispositivo pertenece a otra cuenta.");
   }
 

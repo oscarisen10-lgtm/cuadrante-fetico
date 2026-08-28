@@ -37,8 +37,6 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
   // frescos, jefes) tienen finde largo de 4 días (sáb-dom-lun-mar) con reparto
   // 2 cortos / 8 largos; el resto, largo de 3 días (sáb-dom-lun) con reparto 6 cortos / 4 largos.
   const findeLargo4Dias = tieneFindeLargoDe4Dias(user?.rank);
-  const calidadCortoTarget = findeLargo4Dias ? 2 : 6;
-  const calidadLargoTarget = findeLargo4Dias ? 8 : 4;
   const calidadLargoLabel = findeLargo4Dias ? "Sáb-Dom-Lun-Mar" : "Sáb-Dom-Lun";
 
   // Objetivos del usuario (null = empresa no verificada que aún no ha puesto los
@@ -47,6 +45,32 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
   // enseña lo que lleva trabajado sin compararlo con una cifra que no es la suya.
   const objetivo = (key) => stats.targets?.[key] || 0;
   const sinObjetivos = !stats.targets;
+
+  // ── Objetivos recortados por la fecha de alta ──
+  // Quien entró a mitad de año no tiene los topes enteros del convenio, sino su
+  // parte proporcional (ver config.proporcionAnual): de alta el 6 de julio son 179
+  // de 365 días, y 22 domingos se quedan en 11. `stats.prorrateo` es null cuando el
+  // año va completo, que es el caso de casi todo el mundo.
+  const prorrateo = stats.prorrateo;
+  const conProrrateo = !!prorrateo && !sinObjetivos;
+  const anual = (key) => stats.targetsAnuales?.[key] || 0;
+  // Aclaración junto a la etiqueta: sin ella, ver un 11 donde el compañero de al
+  // lado tiene un 22 se lee como un fallo de la app, no como el convenio aplicado.
+  const deAlAnio = (key, sufijo = "") =>
+    conProrrateo && anual(key) > 0 && anual(key) !== objetivo(key)
+      ? `de ${anual(key)}${sufijo} al año`
+      : undefined;
+  const fechaLegible = (iso) => {
+    const [y, m, d] = String(iso).split('-');
+    return d && m && y ? `${d}/${m}/${y}` : iso;
+  };
+
+  // El reparto corto/largo se recorta con la MISMA proporción que el objetivo de
+  // calidad del que sale; si no, alguien con 5 findes de objetivo vería debajo un
+  // desglose de 6 + 4 que suma 10 y no cuadra con su propia barra.
+  const recorta = (n) => (conProrrateo ? Math.round(n * prorrateo.proporcion) : n);
+  const calidadCortoTarget = recorta(findeLargo4Dias ? 2 : 6);
+  const calidadLargoTarget = recorta(findeLargo4Dias ? 8 : 4);
 
   // El tutorial explica cada barra hablando del convenio, y a quien está fuera de
   // ANGED eso no le vale: sus objetivos se los pone él. En vez de meterle lógica
@@ -221,33 +245,45 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
             </p>
           </div>
         )}
+        {conProrrateo && (
+          <div data-tour="res-prorrateo" className="rounded-2xl bg-emerald-50 border border-emerald-200 p-3.5 mb-5 shrink-0">
+            <p className="text-[9px] font-black text-emerald-800 uppercase tracking-widest leading-none mb-1.5">
+              Objetivos ajustados a tu alta
+            </p>
+            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tight leading-tight">
+              {prorrateo.proporcion === 0
+                ? `Entraste el ${fechaLegible(prorrateo.desde)}, así que en ${prorrateo.anio} todavía no estabas en la empresa.`
+                : `Entraste el ${fechaLegible(prorrateo.desde)}: te corresponden ${prorrateo.dias} de los ${prorrateo.diasAnio} días de ${prorrateo.anio} (${Math.round(prorrateo.proporcion * 100)}%). Los topes del convenio se reparten en esa misma proporción.`}
+            </p>
+          </div>
+        )}
         <div className="flex-1 flex flex-col justify-between py-2 space-y-5">
           {/* data-tour: puntos que ilumina el tutorial (ver constants/screenTips) */}
           {objetivo('horas') > 0 ? (
-            <StatBar dataTour={tour("res-horas")} label="Horas Anuales" currentValue={formatTotalTime(stats.horasTotales)} percentage={(stats.horasTotales/objetivo('horas'))*100} totalValue={`${objetivo('horas')}h`} color="bg-emerald-500" large={true} />
+            <StatBar dataTour={tour("res-horas")} label="Horas Anuales" hint={deAlAnio('horas', 'h')} currentValue={formatTotalTime(stats.horasTotales)} percentage={(stats.horasTotales/objetivo('horas'))*100} totalValue={`${objetivo('horas')}h`} color="bg-emerald-500" large={true} />
           ) : (
-            <StatCounter dataTour={tour("res-horas")} label="Horas Anuales" value={formatTotalTime(stats.horasTotales)} large={true} />
+            <StatCounter dataTour={tour("res-horas")} label="Horas Anuales" hint={deAlAnio('horas', 'h')} value={formatTotalTime(stats.horasTotales)} large={true} />
           )}
 
           {objetivo('trabajados') > 0 ? (
-            <StatBar dataTour={tour("res-trabajados")} label="Días Trabajados" currentValue={stats.diasTrabajados} percentage={(stats.diasTrabajados/objetivo('trabajados'))*100} totalValue={objetivo('trabajados')} color="bg-emerald-600" large={true} />
+            <StatBar dataTour={tour("res-trabajados")} label="Días Trabajados" hint={deAlAnio('trabajados')} currentValue={stats.diasTrabajados} percentage={(stats.diasTrabajados/objetivo('trabajados'))*100} totalValue={objetivo('trabajados')} color="bg-emerald-600" large={true} />
           ) : (
-            <StatCounter dataTour={tour("res-trabajados")} label="Días Trabajados" value={stats.diasTrabajados} large={true} />
+            <StatCounter dataTour={tour("res-trabajados")} label="Días Trabajados" hint={deAlAnio('trabajados')} value={stats.diasTrabajados} large={true} />
           )}
 
           {objetivo('libres') > 0 ? (
-            <StatBar dataTour={tour("res-libres")} label="Días Libres" currentValue={stats.diasLibres} percentage={(stats.diasLibres/objetivo('libres'))*100} totalValue={objetivo('libres')} color="bg-emerald-400" large={true} />
+            <StatBar dataTour={tour("res-libres")} label="Días Libres" hint={deAlAnio('libres')} currentValue={stats.diasLibres} percentage={(stats.diasLibres/objetivo('libres'))*100} totalValue={objetivo('libres')} color="bg-emerald-400" large={true} />
           ) : (
-            <StatCounter dataTour={tour("res-libres")} label="Días Libres" value={stats.diasLibres} large={true} />
+            <StatCounter dataTour={tour("res-libres")} label="Días Libres" hint={deAlAnio('libres')} value={stats.diasLibres} large={true} />
           )}
 
           {objetivo('ha') > 0 && (
-             <StatBar dataTour="res-ha" label="Días HA" currentValue={stats.contadorHA} percentage={(stats.contadorHA/objetivo('ha'))*100} totalValue={objetivo('ha')} color="bg-emerald-500" large={true} />
+             <StatBar dataTour="res-ha" label="Días HA" hint={deAlAnio('ha')} currentValue={stats.contadorHA} percentage={(stats.contadorHA/objetivo('ha'))*100} totalValue={objetivo('ha')} color="bg-emerald-500" large={true} />
           )}
 
           {objetivo('calidad') > 0 && (
             <div data-tour="res-calidad">
-              <StatBar label="Calidad" currentValue={stats.findesCalidad} percentage={(stats.findesCalidad/objetivo('calidad'))*100} totalValue={objetivo('calidad')} color="bg-emerald-600" large={true} />
+              <StatBar label="Calidad" hint={deAlAnio('calidad')} currentValue={stats.findesCalidad} percentage={(stats.findesCalidad/objetivo('calidad'))*100} totalValue={objetivo('calidad')} color="bg-emerald-600" large={true} />
               <div className="flex gap-3 mt-1.5 ml-1">
                 <span className="text-[9px] font-black text-emerald-700 uppercase tracking-wider">● Sáb-Dom: {stats.findesCalidadCorto}/{calidadCortoTarget}</span>
                 <span className="text-[9px] font-black text-emerald-500 uppercase tracking-wider">● {calidadLargoLabel}: {stats.findesCalidadLargo}/{calidadLargoTarget}</span>
@@ -256,9 +292,9 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
           )}
 
           {objetivo('domingos') > 0 ? (
-            <StatBar dataTour={tour("res-domingos")} label="DOMINGOS/FESTIVOS" currentValue={stats.domingosCount} percentage={(stats.domingosCount/objetivo('domingos'))*100} totalValue={objetivo('domingos')} color="bg-emerald-500" large={true} />
+            <StatBar dataTour={tour("res-domingos")} label="DOMINGOS/FESTIVOS" hint={deAlAnio('domingos')} currentValue={stats.domingosCount} percentage={(stats.domingosCount/objetivo('domingos'))*100} totalValue={objetivo('domingos')} color="bg-emerald-500" large={true} />
           ) : (
-            <StatCounter dataTour={tour("res-domingos")} label="DOMINGOS/FESTIVOS" value={stats.domingosCount} large={true} />
+            <StatCounter dataTour={tour("res-domingos")} label="DOMINGOS/FESTIVOS" hint={deAlAnio('domingos')} value={stats.domingosCount} large={true} />
           )}
         </div>
       </div>

@@ -24,13 +24,24 @@ const ACTIVITY_STAMP_TTL_MS = 12 * 60 * 60 * 1000;
 // Compara dos objetos "user" a nivel superficial. Evita crear una referencia
 // nueva (y disparar re-renders en cascada en vistas memoizadas y en useShifts)
 // cuando el perfil llega igual en un nuevo snapshot del documento.
+// Los arrays de primitivos (profile.fcmTokens) se comparan por CONTENIDO: Firestore
+// construye uno nuevo en cada snapshot, así que con === el perfil salía distinto
+// siempre y la memoización de aquí abajo no servía de nada.
+const mismoValor = (x, y) => {
+  if (x === y) return true;
+  if (Array.isArray(x) && Array.isArray(y)) {
+    return x.length === y.length && x.every((v, i) => v === y[i]);
+  }
+  return false;
+};
+
 const shallowEqualUser = (a, b) => {
   if (a === b) return true;
   if (!a || !b) return false;
   const ka = Object.keys(a);
   const kb = Object.keys(b);
   if (ka.length !== kb.length) return false;
-  return ka.every((k) => a[k] === b[k]);
+  return ka.every((k) => mismoValor(a[k], b[k]));
 };
 
 export const useAuth = () => {
@@ -279,8 +290,17 @@ export const useAuth = () => {
     }
   }, [user?.uid]);
 
+  // Refleja EN LOCAL un cambio de perfil que ya ha aplicado el SERVIDOR y que el
+  // cliente no puede escribir por sí mismo (la tienda: ver cambiarMiTienda). El
+  // onSnapshot acabará trayendo lo mismo, pero mientras tanto la pantalla se
+  // quedaba con el valor viejo — de ahí la sensación de que el cambio de empresa
+  // "no ocurre" hasta cerrar y reabrir la app. NO escribe nada en Firestore.
+  const applyProfileLocally = useCallback((updates) => {
+    setUser((prev) => (prev ? { ...prev, ...updates } : prev));
+  }, []);
+
   return {
-    user, loading, logoutUser, saveToCloud,
+    user, loading, logoutUser, saveToCloud, applyProfileLocally,
     isActive, delegado,
     settings, shifts, activeShift, workTimeAccumulated, isBreakActive, breakStartTime
   };

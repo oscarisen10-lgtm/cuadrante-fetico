@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, ShieldCheck, Users, HelpCircle, Target, Share2, Link2 } from 'lucide-react';
+import { Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, ShieldCheck, Users, HelpCircle, Target, Share2, Link2, CalendarDays } from 'lucide-react';
 import { COMPANY_RULES, isAdminUser, hasKnownConvenio, CUSTOM_TARGET_FIELDS } from '../constants/config';
-import { STORES, S_ROMERO_STORES, ECI_STORES, formatStoreName } from '../constants/stores';
+import { storesForCompany, formatStoreName } from '../constants/stores';
 import { deleteUserAccount, cambiarMiTienda } from '../services/firebaseService';
 import { firestoreCacheMode } from '../firebase';
 import { toast } from '../services/toastBus';
 import { setHapticsEnabled, isHapticsEnabled, hapticLight } from '../utils/haptics';
 import { compartirPorWhatsApp, copiarEnlace } from '../services/compartir';
 
-export const SettingsView = React.memo(function SettingsView({ user, settings, saveToCloud, pushToken, pushTokenError, permissionState, requestTokenManually, isDelegado = false, onOpenGuide }) {
+export const SettingsView = React.memo(function SettingsView({ user, settings, saveToCloud, applyProfileLocally, pushToken, pushTokenError, permissionState, requestTokenManually, isDelegado = false, onOpenGuide }) {
   const isAdmin = isAdminUser(user);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -49,6 +49,10 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
     setCambiandoTienda(true);
     try {
       const res = await cambiarMiTienda(updates);
+      // El servidor ya lo ha guardado: píntalo sin esperar al onSnapshot. Sin esto,
+      // el desplegable seguía en la empresa vieja hasta que llegara el snapshot —y
+      // si la conexión estaba dormida, hasta reabrir la app.
+      applyProfileLocally(updates);
       if (res?.pendiente) {
         toast('Tienda actualizada. Tu cuenta queda pendiente de que la verifique el delegado de tu nueva tienda.', 'warning');
       } else {
@@ -88,15 +92,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
 
   const tokenColor = pushToken ? '#4ade80' : pushTokenError ? '#f87171' : '#ffffff50';
 
-  let filteredStores = STORES;
-  if (currentCompany === "S. Romero") {
-    filteredStores = STORES.filter(s => S_ROMERO_STORES.includes(s.name));
-  } else if (currentCompany === "ECI") {
-    filteredStores = STORES.filter(s => ECI_STORES.includes(s.name));
-  } else if (currentCompany === "Supercor" || currentCompany === "S. Express") {
-    filteredStores = STORES.filter(s => !S_ROMERO_STORES.includes(s.name) && !ECI_STORES.includes(s.name));
-  }
-  const sortedStores = [...filteredStores].sort((a, b) => a.name.localeCompare(b.name));
+  const sortedStores = [...storesForCompany(currentCompany)].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div className="flex flex-col space-y-5 animate-in fade-in duration-300 pb-20">
@@ -216,8 +212,38 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                      </div>
                    </div>
                  </div>
+
                </>
              )}
+
+             {/* Fecha de alta. Sale de aquí la parte proporcional de dos cosas:
+                 las pagas extra (quien no lleva el periodo entero cobra solo lo
+                 devengado) y los objetivos anuales del Resumen (quien entra el 6
+                 de julio no tiene el tope de 22 domingos, sino 11 — ver
+                 config.proporcionAnual). Sin el dato se asume año completo y paga
+                 entera, que es lo de la mayoría, así que no rellenarlo no rompe nada.
+                 Se enseña también a quien está fuera de ANGED: el registro ya le
+                 pide la fecha, y sus objetivos a mano se prorratean igual, así que
+                 tiene que poder corregirla. */}
+             <div className="flex flex-col space-y-1 mt-1">
+               <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1 flex items-center gap-1">
+                 <CalendarDays size={10} className="text-emerald-500"/> Antigüedad · fecha de alta
+               </span>
+               <input
+                 type="date"
+                 value={user?.fechaAlta || ''}
+                 max={new Date().toISOString().slice(0, 10)}
+                 onChange={(e) => handleProfileChange({ fechaAlta: e.target.value })}
+                 className="w-full bg-white/10 border border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] p-2.5 rounded-xl text-xs outline-none text-white font-medium"
+                 aria-label="Fecha de alta en la empresa"
+               />
+               <span className="text-[8px] text-white/30 font-bold uppercase tracking-tight ml-1 pt-1 leading-tight">
+                 El día que entraste en la empresa. Si entraste a mitad de año, tus
+                 objetivos del Resumen (domingos y festivos, HA, findes de calidad…)
+                 se ajustan a la parte del año que llevas
+                 {esOtraEmpresa ? '.' : ', y de aquí sale también la parte que te corresponde de las pagas de verano y navidad.'}
+               </span>
+             </div>
           </div>
 
           {/* Objetivos a mano: solo para quien está fuera de ANGED. De su convenio no

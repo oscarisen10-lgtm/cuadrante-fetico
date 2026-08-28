@@ -1,7 +1,7 @@
 import {
   DIAS_MES_NOMINA, IRPF_MAXIMO, CATEGORIA_DEDUCCION,
   antiguedadAnual, mensualDesdeAnual, precioDia, plusNocturnidadHora,
-  grupoPorId, tiposCotizacion, cent,
+  grupoPorId, tiposCotizacion, cent, MS_DIA, aFecha, MAX_CUATRIENIOS,
 } from './nomina';
 import { desgloseMesConBajas, calcularIT } from './nominaBajas';
 
@@ -22,6 +22,32 @@ import { desgloseMesConBajas, calcularIT } from './nominaBajas';
 export const claveMes = (anio, mes) => `${anio}-${String(mes + 1).padStart(2, '0')}`;
 
 /**
+ * cuatrieniosEnFecha — cuántos cuatrienios de antigüedad se han cumplido.
+ *
+ * Se DERIVAN de la fecha de alta en vez de preguntarlos: un desplegable a mano es
+ * un dato que se pone una vez y se queda obsoleto —nadie vuelve a Ajustes el día
+ * que cumple ocho años— y encima puede contradecir a la fecha de alta.
+ *
+ * Se toma como referencia el PRIMER día del mes de la nómina, no el último: si el
+ * cuatrienio se cumple a mitad de mes, el complemento nuevo se aplica al mes
+ * siguiente. Es la lectura conservadora; si alguna nómina real demuestra que la
+ * empresa lo aplica el mismo mes, se cambia aquí y solo aquí.
+ */
+export const cuatrieniosEnFecha = (fechaAlta, anio, mes) => {
+  if (!fechaAlta) return 0;
+  const alta = aFecha(fechaAlta);
+  if (Number.isNaN(alta.getTime())) return 0;
+
+  const ref = new Date(anio, mes, 1, 12);
+  let anios = ref.getFullYear() - alta.getFullYear();
+  const difMes = ref.getMonth() - alta.getMonth();
+  // Si aún no ha llegado el aniversario dentro del año, no cuenta ese año.
+  if (difMes < 0 || (difMes === 0 && ref.getDate() < alta.getDate())) anios -= 1;
+  if (anios < 0) return 0;
+  return Math.min(Math.floor(anios / 4), MAX_CUATRIENIOS);
+};
+
+/**
  * configDelMes — la configuración con la que calcular la nómina de UN mes.
  *
  * Cada mes guarda su propia instantánea (`nomina.meses['2026-08']`), porque no
@@ -36,10 +62,20 @@ export const claveMes = (anio, mes) => `${anio}-${String(mes + 1).padStart(2, '0
  *
  * @returns la config del mes, o null si ese mes no se ha guardado todavía.
  */
-export const configDelMes = (nomina, anio, mes) => {
+export const configDelMes = (nomina, anio, mes, fechaAlta) => {
   const delMes = nomina?.meses?.[claveMes(anio, mes)];
   if (!delMes) return null;
-  return { ...delMes, bajas: nomina.bajas || [] };
+  return {
+    ...delMes,
+    bajas: nomina.bajas || [],
+    // La antigüedad sale de la fecha de alta. Si todavía no la ha rellenado, se
+    // respeta lo que hubiera guardado a mano antes de que existiera este campo:
+    // borrarle la antigüedad por no tener un dato nuevo sería quitarle dinero de
+    // la pantalla sin que él haya cambiado nada.
+    cuatrienios: fechaAlta
+      ? cuatrieniosEnFecha(fechaAlta, anio, mes)
+      : (Number(delMes.cuatrienios) || 0),
+  };
 };
 
 /**
@@ -269,6 +305,58 @@ export const calcularNominaDelMes = (cfg, anio, mes) => {
  * @param {number} p.primaSegVida     retribución en especie: se resta igual que suma
  * @param {number} anio               para elegir los tipos de cotización correctos
  */
+/**
+ * Periodo de devengo de cada paga extra. Cada una se gana a lo largo de un año
+ * entero, y la empresa la adelanta antes de que ese año termine (el 15 de junio
+ * la de verano y el 15 de diciembre la de navidad, asumiendo ese riesgo).
+ *
+ * Verano  → del 1 de julio del año anterior al 30 de junio.
+ * Navidad → del 1 de enero al 31 de diciembre del mismo año.
+ *
+ * `desdeMesAnterior` marca la de verano, cuyo periodo arranca en el año previo.
+ */
+export const PERIODOS_PAGA_EXTRA = {
+  verano:  { inicioMes: 6, inicioDia: 1,  finMes: 5,  finDia: 30, desdeAnioAnterior: true },
+  navidad: { inicioMes: 0, inicioDia: 1,  finMes: 11, finDia: 31, desdeAnioAnterior: false },
+};
+
+/**
+ * proporcionPagaExtra — qué fracción de la paga se ha ganado.
+ *
+ * Quien lleva más de un año en la empresa cobra la paga entera (devuelve 1).
+ * Quien entró a mitad del periodo cobra solo la parte proporcional a los DÍAS
+ * NATURALES que estuvo dentro de él: alguien de alta en febrero cobra en junio la
+ * parte de febrero a junio, no la paga completa.
+ *
+ * @param {string} fechaAlta  'YYYY-MM-DD' del alta en la empresa
+ * @param {'verano'|'navidad'} cual
+ * @param {number} anio  año en que se cobra la paga
+ * @returns {{ proporcion:number, dias:number, diasPeriodo:number, desde:string, hasta:string }}
+ */
+export const proporcionPagaExtra = (fechaAlta, cual, anio) => {
+  const per = PERIODOS_PAGA_EXTRA[cual];
+  const anioInicio = per.desdeAnioAnterior ? anio - 1 : anio;
+  const inicio = new Date(anioInicio, per.inicioMes, per.inicioDia, 12);
+  const fin = new Date(anio, per.finMes, per.finDia, 12);
+  const diasPeriodo = Math.round((fin - inicio) / MS_DIA) + 1;
+
+  const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  // Sin fecha de alta no se puede prorratear: se asume la paga entera, que es lo
+  // que cobra la mayoría (quien lleva más de un año) y evita asustar con una
+  // cifra recortada a quien simplemente no ha rellenado el dato.
+  if (!fechaAlta) return { proporcion: 1, dias: diasPeriodo, diasPeriodo, desde: iso(inicio), hasta: iso(fin) };
+
+  const alta = aFecha(fechaAlta);
+  if (Number.isNaN(alta.getTime())) return { proporcion: 1, dias: diasPeriodo, diasPeriodo, desde: iso(inicio), hasta: iso(fin) };
+
+  if (alta <= inicio) return { proporcion: 1, dias: diasPeriodo, diasPeriodo, desde: iso(inicio), hasta: iso(fin) };
+  if (alta > fin) return { proporcion: 0, dias: 0, diasPeriodo, desde: iso(inicio), hasta: iso(fin) };
+
+  const dias = Math.round((fin - alta) / MS_DIA) + 1;   // el día del alta cuenta
+  return { proporcion: dias / diasPeriodo, dias, diasPeriodo, desde: iso(alta), hasta: iso(fin) };
+};
+
 /**
  * netoPagaExtra — lo que se cobra de verdad de una paga de Verano o Navidad.
  *

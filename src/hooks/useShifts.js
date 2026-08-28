@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { getFormattedDate } from '../utils/dateUtils';
-import { resolveTargets, tieneFindeLargoDe4Dias } from '../constants/config';
+import { resolveTargets, tieneFindeLargoDe4Dias, proporcionAnual, prorratearTargets } from '../constants/config';
 import { isHoliday } from '../utils/holidayUtils';
 
 /**
@@ -92,7 +92,13 @@ export const computeShiftStats = (shifts, shiftsMap, user, now = new Date()) => 
   // Empresa de ANGED → objetivos de su convenio. Empresa no verificada → los que
   // haya escrito el usuario a mano, o null si aún no ha puesto ninguno (el
   // Resumen lo detecta y se pinta en modo simple, sin barras de progreso).
-  const userRules = resolveTargets(user);
+  const targetsAnuales = resolveTargets(user);
+
+  // Y si entró a mitad de ESTE año, no le corresponden enteros: se recortan a los
+  // días que lleva de alta (ver config.proporcionAnual). El año se toma de `now`,
+  // que en el PDF es el año exportado, no necesariamente el actual.
+  const prorrateo = proporcionAnual(user?.fechaAlta, year);
+  const userRules = prorrateo ? prorratearTargets(targetsAnuales, prorrateo.proporcion) : targetsAnuales;
 
   return {
     horasTotales: horasTotalesDecimal,
@@ -104,7 +110,12 @@ export const computeShiftStats = (shifts, shiftsMap, user, now = new Date()) => 
     domingosCount,
     diasTrabajados,
     diasLibres,
-    targets: userRules
+    targets: userRules,
+    // Objetivos SIN recortar y el detalle del prorrateo (null si va a año completo).
+    // El Resumen los necesita para poder explicar por qué el tope no es el del
+    // convenio: ver un 11 donde el compañero tiene un 22 parece un fallo de la app.
+    targetsAnuales,
+    prorrateo
   };
 };
 
