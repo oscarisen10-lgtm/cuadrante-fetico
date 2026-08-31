@@ -126,6 +126,20 @@ export default function AuthView() {
         // tienda por defecto y la cuenta esperando a un delegado que no existe.
         const otraEmpresa = !isKnownCompany(selectedCompany);
 
+        // El desplegable de rango no tenía opción vacía: un <select> sin nada elegido
+        // muestra su PRIMERA opción, que en Supercor/S.Romero/ECI es "Jefes" (S.Express:
+        // "Jefe de tienda"). Quien no tocaba el desplegable quedaba dado de alta como
+        // jefe sin querer, con objetivos de convenio completamente distintos a los
+        // suyos. Igual que con la empresa: el `required` del select ya lo impide en el
+        // navegador, esto es el cinturón por si el formulario se envía de otro modo.
+        const selectedRank = otraEmpresa ? "" : formData.get('rank');
+        if (!otraEmpresa && !selectedRank) {
+          setRecoveryError("Selecciona tu rango.");
+          setIsLoading(false);
+          setTimeout(() => setRecoveryError(""), 3000);
+          return;
+        }
+
         const newUserProfile = otraEmpresa
           ? {
               email: emailInput,
@@ -154,7 +168,7 @@ export default function AuthView() {
               fullName: formData.get('fullName') || 'Compañero/a',
               company: selectedCompany,
               store: formData.get('store') || "Centro sin definir",
-              rank: formData.get('rank') || "Personal base",
+              rank: selectedRank,
               fechaAlta: formData.get('fechaAlta') || ''
             };
 
@@ -248,11 +262,16 @@ export default function AuthView() {
                   {/* Rango: solo con empresa de ANGED (es su convenio quien lo define).
                       `key` fuerza a empezar de cero al cambiar de empresa: sin él, el
                       rango ya elegido se quedaba pegado aunque no existiera en la
-                      empresa nueva (los de S. Express no son los de Supercor). */}
+                      empresa nueva (los de S. Express no son los de Supercor).
+                      Empieza VACÍO y es obligatorio, igual que la empresa: sin la opción
+                      vacía, el navegador mostraba la primera de la lista ("Jefes") y
+                      quien no tocaba el desplegable se daba de alta con ese rango y sus
+                      objetivos de convenio, que no son los suyos. */}
                   {esANGED && (
                     <div className="space-y-0.5">
                       <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight">Rango</label>
-                      <select key={formCompany} name="rank" className="w-full bg-slate-50 border-none p-1.5 rounded-lg text-sm outline-none ring-1 ring-slate-200">
+                      <select key={formCompany} name="rank" required defaultValue="" className="w-full bg-slate-50 border-none p-1.5 rounded-lg text-sm outline-none ring-1 ring-slate-200">
+                        <option value="" disabled>Selecciona tu rango...</option>
                         {Object.keys(COMPANY_RULES[formCompany] || {}).map(r => <option key={r} value={r}>{r}</option>)}
                       </select>
                     </div>

@@ -230,10 +230,19 @@ exports.cambiarMiTienda = onCall({ maxInstances: 10, enforceAppCheck: ENFORCE_AP
   }
 
   // El rango es del convenio: fuera de ANGED no significa nada y se vacía.
+  //
+  // Un rango VACÍO que llega explícitamente ("") ahora BORRA el guardado, en vez de
+  // ignorarse. Lo necesita el cambio de empresa dentro de ANGED: los rangos de cada
+  // convenio son distintos (los de S. Express no son los de Supercor), así que al
+  // cambiar hay que dejarlo en blanco para que el usuario elija el suyo. Antes se
+  // conservaba el viejo —que podía no existir en la empresa nueva, y entonces los
+  // objetivos caían a un cálculo por defecto sin avisar.
+  // Ojo a la distinción: `undefined` (la clave ni viene) sigue significando "no toques
+  // el rango", que es lo que hace el cambio de SOLO tienda.
   const rank = request.data?.rank;
   if (saleDeAnged) {
     update.profile.rank = "";
-  } else if (typeof rank === "string" && rank.trim() && rank.length <= 80) {
+  } else if (typeof rank === "string" && rank.length <= 80) {
     update.profile.rank = rank.trim();
   }
 

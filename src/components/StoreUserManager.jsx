@@ -131,7 +131,7 @@ export function StoreUserManager({ stores, showTotal = false, admin = false }) {
   const q = search.trim().toLowerCase();
   const filtered = q
     ? users.filter((u) =>
-        [u.fullName, u.email, u.section, u.phone].some((f) => (f || "").toLowerCase().includes(q))
+        [u.fullName, u.email, u.section, u.phone, u.rank].some((f) => (f || "").toLowerCase().includes(q))
       )
     : users;
   const activos = users.filter((u) => u.active).length;

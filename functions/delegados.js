@@ -235,6 +235,9 @@ exports.adminStats = onCall({
  */
 const LIST_USERS_FIELDS = [
   "profile.fullName", "profile.email", "profile.phone", "profile.section",
+  // El rango es del convenio y decide los objetivos anuales de esa persona: el
+  // delegado lo necesita para cotejar el censo igual que la sección.
+  "profile.rank",
   "profile.store", ...TOKEN_FIELDS, "profile.platform", "membership",
   // Para distinguir a quien sigue usando la app de quien la tiene abandonada o
   // desinstalada. Un recuento dice cuántos son; esto dice QUIÉNES.
@@ -300,6 +303,9 @@ exports.delegadoListUsers = onCall({
       email: p.email || "",
       phone: p.phone || "",
       section: p.section || "Sin especificar",
+      // Vacío a propósito para quien está fuera de ANGED: ahí no hay convenio, así
+      // que no hay rango que enseñar (la ficha se lo salta en vez de inventarlo).
+      rank: p.rank || "",
       store: p.store || "Sin tienda",
       platform: p.platform || "",
       hasPush: tokensFromProfile(p).length > 0,

@@ -64,8 +64,11 @@ export const UserCard = React.memo(function UserCard({ u, collapsible = false, b
           </span>
         )}
       </div>
+      {/* Tienda · sección · rango. El rango solo si lo tiene: quien está fuera de
+          ANGED no tiene convenio, y pintar un hueco vacío con su punto separador
+          parecería un dato que falta en vez de uno que no aplica. */}
       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-1">
-        {formatStoreName(u.store)} · {u.section}
+        {formatStoreName(u.store)} · {u.section}{u.rank ? ` · ${u.rank}` : ''}
       </p>
     </>
   );

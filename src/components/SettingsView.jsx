@@ -29,7 +29,11 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
   // nombre de su empresa (a mano) y los objetivos que se fije él.
   const esOtraEmpresa = !hasKnownConvenio(user);
   const currentCompany = user?.company || "Supercor";
-  const currentRank = user?.rank || "Personal de fresco";
+  // Sin respaldo a "Personal de fresco": era MENTIRA sobre lo guardado. Un perfil sin
+  // rango se pintaba como si tuviera ese, así que nadie sabía que le faltaba —y como
+  // solo se guarda al tocar el desplegable, podía no llegar a guardarse nunca. Vacío
+  // pinta "Selecciona tu rango...", que sí dice la verdad.
+  const currentRank = user?.rank || "";
   const currentStore = user?.store || "";
 
   // Qué marca el desplegable de empresa. Quien está fuera de ANGED puede tener el
@@ -98,10 +102,14 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
       );
       return;
     }
-    const firstRank = Object.keys(COMPANY_RULES[newCompany] || {})[0];
+    // El rango se VACÍA, no se elige por él. Antes se ponía el PRIMERO del convenio
+    // nuevo (Object.keys(...)[0]), que en Supercor, S. Romero y ECI es "Jefes": quien
+    // cambiaba de empresa en Ajustes quedaba guardado como jefe sin enterarse, con los
+    // objetivos de ese puesto (235 días trabajados frente a 258 del personal base).
+    // Vacío obliga a elegir, igual que en el alta.
     handleStoreChange(
-      { company: newCompany, rank: firstRank, store: "" },
-      { company: newCompany, rank: firstRank, store: "", companyVerified: true }
+      { company: newCompany, rank: "", store: "" },
+      { company: newCompany, rank: "", store: "", companyVerified: true }
     );
   };
 
@@ -211,6 +219,10 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                           onChange={(e) => handleProfileChange({ rank: e.target.value })}
                           className="w-full bg-white/10 border border-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] p-2 rounded-xl text-xs outline-none text-white appearance-none"
                         >
+                          {/* Solo se ve mientras no haya rango guardado (recién cambiada
+                              la empresa): sin ella, el desplegable enseñaría el primero
+                              de la lista como si fuera el suyo. */}
+                          {!currentRank && <option value="" disabled className="text-slate-800">Selecciona tu rango...</option>}
                           {Object.keys(COMPANY_RULES[currentCompany] || {}).map(r => <option key={r} value={r} className="text-slate-800">{r}</option>)}
                         </select>
                       </>

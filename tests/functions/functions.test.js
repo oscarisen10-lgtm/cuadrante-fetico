@@ -196,6 +196,40 @@ describe('cambiarMiTienda', () => {
     expect(d.membership.active).toBe(true);
   });
 
+  // Cambiar de empresa DENTRO de ANGED tiene que poder vaciar el rango: los rangos de
+  // cada convenio son distintos, y Ajustes lo manda vacío para que el usuario elija el
+  // suyo. Antes un "" se ignoraba y se conservaba el rango viejo (que podía no existir
+  // en la empresa nueva), o peor: Ajustes mandaba el PRIMERO del convenio, que es
+  // "Jefes", y te guardaba como jefe sin enterarte.
+  test('cambiar de empresa dentro de ANGED con rango vacío BORRA el rango anterior', async () => {
+    await db.collection('users').doc(USER_CENTRO).set({
+      profile: { fullName: 'Usuario Centro', store: TIENDA_A, company: 'Supercor', rank: 'Jefes' },
+      membership: { active: true },
+    });
+
+    await fns.cambiarMiTienda.run(
+      req(USER_CENTRO, { company: 'ECI', store: '', rank: '' })
+    );
+
+    const d = await perfil(USER_CENTRO);
+    expect(d.profile.rank).toBe('');
+    expect(d.profile.company).toBe('ECI');
+  });
+
+  // La otra mitad de lo mismo: si la clave `rank` NI SIQUIERA VIENE, no se toca. Es el
+  // cambio de SOLO tienda (el desplegable de centro de Ajustes), que no debe hacer que
+  // nadie pierda su rango por el camino.
+  test('cambiar solo de tienda, sin mandar rango, NO toca el rango guardado', async () => {
+    await db.collection('users').doc(USER_CENTRO).set({
+      profile: { fullName: 'Usuario Centro', store: TIENDA_A, company: 'Supercor', rank: 'Personal de cobro' },
+      membership: { active: true },
+    });
+
+    await fns.cambiarMiTienda.run(req(USER_CENTRO, { store: TIENDA_B }));
+
+    expect((await perfil(USER_CENTRO)).profile.rank).toBe('Personal de cobro');
+  });
+
   // Un delegado que se fuera conservaría su doc `delegados/{uid}` con sus tiendas:
   // seguiría gestionando el censo de una empresa en la que ya no dice trabajar.
   test('un DELEGADO no puede pasarse a una empresa de fuera de ANGED', async () => {
@@ -584,6 +618,25 @@ describe('delegadoListUsers', () => {
 
     const adminVe = await fns.delegadoListUsers.run(req(ADMIN_UID, { store: TIENDA_A }, { admin: true }));
     expect(adminVe.users.map((u) => u.uid)).toContain(USER_CENTRO);
+  });
+
+  // El rango sale en la ficha junto a tienda y sección: el delegado lo necesita para
+  // cotejar su censo, y decide los objetivos de convenio de esa persona.
+  test('devuelve el rango, y vacío (no inventado) si no lo tiene', async () => {
+    await db.collection('users').doc(USER_CENTRO).set({
+      profile: { fullName: 'Usuario Centro', store: TIENDA_A, rank: 'Personal de cobro' },
+      membership: { active: true },
+    });
+    const conRango = await fns.delegadoListUsers.run(req(DELEGADO_UID, { store: TIENDA_A }));
+    expect(conRango.users[0].rank).toBe('Personal de cobro');
+
+    // Fuera de ANGED no hay convenio: rango vacío, y la ficha se lo salta.
+    await db.collection('users').doc(USER_CENTRO).set({
+      profile: { fullName: 'Usuario Centro', store: TIENDA_A },
+      membership: { active: true },
+    });
+    const sinRango = await fns.delegadoListUsers.run(req(DELEGADO_UID, { store: TIENDA_A }));
+    expect(sinRango.users[0].rank).toBe('');
   });
 
   // Lo pinta la ficha (y el delegado lo ve sin botón): si no, creería que sus push
