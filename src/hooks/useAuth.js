@@ -157,7 +157,16 @@ export const useAuth = () => {
                 .catch((e) => console.error("Migración de turnos a modelo mensual falló:", e?.message));
             }
             setUser((prev) => {
-              const next = { ...data.profile, uid: firebaseUser.uid, isAdminClaim: adminClaimRef.current };
+              const next = {
+                ...data.profile,
+                uid: firebaseUser.uid,
+                isAdminClaim: adminClaimRef.current,
+                // Interruptor de noticias del admin (adminSetNoticias). Va en
+                // membership, que el cliente no puede escribir: si viviera en
+                // profile, el propio usuario se lo quitaría desde Ajustes.
+                // Ausente = las recibe (ningún perfil anterior lleva el campo).
+                recibeNoticias: !data.membership || data.membership.noticias !== false,
+              };
               return shallowEqualUser(prev, next) ? prev : next;
             });
             // membership ausente = cuenta anterior al sistema de delegados → activa.

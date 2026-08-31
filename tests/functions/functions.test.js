@@ -324,6 +324,108 @@ describe('purgeDeadTokens', () => {
 });
 
 // ───────────────────────────────────────────────────────────────────────────────
+// A QUIÉN se le mandan las noticias.
+//
+// Expulsar a alguien nunca tocó `profile.store`, y el envío de tienda se resuelve
+// por ese campo: el expulsado seguía recibiendo los avisos del delegado de una
+// tienda en la que ya no trabaja. Aparte, el admin puede cortarle las noticias a
+// quien quiera (adminSetNoticias), y ese corte sí alcanza también a las globales.
+describe('destinatarios de las noticias', () => {
+  const push = require_(join(ROOT, 'functions', 'lib', 'push.js'));
+  // El módulo recibe `db` como FUNCIÓN (lib/firebase la exporta así, perezosa).
+  const dbFn = () => db;
+
+  const conToken = (uid, store, token, membership) =>
+    db.collection('users').doc(uid).set({
+      profile: { fullName: uid, store, fcmTokens: [token] },
+      ...(membership ? { membership } : {}),
+    });
+
+  test('las noticias de tienda llegan a quien está en esa tienda', async () => {
+    await conToken(USER_CENTRO, TIENDA_A, 'tok-centro', { active: true });
+    expect([...(await push.tokensForStores(dbFn, [TIENDA_A]))]).toEqual(['tok-centro']);
+  });
+
+  test('un EXPULSADO deja de recibir las noticias de su antigua tienda', async () => {
+    await conToken(USER_CENTRO, TIENDA_A, 'tok-centro', { active: true, expelled: true });
+    expect((await push.tokensForStores(dbFn, [TIENDA_A])).size).toBe(0);
+  });
+
+  // Su cuenta queda ACTIVA a propósito (ver delegadoExpelUser): sigue siendo de la
+  // app, así que el canal "a toda la app" no se le corta por haberse ido de la tienda.
+  test('pero un expulsado SÍ sigue recibiendo las noticias globales del admin', async () => {
+    await conToken(USER_CENTRO, TIENDA_A, 'tok-centro', { active: true, expelled: true });
+    expect([...(await push.tokensForBroadcast(dbFn))]).toContain('tok-centro');
+  });
+
+  // El campo ausente tiene que significar "sí recibe": ningún perfil anterior a
+  // esto lo lleva, y un filtro mal planteado dejaría muda a toda la plantilla.
+  test('un perfil SIN membership sigue recibiéndolas (cuentas antiguas)', async () => {
+    await conToken(USER_CENTRO, TIENDA_A, 'tok-antiguo');
+    expect([...(await push.tokensForStores(dbFn, [TIENDA_A]))]).toEqual(['tok-antiguo']);
+    expect([...(await push.tokensForBroadcast(dbFn))]).toContain('tok-antiguo');
+  });
+
+  test('el corte del admin le quita las de tienda Y las globales', async () => {
+    await conToken(USER_CENTRO, TIENDA_A, 'tok-centro', { active: true, noticias: false });
+    expect((await push.tokensForStores(dbFn, [TIENDA_A])).size).toBe(0);
+    expect([...(await push.tokensForBroadcast(dbFn))]).not.toContain('tok-centro');
+  });
+
+  // Decide si el broadcast va por topic (barato) o por token (para saltarse a
+  // alguien). Si diera un falso negativo, el silenciado recibiría el aviso igual.
+  test('haySilenciados solo es cierto cuando hay alguien cortado', async () => {
+    await conToken(USER_CENTRO, TIENDA_A, 'tok-centro', { active: true });
+    expect(await push.haySilenciados(dbFn)).toBe(false);
+
+    await conToken(USER_CENTRO, TIENDA_A, 'tok-centro', { active: true, noticias: false });
+    expect(await push.haySilenciados(dbFn)).toBe(true);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────────
+describe('adminSetNoticias', () => {
+  // Si pudiera un delegado, le taparía a un usuario de su tienda las noticias que
+  // el admin publica para toda la app.
+  test('un delegado NO puede cortar las noticias a nadie', async () => {
+    await expect(
+      fns.adminSetNoticias.run(req(DELEGADO_UID, { uid: USER_CENTRO, noticias: false }))
+    ).rejects.toThrow(/Solo el administrador/i);
+  });
+
+  test('corta y restaura sin tocar la activación de la cuenta', async () => {
+    await db.collection('users').doc(USER_CENTRO).set({ membership: { active: true } }, { merge: true });
+
+    await fns.adminSetNoticias.run(req(ADMIN_UID, { uid: USER_CENTRO, noticias: false }, { admin: true }));
+    const cortado = (await perfil(USER_CENTRO)).membership;
+    expect(cortado.noticias).toBe(false);
+    expect(cortado.active).toBe(true);
+
+    await fns.adminSetNoticias.run(req(ADMIN_UID, { uid: USER_CENTRO, noticias: true }, { admin: true }));
+    expect((await perfil(USER_CENTRO)).membership.noticias).toBe(true);
+  });
+
+  // membership AUSENTE = cuenta activa por ausencia del campo (isUserActive e
+  // isActiveMember() de las reglas). Crear el mapa con solo `noticias` la habría
+  // dejado bloqueada de rebote, por haberle tocado las noticias.
+  test('a una cuenta sin membership no le quita la activación', async () => {
+    await db.collection('users').doc('antiguo').set({ profile: { fullName: 'Antiguo', store: TIENDA_A } });
+
+    await fns.adminSetNoticias.run(req(ADMIN_UID, { uid: 'antiguo', noticias: false }, { admin: true }));
+
+    const m = (await perfil('antiguo')).membership;
+    expect(m.noticias).toBe(false);
+    expect(m.active).toBe(true);
+  });
+
+  test('rechaza un usuario que no existe', async () => {
+    await expect(
+      fns.adminSetNoticias.run(req(ADMIN_UID, { uid: 'fantasma', noticias: false }, { admin: true }))
+    ).rejects.toThrow(/no existe/i);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────────
 describe('adminStats — abandono', () => {
   const hace = (dias) => Date.now() - dias * 24 * 60 * 60 * 1000;
 
@@ -482,6 +584,18 @@ describe('delegadoListUsers', () => {
 
     const adminVe = await fns.delegadoListUsers.run(req(ADMIN_UID, { store: TIENDA_A }, { admin: true }));
     expect(adminVe.users.map((u) => u.uid)).toContain(USER_CENTRO);
+  });
+
+  // Lo pinta la ficha (y el delegado lo ve sin botón): si no, creería que sus push
+  // fallan con esta persona.
+  test('dice si el admin le ha cortado las noticias', async () => {
+    const antes = await fns.delegadoListUsers.run(req(DELEGADO_UID, { store: TIENDA_A }));
+    expect(antes.users[0].noticias).toBe(true);
+
+    await fns.adminSetNoticias.run(req(ADMIN_UID, { uid: USER_CENTRO, noticias: false }, { admin: true }));
+
+    const despues = await fns.delegadoListUsers.run(req(DELEGADO_UID, { store: TIENDA_A }));
+    expect(despues.users[0].noticias).toBe(false);
   });
 });
 

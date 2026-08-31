@@ -391,6 +391,15 @@ export const setUserExpelled = async (uid, expelled) => {
   return callFunction('delegadoExpelUser', { uid, expelled });
 };
 
+/**
+ * SOLO admin: corta (o restaura) las noticias y sus push a un usuario. No le toca
+ * la cuenta — sigue usando la app entera, pero deja de recibir el broadcast del
+ * admin y los avisos de su delegado.
+ */
+export const setUserNoticias = async (uid, noticias) => {
+  return callFunction('adminSetNoticias', { uid, noticias });
+};
+
 // --- CENSO (delegados) ---
 
 /**

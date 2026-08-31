@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Users, Search, RefreshCw, Store as StoreIcon, ChevronDown, UserCheck } from 'lucide-react';
-import { fetchStoreUsers, setUserActiveStatus, setUserExpelled } from '../services/firebaseService';
+import { fetchStoreUsers, setUserActiveStatus, setUserExpelled, setUserNoticias } from '../services/firebaseService';
 import { toast, confirm } from '../services/toastBus';
 import { LoadingLogo } from './UIComponents';
 import { UserCard } from './UserCard';
@@ -19,6 +19,10 @@ const TOTAL = '__ALL__';
  * contacto, permite activar/desactivar su cuenta y EXPULSAR a quien se fue de
  * la empresa (desaparece de las vistas del delegado sin borrar ni bloquear su
  * cuenta; el admin ve a los expulsados y puede readmitirlos).
+ *
+ * Con `admin` aparece además el corte de NOTICIAS por usuario: elige a quién le
+ * llegan las noticias y los push, sin tocarle la cuenta. Solo el admin, porque
+ * también corta las suyas (las globales), no solo las del delegado.
  */
 export function StoreUserManager({ stores, showTotal = false, admin = false }) {
   const sortedStores = useMemo(
@@ -102,6 +106,27 @@ export function StoreUserManager({ stores, showTotal = false, admin = false }) {
     }
     setTogglingUid(null);
   }, [admin]);
+
+  // Corte de noticias: SOLO admin (la callable lo exige). Es lo que decide a quién
+  // llega cada noticia — el interruptor de arriba activa la CUENTA, esto el envío.
+  const handleToggleNoticias = useCallback(async (u) => {
+    const ok = await confirm(
+      u.noticias === false
+        ? `¿Volver a enviarle noticias a ${u.fullName}? Recibirá otra vez las tuyas y las de su delegado, con su push.`
+        : `¿Dejar de enviarle noticias a ${u.fullName}? No recibirá ni las tuyas ni las de su delegado, ni sus push. Su cuenta no se toca: sigue usando la app.`
+    );
+    if (!ok) return;
+    setTogglingUid(u.uid);
+    try {
+      const siguiente = u.noticias === false;
+      await setUserNoticias(u.uid, siguiente);
+      setUsers((prev) => prev.map((x) => (x.uid === u.uid ? { ...x, noticias: siguiente } : x)));
+      toast(siguiente ? "Volverá a recibir noticias." : "No recibirá más noticias ni push.", "success");
+    } catch (e) {
+      toast("Error: " + (e?.message || e), "error");
+    }
+    setTogglingUid(null);
+  }, []);
 
   const q = search.trim().toLowerCase();
   const filtered = q
@@ -194,6 +219,7 @@ export function StoreUserManager({ stores, showTotal = false, admin = false }) {
               busy={togglingUid === u.uid}
               onToggleActive={handleToggle}
               onExpel={handleExpel}
+              onToggleNoticias={admin ? handleToggleNoticias : undefined}
             />
           ))}
         </div>

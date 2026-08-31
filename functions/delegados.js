@@ -309,6 +309,9 @@ exports.delegadoListUsers = onCall({
       pushMuerto: p.pushMuerto === true,
       active: isUserActive(data),
       expelled: !!(data.membership && data.membership.expelled),
+      // Interruptor de noticias del admin. AUSENTE = las recibe (ningún perfil
+      // anterior a esto lleva el campo), así que solo un false explícito lo apaga.
+      noticias: !(data.membership && data.membership.noticias === false),
     };
   })
     // Los EXPULSADOS (se fueron de la empresa) desaparecen para el delegado;
@@ -444,6 +447,45 @@ exports.delegadoSetActive = onCall({ maxInstances: 10, enforceAppCheck: ENFORCE_
   }, { merge: true });
 
   return { success: true, uid: targetUid, active };
+});
+
+/**
+ * adminSetNoticias — SOLO admin. Corta (o restaura) las noticias y sus push a un
+ * usuario concreto, SIN tocarle la cuenta: sigue usando la app entera, pero deja
+ * de recibir tanto el broadcast global del admin como los avisos de su delegado.
+ * Así el admin elige a quién llegan las noticias, uno a uno.
+ *
+ * Solo el admin, a diferencia de activar/expulsar: si pudiera un delegado, le
+ * taparía a un usuario de su tienda las noticias que el admin publica para toda
+ * la app. Vive en `membership` porque las reglas impiden que el cliente lo
+ * escriba — en `profile` el propio usuario se rehabilitaría por REST.
+ */
+exports.adminSetNoticias = onCall({ maxInstances: 10, enforceAppCheck: ENFORCE_APP_CHECK }, async (request) => {
+  requireAdmin(request, "Solo el administrador puede cortar las noticias a un usuario.");
+  const targetUid = request.data?.uid;
+  const noticias = request.data?.noticias;
+  if (typeof targetUid !== "string" || !targetUid || typeof noticias !== "boolean") {
+    throw new HttpsError("invalid-argument", "Parámetros no válidos.");
+  }
+
+  const userRef = db().collection("users").doc(targetUid);
+  const snap = await userRef.get();
+  if (!snap.exists) {
+    throw new HttpsError("not-found", "El usuario no existe.");
+  }
+
+  const membership = { noticias, updatedAt: Date.now(), updatedBy: request.auth.uid };
+  // ⚠️ Un perfil SIN membership (cuenta anterior al sistema de delegados) está
+  // ACTIVO por ausencia del campo: isUserActive e isActiveMember() de las reglas
+  // lo leen así. Crearle el mapa con solo `noticias` lo dejaría, sin querer, con
+  // membership presente y active != true — es decir, con la cuenta bloqueada por
+  // haberle tocado las noticias. Se reafirma explícitamente.
+  const actual = snap.data().membership;
+  if (!actual || typeof actual.active !== "boolean") membership.active = true;
+
+  await userRef.set({ membership }, { merge: true });
+
+  return { success: true, uid: targetUid, noticias };
 });
 
 /**

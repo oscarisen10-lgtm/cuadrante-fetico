@@ -46,9 +46,51 @@ const tokensFromProfile = (profile) => {
   return [...out];
 };
 
-/** Vuelca en un Set los tokens de todos los docs de usuario de un QuerySnapshot. */
-const collectTokens = (snap, into) => {
-  snap.forEach((d) => tokensFromProfile(d.data().profile).forEach((t) => into.add(t)));
+// Campos que deciden si a alguien se le mandan NOTICIAS. Van en `membership`, no
+// en `profile`, a propósito: las reglas impiden que el cliente escriba membership,
+// así que el propio usuario no puede rehabilitarse por su cuenta.
+// Hay que pedirlos en cualquier .select() que alimente a recibeNoticias*.
+const NEWS_FLAG_FIELDS = ["membership.expelled", "membership.noticias"];
+
+const membershipDe = (data) => (data && data.membership) || {};
+
+/**
+ * ¿Le mandamos las noticias GLOBALES (las del admin, para toda la app)?
+ *
+ * `membership.noticias == false` es el interruptor del panel de admin
+ * (adminSetNoticias): corta las noticias y sus push a esa persona sin tocarle la
+ * cuenta. Campo AUSENTE = sí recibe: ningún perfil anterior a esto lo lleva, y el
+ * valor por defecto tiene que ser "sí" para no dejar a nadie mudo.
+ */
+const recibeNoticias = (data) => membershipDe(data).noticias !== false;
+
+/**
+ * ¿Le mandamos las noticias DE SU TIENDA (las de su delegado)?
+ *
+ * Además del interruptor de arriba, quedan fuera los EXPULSADOS. Expulsar
+ * (delegadoExpelUser) significa "se fue de la empresa", pero nunca tocó
+ * `profile.store` — y el envío de tienda se resuelve por ese campo, así que hasta
+ * ahora el expulsado seguía recibiendo los avisos del delegado de una tienda en la
+ * que ya no trabaja.
+ *
+ * Las noticias GLOBALES sí las sigue recibiendo: su cuenta queda activa a
+ * propósito (ver delegadoExpelUser) y son para toda la app. Si además se le
+ * quieren cortar, el admin tiene el interruptor.
+ */
+const recibeNoticiasTienda = (data) => recibeNoticias(data) && membershipDe(data).expelled !== true;
+
+/**
+ * Vuelca en un Set los tokens de todos los docs de usuario de un QuerySnapshot.
+ * Con `filtro` (recibeNoticias / recibeNoticiasTienda) se salta a quien no deba
+ * recibir el envío. El .select() de la consulta tiene que traer los campos que ese
+ * filtro lee, o no filtrará nada.
+ */
+const collectTokens = (snap, into, filtro) => {
+  snap.forEach((d) => {
+    const data = d.data();
+    if (filtro && !filtro(data)) return;
+    tokensFromProfile(data.profile).forEach((t) => into.add(t));
+  });
   return into;
 };
 
@@ -253,17 +295,57 @@ async function tokensForStores(db, stores) {
   const snaps = await Promise.all(
     chunks.map((chunk) => db().collection("users")
       .where("profile.store", "in", chunk)
-      .select(...TOKEN_FIELDS)
+      .select(...TOKEN_FIELDS, ...NEWS_FLAG_FIELDS)
       .get())
   );
 
+  // El filtro va en memoria, NO en la consulta: `where("membership.noticias",
+  // "!=", false)` dejaría fuera a todo el que no tenga el campo — Firestore no
+  // devuelve los documentos donde el campo NO EXISTE en las consultas de
+  // desigualdad, que es justo el caso de todos los perfiles anteriores a esto.
   const tokens = new Set();
-  snaps.forEach((snap) => collectTokens(snap, tokens));
+  snaps.forEach((snap) => collectTokens(snap, tokens, recibeNoticiasTienda));
+  return tokens;
+}
+
+/**
+ * ¿Hay alguien con las noticias cortadas por el admin?
+ *
+ * Consulta de AGREGACIÓN count(): cuesta 1 lectura por cada 1000 coincidencias
+ * (mínimo 1), no una por usuario. Sirve para no pagar el recorrido de la
+ * colección entera cuando no hay nadie silenciado, que es lo normal.
+ */
+async function haySilenciados(db) {
+  const snap = await db().collection("users")
+    .where("membership.noticias", "==", false)
+    .count()
+    .get();
+  return snap.data().count > 0;
+}
+
+/**
+ * Tokens de TODA la app menos los silenciados, para el broadcast del admin.
+ *
+ * Recorrer `users` es exactamente lo que el topic evita (ver NEWS_TOPIC), así que
+ * esto SOLO se usa cuando hay alguien a quien saltarse: un envío al topic lo hace
+ * FCM por su cuenta y no admite excepciones. .stream() para que la memoria no
+ * crezca con el nº de usuarios; .select() para no traer el perfil entero.
+ */
+async function tokensForBroadcast(db) {
+  const tokens = new Set();
+  const stream = db().collection("users")
+    .select(...TOKEN_FIELDS, ...NEWS_FLAG_FIELDS)
+    .stream();
+  for await (const d of stream) {
+    const data = d.data();
+    if (!recibeNoticias(data)) continue;
+    tokensFromProfile(data.profile).forEach((t) => tokens.add(t));
+  }
   return tokens;
 }
 
 module.exports = {
-  NEWS_TOPIC, TOKEN_FIELDS, buildMessage, sendToNewsTopic, sendToTokens,
-  tokensForStores, tokensFromProfile, collectTokens, purgeDeadTokens,
-  DEAD_TOKEN_CODES,
+  NEWS_TOPIC, TOKEN_FIELDS, NEWS_FLAG_FIELDS, buildMessage, sendToNewsTopic, sendToTokens,
+  tokensForStores, tokensForBroadcast, haySilenciados, tokensFromProfile, collectTokens,
+  recibeNoticias, recibeNoticiasTienda, purgeDeadTokens, DEAD_TOKEN_CODES,
 };

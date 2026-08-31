@@ -10,6 +10,8 @@ import {
  * noticiasTienda; los usuarios de otras tiendas ni las ven — lo garantizan las
  * reglas). Se fusionan ordenadas por fecha; las de delegado llevan
  * isStoreNews:true para que el Resumen las etiquete.
+ *
+ * Si el admin le ha cortado las noticias a este usuario, el feed sale vacío.
  */
 export const useNews = (user) => {
   const [globalNews, setGlobalNews] = useState([]);
@@ -32,14 +34,21 @@ export const useNews = (user) => {
     return () => unsub();
   }, [store]);
 
+  // El admin puede cortarle las noticias a alguien (adminSetNoticias): el push no
+  // le sale del servidor y el feed queda vacío aquí. Ojo con lo que esto es y lo
+  // que no: el push SÍ está cortado en el servidor, pero el feed lo esconde el
+  // cliente — no es un secreto que ocultar, es la misma noticia que ve todo el
+  // mundo, así que no se pagan lecturas ni reglas extra por esconderla.
+  const mudo = user?.recibeNoticias === false;
+
   const newsList = useMemo(
     // Sin tienda no se muestran noticias de delegado. Se DERIVA aquí en vez de
     // vaciar storeNews desde el efecto: llamar a setState dentro de un efecto
     // provoca un render en cascada innecesario (react-hooks/set-state-in-effect).
-    () => [...globalNews, ...(store ? storeNews : [])]
+    () => (mudo ? [] : [...globalNews, ...(store ? storeNews : [])]
       .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
-      .slice(0, 40),
-    [globalNews, storeNews, store]
+      .slice(0, 40)),
+    [globalNews, storeNews, store, mudo]
   );
 
   const addNews = useCallback(async (newsData) => {

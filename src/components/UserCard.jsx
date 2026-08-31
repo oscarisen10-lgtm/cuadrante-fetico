@@ -31,7 +31,8 @@ const resumenActividad = (lastActiveAt) => {
 /**
  * UserCard — Ficha de usuario compartida por la pestaña "Usuarios" (delegado y
  * admin) y por el Censo: nombre + estado, tienda · sección, interruptor de
- * activación, contacto (teléfono/email/push) y expulsar/readmitir.
+ * activación, contacto (teléfono/email/push), corte de noticias (solo admin) y
+ * expulsar/readmitir.
  *
  * `collapsible`: empieza plegada (solo nombre, estado y el interruptor) y se
  * abre al tocar el nombre — así el Censo puede listar tiendas enteras sin
@@ -41,7 +42,7 @@ const resumenActividad = (lastActiveAt) => {
  * local (StoreUserManager). Sin memo, cada pulsación en ese buscador volvía a
  * renderizar TODAS las fichas, aunque sus props no hubieran cambiado.
  */
-export const UserCard = React.memo(function UserCard({ u, collapsible = false, busy = false, onToggleActive, onExpel }) {
+export const UserCard = React.memo(function UserCard({ u, collapsible = false, busy = false, onToggleActive, onExpel, onToggleNoticias }) {
   const [open, setOpen] = useState(!collapsible);
   const actividad = resumenActividad(u.lastActiveAt);
 
@@ -52,6 +53,16 @@ export const UserCard = React.memo(function UserCard({ u, collapsible = false, b
         <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-md tracking-tight ${u.expelled ? 'bg-rose-500/10 text-rose-600' : u.active ? 'bg-emerald-500/10 text-emerald-700' : 'bg-slate-200 text-slate-500'}`}>
           {u.expelled ? 'Expulsado' : u.active ? 'Activo' : 'Pendiente'}
         </span>
+        {/* El admin le ha cortado las noticias. Se ve también en el Censo, sin
+            botón: si no, el delegado creería que sus push fallan con esta persona. */}
+        {u.noticias === false && (
+          <span
+            className="text-[8px] font-black uppercase px-2 py-0.5 rounded-md tracking-tight bg-amber-500/10 text-amber-700 flex items-center gap-1"
+            title="El administrador le ha cortado las noticias: no recibe ni las globales ni las de su delegado."
+          >
+            <BellOff size={9} /> Sin noticias
+          </span>
+        )}
       </div>
       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-1">
         {formatStoreName(u.store)} · {u.section}
@@ -140,6 +151,21 @@ export const UserCard = React.memo(function UserCard({ u, collapsible = false, b
               </span>
             )}
           </div>
+
+          {/* Noticias y push ON/OFF. Solo lo pasa el panel del ADMIN: corta el
+              envío (el global suyo y el del delegado) sin tocar la cuenta, que
+              es lo que hace el interruptor de arriba. */}
+          {onToggleNoticias && (
+            <button
+              onClick={() => onToggleNoticias(u)}
+              disabled={busy}
+              className={`w-full mt-2.5 py-2 rounded-xl text-[9px] font-black uppercase flex items-center justify-center gap-1.5 active:scale-95 transition-all ${u.noticias === false ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-slate-50 text-slate-500 border border-slate-200'} ${busy ? 'opacity-50' : ''}`}
+            >
+              {u.noticias === false
+                ? <><BellOff size={11} /> Volver a enviarle noticias</>
+                : <><Bell size={11} /> No enviarle noticias ni push</>}
+            </button>
+          )}
 
           {/* Expulsar (se fue de la empresa) / Readmitir (solo la ve el admin) */}
           {onExpel && (

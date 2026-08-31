@@ -1,7 +1,7 @@
 /**
  * Noticias y notificaciones push.
  *
- *   sendPushNotification  — broadcast al topic cuando el admin publica en `noticias`.
+ *   sendPushNotification  — broadcast a toda la app cuando el admin publica en `noticias`.
  *   sendStoreNews         — push DIRIGIDO de las noticias de delegado (`noticiasTienda`).
  *   notifyDelegadoNewUser — avisa a delegados + admin de una cuenta nueva por activar.
  *   subscribeToNewsTopic  — suscribe un token al topic (lo necesita el cliente web).
@@ -11,7 +11,8 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { admin, db, ENFORCE_APP_CHECK } = require("./lib/firebase");
 const { ADMIN_EMAIL, requireAuth } = require("./lib/auth");
 const {
-  NEWS_TOPIC, TOKEN_FIELDS, sendToNewsTopic, sendToTokens, tokensForStores, collectTokens,
+  NEWS_TOPIC, TOKEN_FIELDS, sendToNewsTopic, sendToTokens, tokensForStores,
+  tokensForBroadcast, haySilenciados, collectTokens,
 } = require("./lib/push");
 
 /**
@@ -75,11 +76,45 @@ exports.sendPushNotification = onDocumentCreated(
       console.error("ensureTopicMigration falló (se continúa con el envío):", error);
     }
 
+    // Dos vías, según haya o no gente con las noticias cortadas por el admin
+    // (membership.noticias == false, ver adminSetNoticias):
+    //
+    //   - Nadie silenciado (lo normal) → TOPIC: 1 llamada y 0 lecturas, FCM hace
+    //     el fan-out a todos los dispositivos suscritos.
+    //   - Alguien silenciado → por TOKEN: un envío al topic no admite
+    //     excepciones, así que hay que recorrer `users` (1 lectura por usuario)
+    //     para poder saltárselo.
+    //
+    // Distinguir un caso del otro cuesta UNA lectura (consulta de agregación).
+    // Si esa consulta falla, se tira por la vía de token aunque salga más cara:
+    // un aviso que llega a quien el admin excluyó a mano no se puede retirar,
+    // mientras que un envío que no sale se puede repetir.
+    let porToken = true;
     try {
-      const messageId = await sendToNewsTopic(title, body);
-      console.log(`Push enviado al topic "${NEWS_TOPIC}":`, messageId);
+      porToken = await haySilenciados(db);
     } catch (error) {
-      console.error("Error enviando push al topic:", error);
+      console.error("No se pudo comprobar si hay usuarios silenciados; se envía por token:", error);
+    }
+
+    try {
+      if (!porToken) {
+        const messageId = await sendToNewsTopic(title, body);
+        console.log(`Push enviado al topic "${NEWS_TOPIC}":`, messageId);
+        return null;
+      }
+
+      const tokens = await tokensForBroadcast(db);
+      if (tokens.size === 0) {
+        console.log("Broadcast de noticias: no queda ningún dispositivo al que enviar.");
+        return null;
+      }
+      const { ok, ko, total } = await sendToTokens(tokens, title, body);
+      console.log(`Broadcast de noticias por token: ${ok} entregados, ${ko} fallos (tokens muertos, ignorables).`);
+      if (ok + ko < total) {
+        console.error(`Broadcast de noticias: ENVÍO INCOMPLETO — ${ok + ko} de ${total} tokens procesados.`);
+      }
+    } catch (error) {
+      console.error("Error enviando el push de noticias:", error);
     }
 
     return null;
@@ -101,6 +136,8 @@ const PUSH_COOLDOWN_MS = 60 * 1000;
  *     ningún topic nuevo): reciben el aviso aunque su app no muestre aún el feed.
  *   - El servidor RE-VALIDA que el autor es un delegado activo con esas tiendas
  *     autorizadas (las reglas ya lo exigen al crear el doc; doble cinturón).
+ * Quedan fuera los EXPULSADOS de la tienda y quien tenga las noticias cortadas por
+ * el admin (ver recibeNoticiasTienda en lib/push.js).
  * Coste: una lectura por usuario de las tiendas destino (decenas) + el envío.
  */
 exports.sendStoreNews = onDocumentCreated(

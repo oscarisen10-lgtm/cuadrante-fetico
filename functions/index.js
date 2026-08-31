@@ -31,6 +31,7 @@ exports.subscribeToNewsTopic = noticias.subscribeToNewsTopic;
 exports.adminStats = delegados.adminStats;
 exports.adminOverview = delegados.adminOverview;
 exports.adminSetDelegado = delegados.adminSetDelegado;
+exports.adminSetNoticias = delegados.adminSetNoticias;
 exports.delegadoListUsers = delegados.delegadoListUsers;
 exports.delegadoSetActive = delegados.delegadoSetActive;
 exports.delegadoExpelUser = delegados.delegadoExpelUser;
