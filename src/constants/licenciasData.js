@@ -30,9 +30,9 @@ export const LICENCIAS_CATEGORIES = [
       },
       {
         title: "Accidente Grave u Hospitalización de Familiares (Art. 37.C)",
-        duracion: "2 días hábiles. Si necesitas desplazarte, 4 días hábiles.",
+        duracion: "5 días hábiles.",
         requisito: "Accidente grave u hospitalización de parientes hasta el 2º grado de consanguinidad o afinidad, en los supuestos no recogidos en el apartado D.",
-        documentacion: "Parte de hospitalización o justificante médico. Para la ampliación, justificante del desplazamiento."
+        documentacion: "Parte de hospitalización o justificante médico."
       },
       {
         title: "Enfermedad Grave o Fallecimiento de Familiares (Art. 37.D)",
