@@ -29,7 +29,7 @@
     "@capgo/capacitor-native-biometric": "^8.4.2",
     "firebase": "^12.10.0",
     "jspdf": "^4.2.1",
-    "lucide-react": "^0.284.0",
+    "lucide-react": "^1.33.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.18.1"
