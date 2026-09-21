@@ -562,6 +562,72 @@ describe('delegadoExpelUser', () => {
 });
 
 // ───────────────────────────────────────────────────────────────────────────────
+// Borrar es lo que el panel del admin ofrece EN LUGAR de expulsar. Al ser la única
+// acción de la app sin vuelta atrás, lo que más importa aquí no es que borre —eso
+// lo hace purgeUserData, compartido con deleteMyAccount— sino QUIÉN puede pedirlo.
+describe('adminDeleteUser', () => {
+  const comoAdmin = (data) => req(ADMIN_UID, data, { admin: true });
+
+  test('el admin borra el perfil y sus subcolecciones', async () => {
+    await db.collection('users').doc(USER_CENTRO).collection('shiftMonths').doc('2026-09')
+      .set({ dias: { '2026-09-01': { hours: 8 } } });
+
+    await fns.adminDeleteUser.run(comoAdmin({ uid: USER_CENTRO }));
+
+    expect((await db.collection('users').doc(USER_CENTRO).get()).exists).toBe(false);
+    expect((await db.collection('users').doc(USER_CENTRO).collection('shiftMonths').get()).empty).toBe(true);
+  });
+
+  test('borra también su cuenta de Auth, para que pueda registrarse de nuevo', async () => {
+    await auth.createUser({ uid: USER_CENTRO, email: 'centro@test.com' }).catch(() => {});
+
+    await fns.adminDeleteUser.run(comoAdmin({ uid: USER_CENTRO }));
+
+    await expect(auth.getUser(USER_CENTRO)).rejects.toMatchObject({ code: 'auth/user-not-found' });
+  });
+
+  // Un perfil de Firestore sin cuenta de Auth es justo uno de los restos que esto
+  // viene a limpiar: que no exista en Auth no puede hacer fallar el borrado.
+  test('un perfil huérfano (sin cuenta de Auth) se borra sin error', async () => {
+    await expect(
+      fns.adminDeleteUser.run(comoAdmin({ uid: USER_CENTRO }))
+    ).resolves.toMatchObject({ success: true });
+    expect((await db.collection('users').doc(USER_CENTRO).get()).exists).toBe(false);
+  });
+
+  // El delegado conserva su "expulsar" reversible; esto no lo alcanza ni en su
+  // propia tienda, que es donde sí puede activar y expulsar.
+  test('un DELEGADO no puede borrar a nadie, ni de su propia tienda', async () => {
+    await expect(
+      fns.adminDeleteUser.run(req(DELEGADO_UID, { uid: USER_CENTRO }))
+    ).rejects.toThrow(/Solo el administrador/i);
+    expect((await db.collection('users').doc(USER_CENTRO).get()).exists).toBe(true);
+  });
+
+  test('un usuario normal tampoco', async () => {
+    await expect(
+      fns.adminDeleteUser.run(req(USER_BARNA, { uid: USER_CENTRO }))
+    ).rejects.toThrow(/Solo el administrador/i);
+    expect((await db.collection('users').doc(USER_CENTRO).get()).exists).toBe(true);
+  });
+
+  // Borrarse a sí mismo se llevaría por delante el custom-claim, que es la ÚNICA
+  // vía de administrar la app: no habría forma de recuperarlo desde dentro.
+  test('el admin no puede borrarse a sí mismo desde el panel', async () => {
+    await expect(
+      fns.adminDeleteUser.run(comoAdmin({ uid: ADMIN_UID }))
+    ).rejects.toThrow(/administrador/i);
+    expect((await db.collection('users').doc(ADMIN_UID).get()).exists).toBe(true);
+  });
+
+  test('rechaza un uid que no es una cadena', async () => {
+    await expect(
+      fns.adminDeleteUser.run(comoAdmin({ uid: 123 }))
+    ).rejects.toThrow(/invalid-argument|no válidos/i);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────────
 describe('delegadoCensusCounts', () => {
   test('cuenta usuarios y activos de las tiendas autorizadas', async () => {
     await db.collection('users').doc('otroCentro').set({

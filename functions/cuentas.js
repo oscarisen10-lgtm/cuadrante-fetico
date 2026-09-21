@@ -12,7 +12,7 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const functionsV1 = require("firebase-functions/v1");
 const { admin, db, ENFORCE_APP_CHECK } = require("./lib/firebase");
 const { NEWS_TOPIC, tokensFromProfile } = require("./lib/push");
-const { isAdminToken, requireAuth, getDelegadoDoc, isUserActive } = require("./lib/auth");
+const { isAdminToken, isProtectedAdminAccount, requireAuth, getDelegadoDoc, isUserActive } = require("./lib/auth");
 const { isValidStore, isAngedCompany, storeBelongsToCompany } = require("./lib/validStores");
 
 /**
@@ -94,6 +94,61 @@ exports.deleteMyAccount = onCall({
     return { success: true };
   } catch (error) {
     console.error("Error borrando la cuenta:", error);
+    throw new HttpsError("internal", "No se pudo borrar la cuenta por completo. Inténtalo de nuevo.");
+  }
+});
+
+/**
+ * adminDeleteUser — El ADMIN borra la cuenta de OTRO usuario, entera y sin vuelta
+ * atrás: perfil, turnos, peticiones, sus noticias de delegado y su cuenta de Auth.
+ *
+ * Es lo que sustituye a "expulsar" en el panel de Gestión. Expulsar solo escondía
+ * del censo a quien se fue de la empresa (su cuenta seguía viva); esto lo elimina
+ * de verdad, y si quiere volver a usar la app tiene que registrarse otra vez.
+ *
+ * Solo por custom-claim de admin: el DELEGADO no puede llamarla ni equivocándose,
+ * y conserva su "expulsar" reversible en el censo. Es a propósito — un borrado que
+ * no se puede deshacer no debe estar en manos de treinta personas.
+ */
+// timeoutSeconds: 300 por lo mismo que deleteMyAccount — el recursiveDelete de un
+// usuario con años de historial no siempre cabe en los 60 s por defecto.
+exports.adminDeleteUser = onCall({
+  maxInstances: 5,
+  enforceAppCheck: ENFORCE_APP_CHECK,
+  timeoutSeconds: 300,
+}, async (request) => {
+  requireAuth(request, HttpsError);
+  if (!isAdminToken(request.auth.token)) {
+    throw new HttpsError("permission-denied", "Solo el administrador puede borrar cuentas.");
+  }
+
+  const targetUid = request.data?.uid;
+  if (typeof targetUid !== "string" || !targetUid) {
+    throw new HttpsError("invalid-argument", "Parámetros no válidos.");
+  }
+
+  // El admin no se borra a sí mismo desde el panel: se llevaría por delante el claim
+  // y con él la única vía de administrar la app. Para eso está "Eliminar mi cuenta"
+  // en Ajustes, donde al menos sabe lo que hace. Se comprueba además contra la cuenta
+  // PROTEGIDA porque durante un cambio de administrador el claim y ADMIN_EMAIL pueden
+  // estar en cuentas distintas (ver isProtectedAdminAccount).
+  if (targetUid === request.auth.uid || await isProtectedAdminAccount(targetUid)) {
+    throw new HttpsError("failed-precondition", "No se puede borrar la cuenta del administrador desde el panel.");
+  }
+
+  try {
+    await purgeUserData(targetUid);
+    // La cuenta de Auth, al final. Que no exista NO es un error: un perfil huérfano
+    // (Firestore sin Auth) es justo uno de los casos que esto viene a limpiar, y el
+    // objetivo —que no quede nada de esa persona— ya está cumplido.
+    await admin.auth().deleteUser(targetUid).catch((e) => {
+      if (e && e.code === "auth/user-not-found") return;
+      throw e;
+    });
+    console.log(`adminDeleteUser → ${request.auth.uid} borró la cuenta ${targetUid}.`);
+    return { success: true, uid: targetUid };
+  } catch (error) {
+    console.error("Error borrando la cuenta", targetUid, error);
     throw new HttpsError("internal", "No se pudo borrar la cuenta por completo. Inténtalo de nuevo.");
   }
 });

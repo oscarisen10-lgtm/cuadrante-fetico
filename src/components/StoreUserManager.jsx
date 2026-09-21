@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Users, Search, RefreshCw, Store as StoreIcon, ChevronDown, UserCheck } from 'lucide-react';
-import { fetchStoreUsers, setUserActiveStatus, setUserExpelled, setUserNoticias } from '../services/firebaseService';
+import { Users, Search, RefreshCw, Store as StoreIcon, ChevronDown, UserCheck, BellOff, UserMinus, Clock } from 'lucide-react';
+import { fetchStoreUsers, setUserActiveStatus, setUserExpelled, setUserNoticias, adminDeleteUserAccount } from '../services/firebaseService';
 import { toast, confirm } from '../services/toastBus';
 import { LoadingLogo } from './UIComponents';
 import { UserCard } from './UserCard';
@@ -10,6 +10,27 @@ import { formatStoreName } from '../constants/stores';
 // tiendas del delegado, o todos los de la app si es el admin). El backend la
 // entiende y lo resuelve en UNA sola llamada. Solo con showTotal.
 const TOTAL = '__ALL__';
+
+/**
+ * Filtros por ESTADO, que se aplican sobre la tienda ya elegida (o sobre el Total).
+ *
+ * El buscador de abajo solo sirve cuando ya sabes a quién buscas. Esto es lo
+ * contrario: a quien no tiene push no se le puede avisar de nada, y a quien lleva
+ * meses "Pendiente" no lo ha verificado ningún delegado — son justo las personas
+ * cuyo nombre no te sabes de antemano, y sin filtro había que ir bajando tienda
+ * por tienda para dar con ellas.
+ *
+ * "Activos" y "Pendientes" excluyen a los expulsados a propósito: en su ficha esa
+ * etiqueta manda sobre las otras dos (ver UserCard), así que meterlos aquí
+ * enseñaría como activa a gente que ya se fue de la empresa.
+ */
+const FILTROS = [
+  { id: 'todos', label: 'Todos', Icon: Users, test: () => true },
+  { id: 'activos', label: 'Activos', Icon: UserCheck, test: (u) => u.active && !u.expelled },
+  { id: 'pendientes', label: 'Pendientes', Icon: Clock, test: (u) => !u.active && !u.expelled },
+  { id: 'sinpush', label: 'Sin push', Icon: BellOff, test: (u) => !u.hasPush },
+  { id: 'baja', label: 'Posible baja', Icon: UserMinus, test: (u) => u.pushMuerto },
+];
 
 /**
  * StoreUserManager — Gestor de usuarios por tienda. Hoy lo usa el panel de
@@ -39,6 +60,7 @@ export function StoreUserManager({ stores, showTotal = false, admin = false }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [filtro, setFiltro] = useState('todos');
   const [togglingUid, setTogglingUid] = useState(null);
 
   // Si cambian las tiendas autorizadas y la selección ya no existe, volver a la primera opción.
@@ -107,6 +129,28 @@ export function StoreUserManager({ stores, showTotal = false, admin = false }) {
     setTogglingUid(null);
   }, [admin]);
 
+  // Borrado de la cuenta: SOLO admin (la callable lo exige). Ocupa el sitio del
+  // antiguo "expulsar" en este panel, y NO tiene vuelta atrás: se van el perfil,
+  // los turnos y la cuenta de Auth. Por eso el aviso dice el nombre y el correo —
+  // en una lista de tienda entera las fichas se parecen mucho— y avisa de que la
+  // persona tendría que registrarse de nuevo.
+  const handleDelete = useCallback(async (u) => {
+    const ok = await confirm(
+      `¿ELIMINAR la cuenta de ${u.fullName} (${u.email})? Se borran su perfil, sus turnos y su acceso. ` +
+      `Esto NO se puede deshacer: si quisiera volver a usar la app, tendría que registrarse de nuevo.`
+    );
+    if (!ok) return;
+    setTogglingUid(u.uid);
+    try {
+      await adminDeleteUserAccount(u.uid);
+      setUsers((prev) => prev.filter((x) => x.uid !== u.uid));
+      toast(`Cuenta de ${u.fullName} eliminada.`, "success");
+    } catch (e) {
+      toast("Error: " + (e?.message || e), "error");
+    }
+    setTogglingUid(null);
+  }, []);
+
   // Corte de noticias: SOLO admin (la callable lo exige). Es lo que decide a quién
   // llega cada noticia — el interruptor de arriba activa la CUENTA, esto el envío.
   const handleToggleNoticias = useCallback(async (u) => {
@@ -128,12 +172,21 @@ export function StoreUserManager({ stores, showTotal = false, admin = false }) {
     setTogglingUid(null);
   }, []);
 
+  // Los contadores de cada chip salen de la tienda entera, no de lo ya filtrado:
+  // son los que dicen si merece la pena pulsarlo (un "Sin push · 0" ahorra el clic).
+  const conteos = useMemo(() => {
+    const c = {};
+    for (const f of FILTROS) c[f.id] = users.filter(f.test).length;
+    return c;
+  }, [users]);
+
   const q = search.trim().toLowerCase();
-  const filtered = q
-    ? users.filter((u) =>
-        [u.fullName, u.email, u.section, u.phone, u.rank].some((f) => (f || "").toLowerCase().includes(q))
-      )
-    : users;
+  const testFiltro = (FILTROS.find((f) => f.id === filtro) || FILTROS[0]).test;
+  const filtered = users.filter(
+    (u) =>
+      testFiltro(u) &&
+      (!q || [u.fullName, u.email, u.section, u.phone, u.rank].some((f) => (f || "").toLowerCase().includes(q)))
+  );
   const activos = users.filter((u) => u.active).length;
 
   if (sortedStores.length === 0) return null;
@@ -174,6 +227,30 @@ export function StoreUserManager({ stores, showTotal = false, admin = false }) {
         </div>
       )}
 
+      {/* Filtros por estado. Van en su propia fila y con el relieve "hundido" del
+          resto de secundarios (fondo claro + aro) para que no compitan con los
+          chips de tienda de arriba, que son los que mandan. */}
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1" role="group" aria-label="Filtrar usuarios por estado">
+        {FILTROS.map(({ id, label, Icon }) => {
+          const activo = filtro === id;
+          return (
+            <button
+              key={id}
+              onClick={() => setFiltro(id)}
+              aria-pressed={activo}
+              className={`shrink-0 px-3 py-2 rounded-2xl text-[9px] font-black uppercase tracking-tight flex items-center gap-1.5 transition-all active:scale-95 ring-1 ${
+                activo ? 'bg-emerald-50 text-emerald-700 ring-emerald-300' : 'bg-white text-slate-400 ring-slate-200'
+              }`}
+            >
+              <Icon size={11} /> {label}
+              <span className={`px-1.5 py-0.5 rounded-md text-[8px] ${activo ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                {conteos[id]}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Contador + refrescar */}
       <div className="flex justify-between items-center px-1">
         <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
@@ -207,7 +284,11 @@ export function StoreUserManager({ stores, showTotal = false, admin = false }) {
         <div className="py-12 flex flex-col items-center opacity-40">
           <Users size={36} className="text-slate-300 mb-3" />
           <p className="text-[10px] text-slate-400 italic uppercase font-bold tracking-widest">
-            {users.length === 0 ? 'No hay usuarios en esta tienda' : 'Sin resultados para la búsqueda'}
+            {users.length === 0
+              ? 'No hay usuarios en esta tienda'
+              : q
+                ? 'Sin resultados para la búsqueda'
+                : 'Nadie en este filtro'}
           </p>
         </div>
       ) : (
@@ -218,7 +299,11 @@ export function StoreUserManager({ stores, showTotal = false, admin = false }) {
               u={u}
               busy={togglingUid === u.uid}
               onToggleActive={handleToggle}
-              onExpel={handleExpel}
+              /* Para el admin, "expulsar" ya no se ofrece: en su sitio está borrar.
+                 Se conserva SOLO para READMITIR a los que expulsó un delegado antes
+                 de esto — si no, se quedarían escondidos del censo para siempre. */
+              onExpel={admin ? (u.expelled ? handleExpel : undefined) : handleExpel}
+              onDelete={admin ? handleDelete : undefined}
               onToggleNoticias={admin ? handleToggleNoticias : undefined}
             />
           ))}

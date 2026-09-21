@@ -39,6 +39,9 @@ exports.delegadoCensusCounts = delegados.delegadoCensusCounts;
 
 // --- Cuentas ---
 exports.deleteMyAccount = cuentas.deleteMyAccount;
+// Borrado de la cuenta de OTRO usuario. Solo admin: en el panel de Gestión ocupa el
+// sitio del antiguo "expulsar", que sigue existiendo (reversible) para el delegado.
+exports.adminDeleteUser = cuentas.adminDeleteUser;
 exports.cleanupOnAuthDelete = cuentas.cleanupOnAuthDelete;
 // Única vía para cambiar de tienda: las reglas ya no dejan tocar profile.store desde
 // el cliente, porque de ese campo dependen las noticias de delegado y el censo.

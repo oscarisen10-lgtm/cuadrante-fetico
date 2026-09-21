@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Phone, Mail, Bell, BellOff, UserCheck, UserX, ChevronDown, ChevronUp, Activity, UserMinus } from 'lucide-react';
+import { Phone, Mail, Bell, BellOff, UserCheck, UserX, ChevronDown, ChevronUp, Activity, UserMinus, Trash2 } from 'lucide-react';
 import { formatStoreName } from '../constants/stores';
 
 const DIA_MS = 24 * 60 * 60 * 1000;
@@ -34,6 +34,11 @@ const resumenActividad = (lastActiveAt) => {
  * activación, contacto (teléfono/email/push), corte de noticias (solo admin) y
  * expulsar/readmitir.
  *
+ * `onExpel` y `onDelete` son las DOS formas de dar de baja a alguien, y quién ve
+ * cuál no es un detalle de estilo: expulsar es reversible y lo usa el DELEGADO
+ * desde el censo (esconde de sus listas a quien se fue de la empresa, sin tocarle
+ * la cuenta); borrar NO tiene vuelta atrás y solo lo pasa el panel del ADMIN.
+ *
  * `collapsible`: empieza plegada (solo nombre, estado y el interruptor) y se
  * abre al tocar el nombre — así el Censo puede listar tiendas enteras sin
  * ocupar media pantalla por usuario. En "Usuarios" va siempre abierta.
@@ -42,7 +47,7 @@ const resumenActividad = (lastActiveAt) => {
  * local (StoreUserManager). Sin memo, cada pulsación en ese buscador volvía a
  * renderizar TODAS las fichas, aunque sus props no hubieran cambiado.
  */
-export const UserCard = React.memo(function UserCard({ u, collapsible = false, busy = false, onToggleActive, onExpel, onToggleNoticias }) {
+export const UserCard = React.memo(function UserCard({ u, collapsible = false, busy = false, onToggleActive, onExpel, onDelete, onToggleNoticias }) {
   const [open, setOpen] = useState(!collapsible);
   const actividad = resumenActividad(u.lastActiveAt);
 
@@ -170,7 +175,8 @@ export const UserCard = React.memo(function UserCard({ u, collapsible = false, b
             </button>
           )}
 
-          {/* Expulsar (se fue de la empresa) / Readmitir (solo la ve el admin) */}
+          {/* Expulsar (se fue de la empresa) / Readmitir. Reversible: lo pasa el
+              censo del delegado, y el panel del admin solo para readmitir. */}
           {onExpel && (
             <button
               onClick={() => onExpel(u)}
@@ -178,6 +184,20 @@ export const UserCard = React.memo(function UserCard({ u, collapsible = false, b
               className={`w-full mt-2.5 py-2 rounded-xl text-[9px] font-black uppercase flex items-center justify-center gap-1.5 active:scale-95 transition-all ${u.expelled ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-100'} ${busy ? 'opacity-50' : ''}`}
             >
               {u.expelled ? <><UserCheck size={11} /> Readmitir</> : <><UserX size={11} /> Expulsar (se fue de la empresa)</>}
+            </button>
+          )}
+
+          {/* Eliminar la cuenta. Solo el admin, y sin vuelta atrás: va en rojo
+              macizo (no en el rosa suave del resto) porque no es "una acción más
+              de la ficha" — se lleva por delante los turnos de esa persona. */}
+          {onDelete && (
+            <button
+              onClick={() => onDelete(u)}
+              disabled={busy}
+              className={`w-full mt-2.5 py-2 rounded-xl text-[9px] font-black uppercase flex items-center justify-center gap-1.5 text-white active:scale-95 transition-all ${busy ? 'opacity-50' : ''}`}
+              style={{ background: 'linear-gradient(180deg,#f43f5e,#be123c)', boxShadow: '0 5px 12px rgba(190,18,60,0.35), inset 0 1px 1px rgba(255,255,255,0.35)' }}
+            >
+              <Trash2 size={11} /> Eliminar cuenta
             </button>
           )}
         </div>

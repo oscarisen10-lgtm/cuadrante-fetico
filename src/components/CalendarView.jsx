@@ -281,53 +281,51 @@ export const CalendarView = React.memo(function CalendarView({ shifts, shiftsMap
           <div id="calendar-grid" role="tabpanel">
             {viewMode === 'mensual' ? (
               <div className="flex flex-col relative">
-                {(() => {
-                  const m = currentDate.getMonth();
-                  const isLocked = permissionState !== 'granted' && [0, 7, 9].includes(m);
-                  return (
-                    <>
-                      <div className={`p-3 grid grid-cols-7 gap-1.5 ${isLocked ? 'opacity-30 pointer-events-none' : ''}`} role="grid" aria-label="Calendario mensual">
-                        <WeekdayHeader />
-                        <MonthGrid
-                          targetYear={currentDate.getFullYear()}
-                          targetMonth={currentDate.getMonth()}
-                          shiftsMap={shiftsMap}
-                          isSmall={false}
-                          selectedDates={selectedDates}
-                          holidaySet={holidaySet}
-                          onDayClick={handleDayClick}
-                        />
-                      </div>
-                      {isLocked && (
-                        <div className="absolute inset-0 flex items-center justify-center z-10 pb-8">
-                          <div className="bg-slate-800/90 p-5 rounded-3xl backdrop-blur-md text-white flex flex-col items-center gap-3 shadow-2xl mx-6 text-center">
-                            <Lock size={36} className="text-emerald-400" />
-                            <p className="text-sm font-bold leading-snug">Activa las notificaciones para desbloquear este mes</p>
-                            <button onClick={requestTokenManually} className="mt-2 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-black px-4 py-2 rounded-xl transition-colors shadow-lg active:scale-95">ACTIVAR</button>
-                          </div>
-                        </div>
+                <div className={`p-3 grid grid-cols-7 gap-1.5 ${hasNotifications ? '' : 'opacity-30 pointer-events-none'}`} role="grid" aria-label="Calendario mensual">
+                  <WeekdayHeader />
+                  <MonthGrid
+                    targetYear={currentDate.getFullYear()}
+                    targetMonth={currentDate.getMonth()}
+                    shiftsMap={shiftsMap}
+                    isSmall={false}
+                    selectedDates={selectedDates}
+                    holidaySet={holidaySet}
+                    onDayClick={handleDayClick}
+                  />
+                </div>
+                {!hasNotifications && (
+                  <div className="absolute inset-0 flex items-center justify-center z-10 pb-8">
+                    <div className="bg-slate-800/90 p-5 rounded-3xl backdrop-blur-md text-white flex flex-col items-center gap-3 shadow-2xl mx-6 text-center">
+                      <Lock size={36} className="text-emerald-400" />
+                      <p className="text-sm font-bold leading-snug">
+                        {permissionState === 'denied'
+                          ? 'La agenda necesita las notificaciones. Actívalas en los Ajustes del móvil.'
+                          : 'Activa las notificaciones para usar la agenda'}
+                      </p>
+                      {permissionState !== 'denied' && (
+                        <button onClick={requestTokenManually} className="mt-2 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-black px-4 py-2 rounded-xl transition-colors shadow-lg active:scale-95">ACTIVAR</button>
                       )}
-                    </>
-                  );
-                })()}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <>
               <div className="px-3 pt-3">
                 <button
                   onClick={exportarAnio}
-                  disabled={exportando}
-                  className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white transition-transform active:scale-[0.98] ${exportando ? 'opacity-60' : ''}`}
+                  disabled={exportando || !hasNotifications}
+                  className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white transition-transform active:scale-[0.98] ${exportando || !hasNotifications ? 'opacity-60' : ''}`}
                   style={{ background: 'linear-gradient(180deg,#34d399,#059669 58%,#047857)', boxShadow: '0 6px 14px rgba(5,150,105,0.4), inset 0 1.5px 1px rgba(255,255,255,0.45)' }}
-                  aria-label={`Descargar el cuadrante de ${currentDate.getFullYear()} en PDF`}
+                  aria-label={hasNotifications ? `Descargar el cuadrante de ${currentDate.getFullYear()} en PDF` : 'Activa las notificaciones para descargar el cuadrante'}
                 >
-                  <FileDown size={14} />
-                  {exportando ? 'Generando…' : `Descargar ${currentDate.getFullYear()} en PDF`}
+                  {hasNotifications ? <FileDown size={14} /> : <Lock size={14} />}
+                  {!hasNotifications ? 'Activa las notificaciones' : exportando ? 'Generando…' : `Descargar ${currentDate.getFullYear()} en PDF`}
                 </button>
               </div>
               <div className="p-3 grid grid-cols-3 gap-x-2 gap-y-4 pb-4" role="grid" aria-label="Calendario anual">
                 {Array.from({ length: 12 }).map((_, m) => {
-                  const isLocked = permissionState !== 'granted' && [0, 7, 9].includes(m);
+                  const isLocked = !hasNotifications;
                   return (
                   <div key={m} className="flex flex-col relative">
                      <h4 className="text-[8px] font-black uppercase text-slate-800 mb-1 text-center tracking-widest">{new Date(currentDate.getFullYear(), m, 1).toLocaleDateString('es-ES', { month: 'short' })}</h4>

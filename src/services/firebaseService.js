@@ -392,6 +392,22 @@ export const setUserExpelled = async (uid, expelled) => {
 };
 
 /**
+ * SOLO admin: BORRA la cuenta de otro usuario entera y sin vuelta atrás (perfil,
+ * turnos, peticiones y su cuenta de Auth). Para volver a usar la app tendría que
+ * registrarse de nuevo. Ver la Cloud Function `adminDeleteUser`.
+ *
+ * A PROPÓSITO sin el callFunction de arriba, por lo mismo que deleteUserAccount:
+ * esa function declara timeoutSeconds: 300 porque el borrado de un usuario con
+ * años de historial no siempre cabe en menos, y cortar aquí a los 20 s enseñaría
+ * un error mientras el borrado sigue y acaba bien.
+ */
+export const adminDeleteUserAccount = async (uid) => {
+  const fn = httpsCallable(functions, 'adminDeleteUser');
+  const { data } = await fn({ uid });
+  return data;
+};
+
+/**
  * SOLO admin: corta (o restaura) las noticias y sus push a un usuario. No le toca
  * la cuenta — sigue usando la app entera, pero deja de recibir el broadcast del
  * admin y los avisos de su delegado.
