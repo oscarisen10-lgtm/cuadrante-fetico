@@ -48,7 +48,7 @@
     "firebase-admin": "^14.3.0",
     "globals": "^17.8.0",
     "postcss": "^8.4.24",
-    "tailwindcss": "^3.3.2",
+    "tailwindcss": "^4.3.3",
     "vite": "^6.4.3",
     "vitest": "^4.1.8"
   }
