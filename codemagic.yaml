@@ -233,7 +233,7 @@ workflows:
           # Build number interno (incrementa en cada subida a App Store Connect)
           # Un número de build no se puede reutilizar en App Store Connect: súbelo SIEMPRE
           # en uno respecto al último que llegó a subirse (aunque fallara después).
-          NEW_BUILD=189
+          NEW_BUILD=190
           echo "Build number -> $NEW_BUILD"
           cd ios/App
           agvtool new-version -all "$NEW_BUILD"
