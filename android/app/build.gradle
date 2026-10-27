@@ -71,6 +71,19 @@ dependencies {
     implementation project(':capacitor-cordova-android-plugins')
 }
 
+// Una RELEASE sin keystore se para aquí (auditoría 25-oct-2026, H-26). Antes caía en
+// silencio a la firma de DEPURACIÓN (ver signingConfig arriba), y Google Play rechaza
+// ese .aab al subirlo: se descubría tarde y sin un mensaje claro. Los builds de
+// depuración no se ven afectados.
+gradle.taskGraph.whenReady { graph ->
+    def pideRelease = graph.allTasks.any { t -> t.name ==~ /(bundle|assemble)Release/ }
+    if (pideRelease && !hasKeystore) {
+        throw new GradleException(
+            "Falta android/keystore.properties: una release firmada con la clave de " +
+            "depuración la rechaza Google Play. Copia keystore.properties.example y rellénalo.")
+    }
+}
+
 apply from: 'capacitor.build.gradle'
 
 try {

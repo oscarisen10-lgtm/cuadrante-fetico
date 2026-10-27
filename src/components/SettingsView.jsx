@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, ShieldCheck, Users, HelpCircle, Target, Share2, Link2, CalendarDays } from 'lucide-react';
-import { COMPANY_RULES, isAdminUser, hasKnownConvenio, CUSTOM_TARGET_FIELDS, OTHER_COMPANY, NON_ANGED_COMPANIES, isKnownCompany, isNamedOtherCompany } from '../constants/config';
+import { Settings, Building2, Bell, RefreshCw, Trash2, AlertTriangle, Fingerprint, Store, ChevronDown, ShieldCheck, Users, HelpCircle, Target, Share2, Link2, CalendarDays, FileText } from 'lucide-react';
+import { COMPANY_RULES, isAdminUser, hasKnownConvenio, CUSTOM_TARGET_FIELDS, OTHER_COMPANY, NON_ANGED_COMPANIES, isKnownCompany, isNamedOtherCompany, URL_PRIVACIDAD, URL_SOPORTE } from '../constants/config';
 import { storesForCompany, formatStoreName } from '../constants/stores';
 import { deleteUserAccount, cambiarMiTienda } from '../services/firebaseService';
 import { firestoreCacheMode } from '../firebase';
@@ -170,7 +170,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                  delegado la sigue garantizando la function (ver cambiarMiTienda). */}
              <div className={segundaColumna ? "grid grid-cols-2 gap-3" : ""}>
                <div className="flex flex-col space-y-1">
-                  <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1">Empresa</span>
+                  <span className="text-[9px] text-white/60 uppercase font-black tracking-widest ml-1">Empresa</span>
                   <select
                     value={valorEmpresa}
                     disabled={cambiandoTienda}
@@ -196,7 +196,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                  <div className="flex flex-col space-y-1">
                     {esOtraEmpresa ? (
                       <>
-                        <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1">Nombre</span>
+                        <span className="text-[9px] text-white/60 uppercase font-black tracking-widest ml-1">Nombre</span>
                         <input
                           type="text"
                           value={companyDraft ?? (user?.company === OTHER_COMPANY ? "" : (user?.company || ""))}
@@ -213,7 +213,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                       </>
                     ) : (
                       <>
-                        <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1">Rango</span>
+                        <span className="text-[9px] text-white/60 uppercase font-black tracking-widest ml-1">Rango</span>
                         <select
                           value={currentRank}
                           onChange={(e) => handleProfileChange({ rank: e.target.value })}
@@ -232,14 +232,14 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
              </div>
 
              {esOtraEmpresa ? (
-               <span className="text-[8px] text-white/30 font-bold uppercase tracking-tight ml-1 leading-tight">
+               <span className="text-[11px] text-white/60 font-medium ml-1 leading-snug">
                  Al pasarte a una empresa de ANGED, tu cuenta queda pendiente de que la verifique el delegado de tu centro
                </span>
              ) : (
                <>
 
                  <div className="flex flex-col space-y-1 mt-1">
-                   <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1 flex items-center gap-1">
+                   <span className="text-[9px] text-white/60 uppercase font-black tracking-widest ml-1 flex items-center gap-1">
                      <Store size={10} className="text-emerald-500"/> Centro / Tienda
                    </span>
                    <div className="relative">
@@ -261,7 +261,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                  </div>
 
                  <div className="flex flex-col space-y-1 mt-1">
-                   <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1 flex items-center gap-1">
+                   <span className="text-[9px] text-white/60 uppercase font-black tracking-widest ml-1 flex items-center gap-1">
                      <Store size={10} className="text-emerald-500"/> Sección
                    </span>
                    <div className="relative">
@@ -297,7 +297,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                  pide la fecha, y sus objetivos a mano se prorratean igual, así que
                  tiene que poder corregirla. */}
              <div className="flex flex-col space-y-1 mt-1">
-               <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1 flex items-center gap-1">
+               <span className="text-[9px] text-white/60 uppercase font-black tracking-widest ml-1 flex items-center gap-1">
                  <CalendarDays size={10} className="text-emerald-500"/> Antigüedad · fecha de alta
                </span>
                <input
@@ -319,13 +319,13 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                 <Target size={14} className="text-emerald-500" />
                 <span className="text-xs font-bold text-white uppercase leading-none">Mis Objetivos</span>
               </div>
-              <p className="text-[9px] text-white/40 font-bold uppercase tracking-tight leading-tight -mt-2">
+              <p className="text-[11px] text-white/60 font-medium leading-snug -mt-2">
                 No conocemos el convenio de tu empresa. Escribe aquí tus objetivos anuales y el Resumen los usará. Lo que dejes vacío se muestra como contador, sin barra.
               </p>
               <div className="grid grid-cols-2 gap-3">
                 {CUSTOM_TARGET_FIELDS.map(({ key, label, max }) => (
                   <div key={key} className="flex flex-col space-y-1">
-                    <span className="text-[9px] text-white/40 uppercase font-black tracking-widest ml-1">{label}</span>
+                    <span className="text-[9px] text-white/60 uppercase font-black tracking-widest ml-1">{label}</span>
                     <input
                       type="number"
                       inputMode="numeric"
@@ -350,7 +350,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
             <div data-tour="set-sync" className="flex justify-between items-center bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
                <div className="flex flex-col">
                   <span className="text-xs font-bold text-white uppercase leading-none flex items-center gap-1.5"><RefreshCw size={14} className="text-emerald-500"/> Sincronización</span>
-                  <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Sincroniza las noticias y avisos</span>
+                  <span className="text-[10px] text-white/60 uppercase mt-1.5 font-medium tracking-tight">Sincroniza las noticias y avisos</span>
                </div>
                <button onClick={requestTokenManually} className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase active:scale-95 shadow-md">
                   Permitir
@@ -361,7 +361,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
           <div className="flex justify-between items-center bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
             <div className="flex flex-col">
                 <span className="text-xs font-bold text-white uppercase leading-none">Vibración</span>
-                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Vibración al pulsar botones</span>
+                <span className="text-[10px] text-white/60 uppercase mt-1.5 font-medium tracking-tight">Vibración al pulsar botones</span>
             </div>
             <button onClick={() => {
                 const v = !haptics;
@@ -376,7 +376,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
           <div data-tour="set-biometrico" className="flex justify-between items-center bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
             <div className="flex flex-col">
                 <span className="text-xs font-bold text-white uppercase leading-none flex items-center gap-1.5"><Fingerprint size={14} className="text-emerald-500"/> Bloqueo Biométrico</span>
-                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Exigir FaceID/Huella al abrir app</span>
+                <span className="text-[10px] text-white/60 uppercase mt-1.5 font-medium tracking-tight">Exigir FaceID/Huella al abrir app</span>
             </div>
             <button onClick={() => {
                 const newSettings = {...settings, useBiometric: !settings.useBiometric};
@@ -387,7 +387,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
           </div>
 
           <div data-tour="set-descanso" className="space-y-4 flex flex-col">
-            <span className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Minutos de Descanso</span>
+            <span className="text-[10px] font-black text-white/60 uppercase tracking-widest ml-1">Minutos de Descanso</span>
             <div className="grid grid-cols-5 gap-2">
               {[15, 20, 30, 45, 60].map(m => (
                 <button key={m} onClick={() => {
@@ -410,7 +410,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                 <span className="text-xs font-bold text-white uppercase leading-none flex items-center gap-1.5">
                   <HelpCircle size={14} className="text-emerald-500"/> Tutorial
                 </span>
-                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Verlo otra vez desde el principio</span>
+                <span className="text-[10px] text-white/60 uppercase mt-1.5 font-medium tracking-tight">Verlo otra vez desde el principio</span>
              </div>
              <span className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-md shrink-0">Ver</span>
           </button>
@@ -423,7 +423,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                 <span className="text-xs font-bold text-white uppercase leading-none flex items-center gap-1.5">
                   <Share2 size={14} className="text-emerald-500"/> Compartir con compañeros
                 </span>
-                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Pásales la app para que se la descarguen</span>
+                <span className="text-[10px] text-white/60 uppercase mt-1.5 font-medium tracking-tight">Pásales la app para que se la descarguen</span>
              </div>
              <div className="flex gap-2">
                 <button
@@ -456,7 +456,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                 <span className="text-xs font-bold text-emerald-300 uppercase leading-none flex items-center gap-1.5">
                   <Users size={14} className="text-emerald-400"/> Modo Delegado
                 </span>
-                <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">
+                <span className="text-[10px] text-white/60 uppercase mt-1.5 font-medium tracking-tight">
                   {settings?.delegadoMode !== false ? 'Gestión de usuarios y noticias' : 'Viendo la app como usuario normal'}
                 </span>
               </div>
@@ -481,7 +481,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                   <span className="text-xs font-bold text-indigo-300 uppercase leading-none flex items-center gap-1.5">
                     <ShieldCheck size={14} className="text-indigo-400"/> Modo Admin
                   </span>
-                  <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">
+                  <span className="text-[10px] text-white/60 uppercase mt-1.5 font-medium tracking-tight">
                     {settings?.adminMode !== false ? 'Gestión y noticias' : 'Viendo la app como usuario normal'}
                   </span>
                 </div>
@@ -512,7 +512,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
                     </div>
                     <div className="flex flex-col bg-white/5 p-2.5 rounded-xl gap-1">
                        <span className="text-[9px] text-white/50 uppercase font-bold">Token FCM:</span>
-                       <span className="text-[7px] font-mono break-all leading-tight" style={{ color: tokenColor }}>
+                       <span className="text-[9px] font-mono break-all leading-tight" style={{ color: tokenColor }}>
                           {tokenStatus}
                        </span>
                     </div>
@@ -530,11 +530,37 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
             </>
           )}
 
+           {/* Privacidad y ayuda: Apple (5.1.1) y Google Play exigen que la política se
+               pueda abrir desde la app (auditoría 25-oct-2026, H-04). URL absoluta a
+               propósito, ver URL_PRIVACIDAD en constants/config. */}
+           <div className="flex flex-col gap-3 bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 rounded-2xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.07)]">
+              <div className="flex flex-col">
+                 <span className="text-xs font-bold text-white uppercase leading-none flex items-center gap-1.5">
+                   <FileText size={14} className="text-emerald-500"/> Privacidad y ayuda
+                 </span>
+                 <span className="text-[10px] text-white/60 uppercase mt-1.5 font-medium tracking-tight">Qué datos guarda la app y quién los ve</span>
+              </div>
+              <div className="flex gap-2">
+                 <a
+                   href={URL_PRIVACIDAD} target="_blank" rel="noopener noreferrer"
+                   className="flex-1 flex items-center justify-center gap-2 bg-white/10 text-white/80 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 active:scale-95 transition-transform"
+                 >
+                   <ShieldCheck size={13}/> Política de privacidad
+                 </a>
+                 <a
+                   href={URL_SOPORTE} target="_blank" rel="noopener noreferrer"
+                   className="px-4 flex items-center justify-center gap-2 bg-white/10 text-white/80 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 active:scale-95 transition-transform"
+                 >
+                   <HelpCircle size={13}/> Soporte
+                 </a>
+              </div>
+           </div>
+
            {/* Zona peligrosa — Eliminar cuenta (Requisito Apple App Store) */}
            <div className="flex justify-between items-center bg-rose-500/10 p-4 rounded-2xl border border-rose-500/20 mt-2">
               <div className="flex flex-col">
                  <span className="text-xs font-bold text-rose-400 uppercase leading-none">Eliminar Cuenta</span>
-                 <span className="text-[9px] text-white/40 uppercase mt-1.5 font-medium tracking-tight">Borrar todos tus datos permanentemente</span>
+                 <span className="text-[10px] text-white/60 uppercase mt-1.5 font-medium tracking-tight">Borrar todos tus datos permanentemente</span>
               </div>
               <button onClick={() => setShowDeleteModal(true)} className="bg-rose-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase active:scale-95 shadow-md flex items-center gap-1.5">
                  <Trash2 size={14}/> Eliminar
@@ -543,7 +569,7 @@ export const SettingsView = React.memo(function SettingsView({ user, settings, s
         </div>
       </div>
 
-      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-300 text-center -mt-1">
+      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500 text-center -mt-1">
         Versión {__APP_VERSION__}
       </p>
 

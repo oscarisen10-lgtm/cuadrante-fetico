@@ -5,6 +5,10 @@ import { toast, confirm } from '../services/toastBus';
 import { LoadingLogo } from './UIComponents';
 import { UserCard } from './UserCard';
 import { formatStoreName } from '../constants/stores';
+import {
+  SIN_SINDICATO, tieneSindicato, sindicatoPendiente, crearFuturo,
+  confirmarConsentimiento, quitarSindicato, contarPendientes,
+} from '../utils/censo';
 
 // Objetivo de afiliación: con este % o más, el indicador se pone en verde.
 const OBJETIVO_PCT = 30;
@@ -12,7 +16,9 @@ const OBJETIVO_PCT = 30;
 // Opciones de los desplegables al apuntar un futuro usuario. Las secciones son
 // las mismas que usa el perfil de la app (Ajustes).
 const SECCIONES = ['Sin especificar', 'Charcutería', 'Carnicería', 'Pescadería', 'Panadería/Platos', 'Frutería', 'Sala'];
-const SINDICATOS = ['Sin sindicato', 'Fetico', 'Fasga', 'UGT', 'CCOO', 'Otro'];
+// El sindicato es un dato especialmente protegido: solo se guarda con el
+// consentimiento expreso de la persona (ver utils/censo.js).
+const SINDICATOS = [SIN_SINDICATO, 'Fetico', 'Fasga', 'UGT', 'CCOO', 'Otro'];
 
 const pctColor = (pct) => (pct === null ? '#94a3b8' : pct >= OBJETIVO_PCT ? '#059669' : '#e11d48');
 
@@ -57,6 +63,8 @@ export const CensoView = React.memo(function CensoView({ user, delegado }) {
   const [newName, setNewName] = useState("");
   const [newSection, setNewSection] = useState(SECCIONES[0]);
   const [newSindicato, setNewSindicato] = useState(SINDICATOS[0]);
+  // Casilla "me ha dado su consentimiento": solo cuenta si hay sindicato elegido.
+  const [newConsentido, setNewConsentido] = useState(false);
   const [busyUid, setBusyUid] = useState(null); // usuario con activación/expulsión en curso
   // Usuarios con app por tienda, cargados al ABRIR la tienda y cacheados en la
   // sesión (volver a abrirla no repite la llamada; "Actualizar" limpia la caché).
@@ -104,19 +112,49 @@ export const CensoView = React.memo(function CensoView({ user, delegado }) {
   };
 
   const addProspect = async (store) => {
-    const name = newName.trim();
-    if (!name) { toast("Escribe el nombre del futuro usuario.", "warning"); return; }
+    const { entrada, error } = crearFuturo({
+      name: newName, section: newSection, sindicato: newSindicato,
+      consentido: newConsentido, uid: user?.uid,
+    });
+    if (error) { toast(error, "warning"); return; }
     const list = prospects[store] || [];
-    if (list.some((x) => x.name.toLowerCase() === name.toLowerCase())) {
+    if (list.some((x) => x.name.toLowerCase() === entrada.name.toLowerCase())) {
       toast("Ese nombre ya está apuntado en esta tienda.", "warning");
       return;
     }
-    const next = { ...prospects, [store]: [...list, { name, section: newSection, sindicato: newSindicato }] };
+    const next = { ...prospects, [store]: [...list, entrada] };
     setNewName("");
     setNewSection(SECCIONES[0]);
     setNewSindicato(SINDICATOS[0]);
+    setNewConsentido(false);
     await persist(next, prospects);
   };
+
+  // Entradas antiguas con sindicato y sin consentimiento registrado: el delegado
+  // confirma que la persona se lo dio, o quita el dato (utils/censo.js).
+  const cambiarFuturo = async (store, name, transformar) => {
+    const next = {
+      ...prospects,
+      [store]: (prospects[store] || []).map((x) => (x.name === name ? transformar(x) : x)),
+    };
+    await persist(next, prospects);
+  };
+
+  const confirmarSindicato = async (store, p) => {
+    const ok = await confirm(
+      `¿${p.name} te ha dado su consentimiento expreso para apuntar que está afiliado a ${p.sindicato}? Quedará registrado con la fecha de hoy.`
+    );
+    if (!ok) return;
+    await cambiarFuturo(store, p.name, (x) => confirmarConsentimiento(x, user?.uid));
+  };
+
+  const borrarSindicato = async (store, p) => {
+    const ok = await confirm(`¿Quitar el sindicato de ${p.name}? Seguirá apuntado como futuro usuario.`);
+    if (!ok) return;
+    await cambiarFuturo(store, p.name, quitarSindicato);
+  };
+
+  const pendientesConsentimiento = useMemo(() => contarPendientes(prospects), [prospects]);
 
   // Expulsar desde la lista de usuarios creados: se fue de la empresa →
   // desaparece del censo y de las listas (su cuenta sigue activa, no se borra).
@@ -224,7 +262,7 @@ export const CensoView = React.memo(function CensoView({ user, delegado }) {
       <div data-tour="censo-total" className="rounded-[2rem] p-5" style={{ background: 'linear-gradient(180deg,#ffffff,#f8f9fb)', boxShadow: '0 14px 34px -16px rgba(30,41,59,0.25), inset 0 1.5px 1px rgba(255,255,255,0.9)', border: '1px solid rgba(15,23,42,0.05)' }}>
         <div className="flex justify-between items-center">
           <div className="flex flex-col gap-1">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Afiliación total</span>
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Afiliación total</span>
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">
               {totalActivos} usuarios · {totalFuturos} futuros · censo {totalActivos + totalFuturos}
             </span>
@@ -240,8 +278,23 @@ export const CensoView = React.memo(function CensoView({ user, delegado }) {
           {/* Marca del objetivo */}
           <div className="absolute top-0 bottom-0 w-0.5 bg-slate-500/60" style={{ left: `${OBJETIVO_PCT}%` }} title={`Objetivo ${OBJETIVO_PCT}%`} />
         </div>
-        <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-1.5 text-right">La marca es el objetivo del {OBJETIVO_PCT}%</p>
+        <p className="text-[11px] text-slate-500 font-medium mt-1.5 text-right">La marca es el objetivo del {OBJETIVO_PCT}%</p>
       </div>
+
+      {/* Sindicatos apuntados antes de pedir el consentimiento (25-oct-2026). Se
+          avisa arriba del todo porque es una obligación legal, no una preferencia. */}
+      {pendientesConsentimiento > 0 && (
+        <div className="rounded-2xl p-4 bg-amber-50 ring-1 ring-amber-200 text-amber-900" role="status">
+          <p className="text-[11px] font-black uppercase tracking-tight">
+            {pendientesConsentimiento === 1
+              ? '1 futuro usuario tiene el sindicato apuntado sin consentimiento'
+              : `${pendientesConsentimiento} futuros usuarios tienen el sindicato apuntado sin consentimiento`}
+          </p>
+          <p className="text-[11px] leading-snug mt-1">
+            El sindicato es un dato especialmente protegido. En cada uno, pulsa «Tengo su permiso» si esa persona te lo dio, o «Quitar» para borrarlo. Lo que no se confirme se borrará.
+          </p>
+        </div>
+      )}
 
       {/* Por tienda */}
       {loading && !counts ? (
@@ -249,7 +302,7 @@ export const CensoView = React.memo(function CensoView({ user, delegado }) {
       ) : stores.length === 0 ? (
         <div className="py-14 flex flex-col items-center opacity-50 text-center px-6">
           <ClipboardList size={40} className="text-slate-300 mb-3" />
-          <p className="text-[10px] text-slate-400 italic uppercase font-bold tracking-widest leading-relaxed">
+          <p className="text-[10px] text-slate-500 italic uppercase font-bold tracking-widest leading-relaxed">
             Aún no tienes tiendas autorizadas.<br />El administrador debe asignártelas.
           </p>
         </div>
@@ -272,7 +325,7 @@ export const CensoView = React.memo(function CensoView({ user, delegado }) {
                     const next = isOpen ? null : store;
                     setExpanded(next);
                     setShowAddForm(false);
-                    setNewName(""); setNewSection(SECCIONES[0]); setNewSindicato(SINDICATOS[0]);
+                    setNewName(""); setNewSection(SECCIONES[0]); setNewSindicato(SINDICATOS[0]); setNewConsentido(false);
                     // Al abrir la tienda se cargan directamente sus usuarios (petición
                     // de producto: los usuarios se ven primero, sin botón intermedio).
                     if (next) loadStoreUsers(store);
@@ -284,7 +337,7 @@ export const CensoView = React.memo(function CensoView({ user, delegado }) {
                       <h4 className="text-xs font-black text-slate-800 uppercase tracking-tight flex items-center gap-1.5">
                         <StoreIcon size={12} className="text-emerald-600 shrink-0" /> {formatStoreName(store)}
                       </h4>
-                      <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight mt-1">
+                      <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tight mt-1">
                         {activos} usuarios · {futuros} futuros
                       </p>
                     </div>
@@ -305,7 +358,7 @@ export const CensoView = React.memo(function CensoView({ user, delegado }) {
                     {!Array.isArray(usersLoaded) ? (
                       <div className="py-3"><LoadingLogo size={36} label="Cargando usuarios…" /></div>
                     ) : usersLoaded.length === 0 ? (
-                      <p className="text-[9px] text-slate-400 font-bold uppercase text-center py-2">No hay usuarios en esta tienda</p>
+                      <p className="text-[11px] text-slate-500 font-medium text-center py-2">No hay usuarios en esta tienda</p>
                     ) : (
                       <div className="space-y-2 animate-in fade-in">
                         {usersLoaded.map((u) => (
@@ -334,15 +387,36 @@ export const CensoView = React.memo(function CensoView({ user, delegado }) {
                                 <p className="text-[11px] font-bold text-slate-700 truncate">{p.name}</p>
                                 <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
                                   {p.section && p.section !== 'Sin especificar' && (
-                                    <span className="text-[8px] font-black uppercase text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded tracking-tight">{p.section}</span>
+                                    <span className="text-[9px] font-black uppercase text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded tracking-tight">{p.section}</span>
                                   )}
-                                  {p.sindicato && p.sindicato !== 'Sin sindicato' && (
-                                    <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded tracking-tight ${p.sindicato === 'Fetico' ? 'text-emerald-700 bg-emerald-500/10' : 'text-indigo-600 bg-indigo-500/10'}`}>{p.sindicato}</span>
+                                  {tieneSindicato(p) && !sindicatoPendiente(p) && (
+                                    <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded tracking-tight ${p.sindicato === 'Fetico' ? 'text-emerald-700 bg-emerald-500/10' : 'text-indigo-600 bg-indigo-500/10'}`}>{p.sindicato}</span>
                                   )}
                                   {p.phone && (
                                     <a href={`tel:${p.phone}`} className="text-[9px] font-bold text-emerald-700 flex items-center gap-1"><Phone size={9} /> {p.phone}</a>
                                   )}
                                 </div>
+                                {sindicatoPendiente(p) && (
+                                  <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded">
+                                      {p.sindicato} · falta su consentimiento
+                                    </span>
+                                    <button
+                                      onClick={() => confirmarSindicato(store, p)}
+                                      disabled={saving}
+                                      className="text-[10px] font-black uppercase text-emerald-700 bg-emerald-50 ring-1 ring-emerald-200 px-2 py-1 rounded-lg active:scale-95"
+                                    >
+                                      Tengo su permiso
+                                    </button>
+                                    <button
+                                      onClick={() => borrarSindicato(store, p)}
+                                      disabled={saving}
+                                      className="text-[10px] font-black uppercase text-rose-600 bg-rose-50 ring-1 ring-rose-200 px-2 py-1 rounded-lg active:scale-95"
+                                    >
+                                      Quitar
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                               <button
                                 onClick={() => removeProspect(store, p.name)}
@@ -391,7 +465,7 @@ export const CensoView = React.memo(function CensoView({ user, delegado }) {
                           <div className="relative">
                             <select
                               value={newSindicato}
-                              onChange={(e) => setNewSindicato(e.target.value)}
+                              onChange={(e) => { setNewSindicato(e.target.value); setNewConsentido(false); }}
                               aria-label="Sindicato"
                               className="w-full bg-white border-none p-2.5 pr-7 rounded-xl text-xs outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 text-slate-700 appearance-none font-medium"
                             >
@@ -400,10 +474,26 @@ export const CensoView = React.memo(function CensoView({ user, delegado }) {
                             <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"><ChevronDown size={12} /></div>
                           </div>
                         </div>
+                        {/* Consentimiento expreso: obligatorio para guardar el sindicato
+                            (RGPD art. 9, ver utils/censo.js). Se pide cada vez que se
+                            elige uno, para que nunca se marque por inercia. */}
+                        {newSindicato !== SIN_SINDICATO && (
+                          <label className="flex items-start gap-2 bg-amber-50 ring-1 ring-amber-200 rounded-xl p-2.5 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={newConsentido}
+                              onChange={(e) => setNewConsentido(e.target.checked)}
+                              className="mt-0.5 accent-emerald-600 shrink-0"
+                            />
+                            <span className="text-[11px] leading-snug text-amber-900">
+                              Esta persona me ha dado su <strong>consentimiento expreso</strong> para apuntar su afiliación sindical. Si no, déjalo en «{SIN_SINDICATO}».
+                            </span>
+                          </label>
+                        )}
                         <button
                           onClick={() => addProspect(store)}
-                          disabled={saving || !newName.trim()}
-                          className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-1 active:scale-95 transition-all ${newName.trim() ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-200 text-slate-400'}`}
+                          disabled={saving || !newName.trim() || (newSindicato !== SIN_SINDICATO && !newConsentido)}
+                          className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-1 active:scale-95 transition-all ${newName.trim() && (newSindicato === SIN_SINDICATO || newConsentido) ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-200 text-slate-500'}`}
                         >
                           <Plus size={13} /> Añadir
                         </button>

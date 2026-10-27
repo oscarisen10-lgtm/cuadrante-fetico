@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { User, Lock, Mail, Store, ShieldCheck, KeyRound, X, ChevronDown, Building2 } from 'lucide-react';
 import { loginUser, registerUser, resetPassword } from '../services/firebaseService';
 import { InputGroup } from './UIComponents';
-import { COMPANY_RULES, OTHER_COMPANY, NON_ANGED_COMPANIES, isKnownCompany } from '../constants/config';
+import { COMPANY_RULES, OTHER_COMPANY, NON_ANGED_COMPANIES, isKnownCompany, URL_PRIVACIDAD, URL_SOPORTE } from '../constants/config';
 import { storesForCompany, formatStoreName } from '../constants/stores';
 import appLogo from '../../icons/icon-192.webp';
 
@@ -215,7 +215,7 @@ export default function AuthView() {
             <img src={appLogo} alt="Mi Cuadrante" className="w-full h-full object-cover" />
           </div>
           <h1 className="relative text-lg font-black italic uppercase tracking-tight leading-none">Mi Cuadrante</h1>
-          <p className="relative text-emerald-100 text-[8px] uppercase font-bold tracking-[0.25em] mt-1.5">Registro Horario</p>
+          <p className="relative text-emerald-100 text-[9px] uppercase font-bold tracking-[0.25em] mt-1.5">Registro Horario</p>
         </div>
 
         <form onSubmit={handleAuth} className="p-4 flex flex-col overflow-hidden relative z-0">
@@ -238,7 +238,7 @@ export default function AuthView() {
                     cambiar de empresa nunca lo remonta. */}
                 <div className={esANGED ? "grid grid-cols-2 gap-2" : ""}>
                   <div className="space-y-0.5">
-                    <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight">Empresa</label>
+                    <label className="text-[10px] font-black text-emerald-700 uppercase ml-1 tracking-tight">Empresa</label>
                     <select
                       name="company"
                       value={formCompany}
@@ -269,7 +269,7 @@ export default function AuthView() {
                       objetivos de convenio, que no son los suyos. */}
                   {esANGED && (
                     <div className="space-y-0.5">
-                      <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight">Rango</label>
+                      <label className="text-[10px] font-black text-emerald-700 uppercase ml-1 tracking-tight">Rango</label>
                       <select key={formCompany} name="rank" required defaultValue="" className="w-full bg-slate-50 border-none p-1.5 rounded-lg text-sm outline-none ring-1 ring-slate-200">
                         <option value="" disabled>Selecciona tu rango...</option>
                         {Object.keys(COMPANY_RULES[formCompany] || {}).map(r => <option key={r} value={r}>{r}</option>)}
@@ -284,7 +284,7 @@ export default function AuthView() {
                     empresa ECI ya seleccionada. */}
                 {esANGED && (
                   <div className="space-y-0.5">
-                    <label className="text-[10px] font-black text-emerald-600 uppercase ml-1 tracking-tight flex items-center gap-1">
+                    <label className="text-[10px] font-black text-emerald-700 uppercase ml-1 tracking-tight flex items-center gap-1">
                       <Store size={10}/> Centro / Tienda
                     </label>
                     <div className="relative">
@@ -326,7 +326,7 @@ export default function AuthView() {
                     className="w-full px-3 border-none p-3 text-sm rounded-2xl outline-none text-slate-800 leading-none transition-all ring-1 ring-slate-200/80 shadow-[inset_0_2px_4px_rgba(15,23,42,0.07)] focus:ring-2 focus:ring-emerald-500"
                     style={{ background: 'linear-gradient(180deg,#f6f7f9,#eef0f3)' }}
                   />
-                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tight ml-1 leading-tight">
+                  <span className="text-[11px] text-slate-500 font-medium ml-1 leading-snug">
                     Opcional. Ajusta tus objetivos del año y tus pagas de verano y navidad si entraste a mitad de año.
                   </span>
                 </div>
@@ -363,6 +363,22 @@ export default function AuthView() {
               </button>
             )}
 
+            {/* La política tiene que poder leerse ANTES de dar los datos (RGPD art. 13)
+                y desde dentro de la app (Apple 5.1.1, Google Play). Al registrarse se
+                dice explícitamente; al entrar basta con el enlace. */}
+            <p className="text-center text-[11px] leading-snug text-slate-500 pt-1">
+              {isRegistering && ALLOW_REGISTRATION && 'Al crear la cuenta confirmas que has leído la '}
+              <a href={URL_PRIVACIDAD} target="_blank" rel="noopener noreferrer" className="font-bold text-emerald-700 underline underline-offset-2">
+                {isRegistering && ALLOW_REGISTRATION ? 'política de privacidad' : 'Política de privacidad'}
+              </a>
+              {isRegistering && ALLOW_REGISTRATION ? '.' : (
+                <>
+                  {' · '}
+                  <a href={URL_SOPORTE} target="_blank" rel="noopener noreferrer" className="font-bold text-emerald-700 underline underline-offset-2">Soporte</a>
+                </>
+              )}
+            </p>
+
           </div>
         </form>
       </div>
@@ -376,7 +392,7 @@ export default function AuthView() {
               <p className="text-center text-slate-500 text-[10px] mb-4 uppercase font-bold tracking-tight">Recibirás un email seguro para cambiar contraseña</p>
               <form onSubmit={handleRecovery} className="space-y-4">
                   <InputGroup label="Email Registrado" name="email" type="email" icon={<Mail size={14}/>} />
-                  {recoveryError && <div className={`p-1.5 rounded text-center text-[9px] font-black uppercase ${recoveryError.includes('Éxito') ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>{recoveryError}</div>}
+                  {recoveryError && <div className={`p-1.5 rounded text-center text-[9px] font-black uppercase ${recoveryError.includes('Éxito') ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-600'}`}>{recoveryError}</div>}
                   <button type="submit" disabled={isLoading} className="btn3d w-full text-white font-black py-3 rounded-2xl uppercase text-xs mt-2" style={{ background: 'linear-gradient(180deg,#34d399,#059669)', boxShadow: '0 7px 16px rgba(5,150,105,0.4), inset 0 1.5px 1px rgba(255,255,255,0.45)' }}>
                     {isLoading ? 'ENVIANDO...' : 'ENVIAR EMAIL DE RECUPERACIÓN'}
                   </button>

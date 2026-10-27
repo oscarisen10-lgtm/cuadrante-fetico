@@ -55,14 +55,14 @@ export const UserCard = React.memo(function UserCard({ u, collapsible = false, b
     <>
       <div className="flex items-center gap-2 flex-wrap">
         <h4 className="text-sm font-black text-slate-800 leading-tight truncate">{u.fullName}</h4>
-        <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-md tracking-tight ${u.expelled ? 'bg-rose-500/10 text-rose-600' : u.active ? 'bg-emerald-500/10 text-emerald-700' : 'bg-slate-200 text-slate-500'}`}>
+        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md tracking-tight ${u.expelled ? 'bg-rose-500/10 text-rose-600' : u.active ? 'bg-emerald-500/10 text-emerald-700' : 'bg-slate-200 text-slate-500'}`}>
           {u.expelled ? 'Expulsado' : u.active ? 'Activo' : 'Pendiente'}
         </span>
         {/* El admin le ha cortado las noticias. Se ve también en el Censo, sin
             botón: si no, el delegado creería que sus push fallan con esta persona. */}
         {u.noticias === false && (
           <span
-            className="text-[8px] font-black uppercase px-2 py-0.5 rounded-md tracking-tight bg-amber-500/10 text-amber-700 flex items-center gap-1"
+            className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md tracking-tight bg-amber-500/10 text-amber-700 flex items-center gap-1"
             title="El administrador le ha cortado las noticias: no recibe ni las globales ni las de su delegado."
           >
             <BellOff size={9} /> Sin noticias
@@ -72,7 +72,7 @@ export const UserCard = React.memo(function UserCard({ u, collapsible = false, b
       {/* Tienda · sección · rango. El rango solo si lo tiene: quien está fuera de
           ANGED no tiene convenio, y pintar un hueco vacío con su punto separador
           parecería un dato que falta en vez de uno que no aplica. */}
-      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-1">
+      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight mt-1">
         {formatStoreName(u.store)} · {u.section}{u.rank ? ` · ${u.rank}` : ''}
       </p>
     </>
@@ -123,7 +123,7 @@ export const UserCard = React.memo(function UserCard({ u, collapsible = false, b
                 <Phone size={11} /> {u.phone}
               </a>
             ) : (
-              <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-300 bg-slate-50 px-2.5 py-1.5 rounded-xl">
+              <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded-xl">
                 <Phone size={11} /> Sin teléfono
               </span>
             )}
@@ -133,7 +133,7 @@ export const UserCard = React.memo(function UserCard({ u, collapsible = false, b
               </a>
             )}
             <span
-              className={`flex items-center gap-1 text-[9px] font-black uppercase px-2 py-1.5 rounded-xl ml-auto ${u.hasPush ? 'text-emerald-600 bg-emerald-50' : 'text-slate-300 bg-slate-50'}`}
+              className={`flex items-center gap-1 text-[9px] font-black uppercase px-2 py-1.5 rounded-xl ml-auto ${u.hasPush ? 'text-emerald-700 bg-emerald-50' : 'text-slate-500 bg-slate-50'}`}
               title={u.hasPush ? 'Notificaciones push activadas' : 'Sin notificaciones push'}
             >
               {u.hasPush ? <Bell size={11} /> : <BellOff size={11} />} Push

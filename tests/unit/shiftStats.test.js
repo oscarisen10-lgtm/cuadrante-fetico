@@ -128,6 +128,45 @@ describe('computeShiftStats', () => {
 // no la que se trabajó: en ANGED esas horas cuentan igual para el cómputo anual
 // aunque no se llegaran a trabajar. Estos tests fijan exactamente qué suma y qué no,
 // porque es la parte del cálculo donde un error corrompe el control anual de alguien.
+// Auditoría 25-oct-2026 (H-02): el Resumen le pasa la ventana de 12 meses MÓVILES,
+// que empieza en el mismo mes del año anterior. Sin filtrar por año, el 1 de enero de
+// 2027 los contadores "anuales" habrían arrancado con todo lo de 2026.
+describe('computeShiftStats — solo el año de referencia', () => {
+  const ENERO_2027 = new Date(2027, 0, 5);
+  const ventana = [
+    { date: '2026-03-02', type: 'work', hours: 8, isHA: true },
+    { date: '2026-11-15', type: 'work', hours: 8 },     // domingo de 2026
+    { date: '2026-12-24', type: 'vacation' },
+    { date: '2026-12-26', type: 'rest' },
+    { date: '2027-01-04', type: 'work', hours: 7.5 },   // lunes de 2027
+  ];
+
+  test('en enero no cuenta nada del año anterior', () => {
+    const stats = computeShiftStats(ventana, toMap(ventana), USER, ENERO_2027);
+    expect(stats.diasTrabajados).toBe(1);
+    expect(stats.horasTotales).toBe(7.5);
+    expect(stats.contadorHA).toBe(0);
+    expect(stats.domingosCount).toBe(0);
+    expect(stats.vacacionesCount).toBe(0);
+    expect(stats.diasLibres).toBe(0);
+  });
+
+  test('y con el año anterior como referencia, cuenta solo ese año', () => {
+    const stats = computeShiftStats(ventana, toMap(ventana), USER, new Date(2026, 11, 31));
+    expect(stats.diasTrabajados).toBe(2);
+    expect(stats.horasTotales).toBe(16);
+    expect(stats.contadorHA).toBe(1);
+    expect(stats.domingosCount).toBe(1);
+    expect(stats.vacacionesCount).toBe(1);
+    expect(stats.diasLibres).toBe(1);
+  });
+
+  test('un turno sin fecha válida no rompe el cálculo', () => {
+    const raros = [{ type: 'work', hours: 8 }, { date: null, type: 'rest' }, ...ventana];
+    expect(() => computeShiftStats(raros, toMap(ventana), USER, ENERO_2027)).not.toThrow();
+  });
+});
+
 describe('computeShiftStats — baja laboral', () => {
   test('una baja con horas suma horas y día trabajado, como si se hubiera trabajado', () => {
     const shifts = [{ date: '2026-01-05', type: 'sick', hours: 8, turn: 'morning' }];

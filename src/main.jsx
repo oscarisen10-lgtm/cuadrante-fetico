@@ -4,6 +4,11 @@ import { SplashScreen } from '@capacitor/splash-screen'
 import './index.css'
 import App from './App.jsx'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { iniciarTamanoLetraDelSistema } from './services/tamanoLetra'
+
+// Accesibilidad: respeta el tamaño de letra que la persona tiene puesto en su móvil,
+// con un tope del 130% (ver services/tamanoLetra.js). En la web no hace nada.
+iniciarTamanoLetraDelSistema();
 
 // Red de seguridad del splash nativo.
 //

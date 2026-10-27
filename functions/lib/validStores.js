@@ -98,4 +98,8 @@ module.exports = {
   ANGED_COMPANIES,
   isAngedCompany,
   storeBelongsToCompany,
+  // Exportadas solo para tests/unit/catalogoTiendas.test.js, que comprueba que estas
+  // copias siguen siendo idénticas a las de src/constants/stores.js.
+  S_ROMERO_STORES,
+  SUPERCOR_EXPRESS_STORES,
 };

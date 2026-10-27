@@ -66,7 +66,7 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
           </div>
           <div className="flex-1 min-w-0">
              <h4 className="text-[10px] font-black text-amber-800 uppercase tracking-widest leading-none mb-1">¡Activar Notificaciones!</h4>
-             <p className="text-[8px] text-slate-500 font-bold uppercase tracking-tight leading-tight">
+             <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tight leading-tight">
                {permissionState === 'denied'
                  ? "Permiso bloqueado. Actívalo en los Ajustes del móvil."
                  : "Es obligatorio para recibir avisos de tus licencias."
@@ -74,7 +74,7 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
              </p>
           </div>
           {permissionState === 'denied' ? (
-             <span className="text-[8px] bg-slate-100 text-slate-500 px-2.5 py-1.5 rounded-lg font-black uppercase shrink-0">Bloqueado</span>
+             <span className="text-[9px] bg-slate-100 text-slate-500 px-2.5 py-1.5 rounded-lg font-black uppercase shrink-0">Bloqueado</span>
           ) : (
              <button onClick={requestTokenManually} className="bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-2 rounded-xl text-[9px] font-black uppercase shadow-md shadow-amber-500/10 active:scale-95 transition-all shrink-0">
                 Permitir
@@ -86,7 +86,7 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
       {/* Control de tamaño de letra de este apartado (se guarda en el dispositivo).
           data-tour: punto que ilumina el tutorial (ver constants/screenTips). */}
       <div data-tour="lic-fuente" className="flex items-center justify-between gap-2 mb-3">
-        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecciona el tamaño de letra</span>
+        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Selecciona el tamaño de letra</span>
         <div className="flex items-center gap-2 shrink-0">
           <button onClick={() => changeScale(-0.1)} disabled={fontScale <= 0.8} aria-label="Reducir tamaño de letra" className="w-9 h-9 rounded-xl bg-white border border-slate-200 shadow-sm text-slate-600 font-black text-xs flex items-center justify-center active:scale-90 transition disabled:opacity-30">A-</button>
           <span className="text-[10px] font-black text-slate-500 w-10 text-center tabular-nums">{Math.round(fontScale * 100)}%</span>
@@ -133,12 +133,12 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
                       </div>
                       <div className="grid grid-cols-1 gap-2">
                         <div>
-                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Consanguinidad (Sangre)</p>
+                          <p className="text-[9px] font-black text-slate-500 uppercase tracking-tighter">Consanguinidad (Sangre)</p>
                           <p className="text-[11px] text-slate-700 font-bold leading-tight mt-0.5">{g.consanguinidad}</p>
                         </div>
                         {g.afinidad && (
                           <div>
-                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Afinidad (Familia Política)</p>
+                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-tighter">Afinidad (Familia Política)</p>
                             <p className="text-[11px] text-slate-700 font-bold leading-tight mt-0.5">{g.afinidad}</p>
                           </div>
                         )}
@@ -217,7 +217,7 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
                                 <div className="flex gap-3">
                                   <div className="bg-amber-50 p-2 rounded-xl text-amber-600 h-fit"><Clock size={14} /></div>
                                   <div>
-                                    <p className="text-[8px] font-black text-amber-600 uppercase tracking-widest">Duración</p>
+                                    <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest">Duración</p>
                                     <p className="text-[11px] text-slate-700 font-bold leading-tight mt-0.5">{lic.duracion}</p>
                                   </div>
                                 </div>
@@ -225,7 +225,7 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
                                 <div className="flex gap-3">
                                   <div className="bg-blue-50 p-2 rounded-xl text-blue-600 h-fit"><Info size={14} /></div>
                                   <div>
-                                    <p className="text-[8px] font-black text-blue-600 uppercase tracking-widest">Requisito</p>
+                                    <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Requisito</p>
                                     <p className="text-[11px] text-slate-700 font-bold leading-tight mt-0.5">{lic.requisito}</p>
                                   </div>
                                 </div>
@@ -234,7 +234,7 @@ export const LicenciasView = React.memo(function LicenciasView({ user, permissio
                                   <div className="flex gap-3">
                                     <div className="bg-emerald-50 p-2 rounded-xl text-emerald-600 h-fit"><ClipboardCheck size={14} /></div>
                                     <div>
-                                      <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">Documentación Necesaria</p>
+                                      <p className="text-[9px] font-black text-emerald-700 uppercase tracking-widest">Documentación Necesaria</p>
                                       <p className="text-[11px] text-slate-700 font-bold leading-tight mt-0.5">{lic.documentacion}</p>
                                     </div>
                                   </div>

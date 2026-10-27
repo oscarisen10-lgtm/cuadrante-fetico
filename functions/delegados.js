@@ -74,6 +74,53 @@ const ACTIVOS_VENTANA_DIAS = 7;
 const INACTIVOS_VENTANAS_DIAS = [30, 60];
 const DIA_MS = 24 * 60 * 60 * 1000;
 
+// ── Versiones instaladas ───────────────────────────────────────────────────────
+// Para poder RETIRAR lo que solo existe por las apps viejas (el doble guardado de
+// turnos, LEGACY_SHIFTS_DUAL_WRITE, y varias reglas heredadas) hay que saber si
+// alguien las sigue usando (auditoría 25-oct-2026). La app guarda su versión en
+// profile.appVersion desde la 3.3.0; quien no la tiene usa una ANTERIOR.
+const SIN_VERSION = "anterior a 3.3.0";
+const ACTIVO_RECIENTE_DIAS = 30;
+
+/** Compara "3.13.2" con "3.4.0" por números, no como texto. */
+const compararVersiones = (a, b) => {
+  const pa = String(a).split(".").map((n) => parseInt(n, 10) || 0);
+  const pb = String(b).split(".").map((n) => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d !== 0) return d;
+  }
+  return 0;
+};
+
+/**
+ * Cuenta usuarios por versión de la app. `activos` son los que la han abierto en los
+ * últimos 30 días; es null en las versiones que aún no sellaban actividad (anteriores
+ * a la 3.6.0), porque ahí no se puede saber y un 0 sería mentira. Función pura.
+ * @param {Array<{appVersion?: string, lastActiveAt?: number}>} perfiles
+ */
+function contarVersiones(perfiles, ahora = Date.now()) {
+  const desde = ahora - ACTIVO_RECIENTE_DIAS * DIA_MS;
+  const porVersion = new Map();
+  for (const p of perfiles) {
+    const v = typeof p.appVersion === "string" && p.appVersion ? p.appVersion : SIN_VERSION;
+    const acc = porVersion.get(v) || { version: v, total: 0, activos: 0, conSello: 0 };
+    acc.total += 1;
+    if (typeof p.lastActiveAt === "number") {
+      acc.conSello += 1;
+      if (p.lastActiveAt >= desde) acc.activos += 1;
+    }
+    porVersion.set(v, acc);
+  }
+  return [...porVersion.values()]
+    .map(({ conSello, ...r }) => ({ ...r, activos: conSello > 0 ? r.activos : null }))
+    .sort((a, b) => {
+      if (a.version === SIN_VERSION) return 1;
+      if (b.version === SIN_VERSION) return -1;
+      return compararVersiones(b.version, a.version);
+    });
+}
+
 /**
  * Actividad de cada delegado: cuántas noticias ha publicado y cuántos push ha
  * lanzado. Ambos viven en `noticiasTienda`; los push son los docs con
@@ -160,13 +207,17 @@ exports.adminStats = onCall({
     const stream = db().collection("users")
       .select(
         "profile.platform", "profile.hasFichado", ...TOKEN_FIELDS,
-        "profile.lastActiveAt", "profile.pushMuerto",
+        "profile.lastActiveAt", "profile.pushMuerto", "profile.appVersion",
       )
       .stream();
+
+    // Solo lo justo para contarVersiones: versión y sello de actividad.
+    const paraVersiones = [];
 
     for await (const d of stream) {
       total += 1;
       const p = d.data().profile || {};
+      paraVersiones.push({ appVersion: p.appVersion, lastActiveAt: p.lastActiveAt });
       if (p.platform === "ios") ios += 1;
       else if (p.platform === "android") android += 1;
       else if (p.platform === "web") web += 1;
@@ -218,6 +269,8 @@ exports.adminStats = onCall({
       ventanaDias: ACTIVOS_VENTANA_DIAS,
       inactivos, ventanasInactividad: INACTIVOS_VENTANAS_DIAS, sinActividad,
       pushMuerto, pushMuertoIos, pushMuertoAndroid,
+      versiones: contarVersiones(paraVersiones, ahora),
+      ventanaVersionesDias: ACTIVO_RECIENTE_DIAS,
       ...delegados,
     };
   });
@@ -353,6 +406,12 @@ async function requireCanManageUser(request, targetUid) {
     // usuario y servía para hacerse pasar por el admin (auditoría 22-ago-2026).
     if (await isProtectedAdminAccount(targetUid)) {
       throw new HttpsError("permission-denied", "No puedes modificar esa cuenta.");
+    }
+    // Tampoco la de OTRO delegado (auditoría 25-oct-2026, H-12). Dos delegados pueden
+    // compartir tienda, y sin esto uno podía desactivar o expulsar al otro y sacarle
+    // de su propio censo. Entre delegados decide el admin. Sobre sí mismo sí puede.
+    if (targetUid !== request.auth.uid && await getDelegadoDoc(targetUid)) {
+      throw new HttpsError("permission-denied", "No puedes modificar la cuenta de otro delegado.");
     }
   }
 
@@ -625,3 +684,6 @@ exports.adminOverview = onCall({
   };
   });
 });
+
+// Solo para tests/functions (no es una function desplegada: index.js no la reexporta).
+exports.contarVersiones = contarVersiones;

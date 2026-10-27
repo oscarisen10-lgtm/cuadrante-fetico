@@ -13,7 +13,8 @@
  *   lib/firebase.js     región global, Admin SDK y el flag de App Check
  *   lib/auth.js         admin por custom-claim, delegados y cuentas activas
  *   lib/push.js         payload único de FCM (antes copiado en 3 sitios) y envíos
- *   noticias.js         push de noticias globales, de tienda y altas pendientes
+ *   noticias.js         push de noticias globales, de tienda y altas pendientes;
+ *                       borrado de carteles al borrar la noticia (lib/imagenes.js)
  *   delegados.js        gestión de usuarios/afiliación y paneles de admin
  *   cuentas.js          borrado de cuenta y limpieza de huérfanos
  */
@@ -26,6 +27,9 @@ exports.sendPushNotification = noticias.sendPushNotification;
 exports.sendStoreNews = noticias.sendStoreNews;
 exports.notifyDelegadoNewUser = noticias.notifyDelegadoNewUser;
 exports.subscribeToNewsTopic = noticias.subscribeToNewsTopic;
+// Borran el cartel de Storage cuando se borra la noticia (auditoría 25-oct-2026).
+exports.limpiarImagenNoticia = noticias.limpiarImagenNoticia;
+exports.limpiarImagenNoticiaTienda = noticias.limpiarImagenNoticiaTienda;
 
 // --- Delegados y administración ---
 exports.adminStats = delegados.adminStats;

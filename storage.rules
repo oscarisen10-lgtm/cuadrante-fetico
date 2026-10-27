@@ -17,10 +17,21 @@ service firebase.storage {
         firestore.get(/databases/(default)/documents/delegados/$(request.auth.uid)).data.active != false;
     }
 
+    // Cuenta activada (sistema de delegados): misma definición que isActiveMember() en
+    // firestore.rules — membership AUSENTE = cuenta anterior al sistema = activa.
+    function esMiembroActivo() {
+      let d = firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+      return !('membership' in d) || d.membership.active == true;
+    }
+
     // Imagen aceptable: comprimida en el dispositivo (~150-400 KB); 5 MB es el cinturón.
+    // Lista CERRADA de formatos (auditoría 25-oct-2026): con 'image/.*' entraba también
+    // image/svg+xml, que es XML y puede llevar scripts. La app solo sube WebP o JPEG
+    // (compressImage) y, si no comprime, el original que admite el selector
+    // (JPEG/PNG/WebP); GIF y HEIC se dejan por si algún móvil entrega el original así.
     function esImagenRazonable() {
       return request.resource.size < 5 * 1024 * 1024 &&
-             request.resource.contentType.matches('image/.*');
+             request.resource.contentType.matches('image/(jpeg|png|webp|gif|heic|heif)');
     }
 
     // Noticias GLOBALES: solo admin puede subir, todos los autenticados pueden leer
@@ -47,11 +58,15 @@ service firebase.storage {
     //
     // El autor puede leer siempre lo suyo, y la rama va la PRIMERA a propósito: al subir,
     // el cliente llama a getDownloadURL() cuando la noticia todavía no existe en Firestore.
+    // Además de la tienda, la cuenta tiene que estar ACTIVA (auditoría 25-oct-2026),
+    // igual que exige firestore.rules para leer la noticia: una cuenta pendiente de
+    // verificar no ve el texto, así que tampoco el cartel.
     match /noticias-delegado/{authorUid}/{noticiaId}/{fileName} {
       allow read: if request.auth != null && (
         isAdmin() ||
         request.auth.uid == authorUid ||
         (firestore.exists(/databases/(default)/documents/noticiasTienda/$(noticiaId)) &&
+         esMiembroActivo() &&
          firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.profile.store
            in firestore.get(/databases/(default)/documents/noticiasTienda/$(noticiaId)).data.stores)
       );

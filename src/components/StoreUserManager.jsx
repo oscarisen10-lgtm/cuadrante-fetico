@@ -243,7 +243,7 @@ export function StoreUserManager({ stores, showTotal = false, admin = false }) {
               }`}
             >
               <Icon size={11} /> {label}
-              <span className={`px-1.5 py-0.5 rounded-md text-[8px] ${activo ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
+              <span className={`px-1.5 py-0.5 rounded-md text-[9px] ${activo ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
                 {conteos[id]}
               </span>
             </button>
@@ -283,7 +283,7 @@ export function StoreUserManager({ stores, showTotal = false, admin = false }) {
       ) : filtered.length === 0 ? (
         <div className="py-12 flex flex-col items-center opacity-40">
           <Users size={36} className="text-slate-300 mb-3" />
-          <p className="text-[10px] text-slate-400 italic uppercase font-bold tracking-widest">
+          <p className="text-[10px] text-slate-500 italic uppercase font-bold tracking-widest">
             {users.length === 0
               ? 'No hay usuarios en esta tienda'
               : q

@@ -34,7 +34,7 @@ export function ActivationGateModal({ onClose }) {
         <p className="text-xs text-slate-500 font-medium leading-relaxed mb-2">
           Esta sección se desbloquea verificando el usuario.
         </p>
-        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-6">
+        <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-6">
           Habla con el administrador<br />para activar la cuenta
         </p>
         <button

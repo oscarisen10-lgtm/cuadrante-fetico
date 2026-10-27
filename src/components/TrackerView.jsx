@@ -99,7 +99,7 @@ export const TrackerView = React.memo(function TrackerView({
             </div>
           ) : (
             <div className="p-4 text-center">
-                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest leading-relaxed">Presiona el botón para<br/>iniciar el registro de hoy</p>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-relaxed">Presiona el botón para<br/>iniciar el registro de hoy</p>
             </div>
           )}
       </div>

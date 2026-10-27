@@ -6,14 +6,31 @@
  *   notifyDelegadoNewUser — avisa a delegados + admin de una cuenta nueva por activar.
  *   subscribeToNewsTopic  — suscribe un token al topic (lo necesita el cliente web).
  */
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated, onDocumentDeleted } = require("firebase-functions/v2/firestore");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { admin, db, ENFORCE_APP_CHECK } = require("./lib/firebase");
-const { ADMIN_EMAIL, requireAuth } = require("./lib/auth");
+const { requireAuth } = require("./lib/auth");
 const {
   NEWS_TOPIC, TOKEN_FIELDS, sendToNewsTopic, sendToTokens, tokensForStores,
-  tokensForBroadcast, haySilenciados, collectTokens,
+  tokensForBroadcast, haySilenciados, collectTokens, tokensDelAdmin,
 } = require("./lib/push");
+const { borrarImagenDeNoticia } = require("./lib/imagenes");
+
+/**
+ * limpiarImagenNoticia / limpiarImagenNoticiaTienda — al borrarse una noticia, borran
+ * su cartel de Storage (auditoría 25-oct-2026, H-15; ver lib/imagenes.js). Cubren
+ * también el borrado en cascada de purgeUserData, que elimina las noticias de un
+ * delegado cuando se borra su cuenta.
+ */
+exports.limpiarImagenNoticia = onDocumentDeleted(
+  { document: "noticias/{docId}", maxInstances: 5 },
+  async (event) => { await borrarImagenDeNoticia(event.data && event.data.data()); }
+);
+
+exports.limpiarImagenNoticiaTienda = onDocumentDeleted(
+  { document: "noticiasTienda/{docId}", maxInstances: 5 },
+  async (event) => { await borrarImagenDeNoticia(event.data && event.data.data()); }
+);
 
 /**
  * Migración ÚNICA a topics: suscribe al topic los tokens que ya estaban guardados en
@@ -237,21 +254,18 @@ exports.notifyDelegadoNewUser = onDocumentCreated(
       for (let i = 0; i < delegadoUids.length; i += 30) {
         uidChunks.push(delegadoUids.slice(i, i + 30));
       }
-      const [delegadoSnaps, adminSnap] = await Promise.all([
+      const [delegadoSnaps, tokensAdmin] = await Promise.all([
         Promise.all(uidChunks.map((chunk) => db().collection("users")
           .where(admin.firestore.FieldPath.documentId(), "in", chunk)
           .select(...TOKEN_FIELDS)
           .get())),
-        // Avisar TAMBIÉN al admin (siempre, por su email fijo), sea delegado o no.
-        db().collection("users")
-          .where("profile.email", "==", ADMIN_EMAIL)
-          .select(...TOKEN_FIELDS)
-          .limit(1)
-          .get(),
+        // Avisar TAMBIÉN al admin (siempre), sea delegado o no. Se le localiza por su
+        // cuenta de Auth, nunca por profile.email (ver tokensDelAdmin en lib/push.js).
+        tokensDelAdmin(db),
       ]);
 
       delegadoSnaps.forEach((snap) => collectTokens(snap, tokens));
-      collectTokens(adminSnap, tokens);
+      tokensAdmin.forEach((t) => tokens.add(t));
 
       if (tokens.size === 0) return null;
 

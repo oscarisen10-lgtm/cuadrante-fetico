@@ -2,6 +2,7 @@
   "emulators": {
     "firestore": { "port": 8080 },
     "auth": { "port": 9099 },
+    "storage": { "port": 9199 },
     "ui": { "enabled": false },
     "singleProjectMode": true
   },
@@ -36,6 +37,10 @@
       {
         "source": "/descargar",
         "destination": "/bienvenida.html"
+      },
+      {
+        "source": "/eliminar-cuenta",
+        "destination": "/eliminar-cuenta.html"
       },
       {
         "source": "**",

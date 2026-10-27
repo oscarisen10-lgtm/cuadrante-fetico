@@ -153,7 +153,7 @@ export const AdminView = React.memo(function AdminView() {
         ) : delegados.length === 0 ? (
           <div className="py-8 flex flex-col items-center opacity-40">
             <ShieldCheck size={32} className="text-slate-300 mb-2" />
-            <p className="text-[10px] text-slate-400 italic uppercase font-bold tracking-widest">Aún no hay delegados nombrados</p>
+            <p className="text-[10px] text-slate-500 italic uppercase font-bold tracking-widest">Aún no hay delegados nombrados</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -163,17 +163,17 @@ export const AdminView = React.memo(function AdminView() {
                   <div className="flex justify-between items-center gap-2">
                     <div className="flex-1 min-w-0">
                       <h4 className="text-xs font-black text-slate-800 truncate">{d.fullName}</h4>
-                      <p className="text-[9px] text-slate-400 font-bold truncate mt-0.5">{d.email}</p>
+                      <p className="text-[9px] text-slate-500 font-bold truncate mt-0.5">{d.email}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-[10px] font-black text-emerald-700">{d.activeCount} <span className="text-slate-300 font-bold">/ {d.userCount}</span></p>
-                      <p className="text-[8px] text-slate-400 font-bold uppercase tracking-tight">afiliados</p>
+                      <p className="text-[10px] font-black text-emerald-700">{d.activeCount} <span className="text-slate-500 font-bold">/ {d.userCount}</span></p>
+                      <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tight">afiliados</p>
                     </div>
                     {expanded === d.uid ? <ChevronUp size={14} className="text-slate-300 shrink-0" /> : <ChevronDown size={14} className="text-slate-300 shrink-0" />}
                   </div>
                   <div className="flex flex-wrap gap-1 mt-2">
                     {d.stores.map((s) => (
-                      <span key={s} className="text-[8px] font-black uppercase text-emerald-700 bg-emerald-500/10 px-2 py-0.5 rounded-md tracking-tight">{formatStoreName(s)}</span>
+                      <span key={s} className="text-[9px] font-black uppercase text-emerald-700 bg-emerald-500/10 px-2 py-0.5 rounded-md tracking-tight">{formatStoreName(s)}</span>
                     ))}
                   </div>
                 </button>
@@ -183,8 +183,8 @@ export const AdminView = React.memo(function AdminView() {
                     <div className="space-y-1.5 bg-slate-50 rounded-xl p-3">
                       {d.perStore.map((s) => (
                         <div key={s.store} className="flex justify-between items-center">
-                          <span className="text-[9px] font-bold text-slate-500 uppercase flex items-center gap-1.5"><StoreIcon size={10} className="text-emerald-600" /> {formatStoreName(s.store)}</span>
-                          <span className="text-[10px] font-black text-slate-700">{s.activos} activos <span className="text-slate-300">/ {s.users}</span></span>
+                          <span className="text-[9px] font-bold text-slate-500 uppercase flex items-center gap-1.5"><StoreIcon size={10} className="text-emerald-700" /> {formatStoreName(s.store)}</span>
+                          <span className="text-[10px] font-black text-slate-700">{s.activos} activos <span className="text-slate-500">/ {s.users}</span></span>
                         </div>
                       ))}
                     </div>
@@ -244,7 +244,7 @@ export const AdminView = React.memo(function AdminView() {
                       className={`w-full pl-10 p-3 text-sm border-none rounded-2xl outline-none ring-1 ring-slate-200 text-slate-800 ${!modal.isNew ? 'bg-slate-100 text-slate-400' : 'bg-slate-50 focus:ring-2 focus:ring-emerald-500'}`}
                     />
                   </div>
-                  <p className="text-[9px] text-slate-400 font-bold uppercase ml-1 tracking-tight">Debe tener ya una cuenta en la app</p>
+                  <p className="text-[11px] text-slate-500 font-medium ml-1">Debe tener ya una cuenta en la app</p>
                 </div>
 
                 {/* Empresa → Centro/Tienda → Añadir (se pueden añadir varias tiendas) */}
@@ -279,7 +279,7 @@ export const AdminView = React.memo(function AdminView() {
                     type="button"
                     onClick={addStoreToModal}
                     disabled={!modal.storePick}
-                    className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-1.5 active:scale-95 transition-all ${modal.storePick ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-100 text-slate-300'}`}
+                    className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-1.5 active:scale-95 transition-all ${modal.storePick ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-100 text-slate-500'}`}
                   >
                     <Plus size={13} /> Añadir tienda
                   </button>
@@ -290,7 +290,7 @@ export const AdminView = React.memo(function AdminView() {
                     Tiendas autorizadas ({modal.stores.length})
                   </label>
                   {modal.stores.length === 0 ? (
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight bg-slate-50 rounded-xl p-3 text-center ring-1 ring-slate-200">
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight bg-slate-50 rounded-xl p-3 text-center ring-1 ring-slate-200">
                       Aún no has añadido ninguna tienda
                     </p>
                   ) : (

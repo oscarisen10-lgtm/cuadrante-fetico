@@ -262,6 +262,17 @@ export const FESTIVOS_NACIONALES = Object.fromEntries(
 export const getFestivosComunes = (user) =>
   hasKnownConvenio(user) ? CONFIG.FESTIVOS : FESTIVOS_NACIONALES;
 
+// Web pública de la app (Firebase Hosting) y sus páginas legales.
+//
+// Apple (guía 5.1.1) y Google Play exigen que la política de privacidad se pueda abrir
+// DESDE la app (auditoría 25-oct-2026, H-04). Van siempre con la URL ABSOLUTA: en la app
+// nativa, un "/privacidad.html" relativo cargaría la copia que viaja dentro del paquete
+// y sacaría al usuario de la app sin botón para volver (en iOS no hay "atrás"). Con la
+// URL absoluta, Capacitor la abre en el navegador del sistema.
+export const WEB_PUBLICA = 'https://mi-calendario-fe.web.app';
+export const URL_PRIVACIDAD = `${WEB_PUBLICA}/privacidad.html`;
+export const URL_SOPORTE = `${WEB_PUBLICA}/soporte.html`;
+
 // 👇 EMAIL DE ADMINISTRADOR 👇
 // Ya NO decide quién es admin (ver isAdminUser). Se conserva porque la app lo usa
 // para mostrar a quién escribir en los textos de contacto/soporte.

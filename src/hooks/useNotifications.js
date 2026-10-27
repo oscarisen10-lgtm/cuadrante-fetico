@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getToken, onMessage } from 'firebase/messaging';
 import { messaging, VAPID_KEY } from '../firebase';
 import { doc, updateDoc, arrayUnion, deleteField } from 'firebase/firestore';
@@ -77,6 +77,15 @@ export const useNotifications = (user) => {
   const [tokenError, setTokenError] = useState(null);
   const [permissionState, setPermissionState] = useState('Notification' in window ? Notification.permission : 'default');
 
+  // Tokens que ya constan en el perfil, SIEMPRE los últimos (auditoría 25-oct-2026,
+  // H-23). El listener de `registration` se monta una vez por sesión y antes leía
+  // `user.fcmTokens` del primer render: si el perfil cambiaba después (otro móvil de
+  // la misma cuenta registraba el suyo), comparaba contra una lista vieja y podía
+  // recortar o reescribir el array con datos desfasados. Un ref se lee en el momento.
+  const tokensRef = useRef(user?.fcmTokens);
+  useEffect(() => { tokensRef.current = user?.fcmTokens; }, [user?.fcmTokens]);
+  const uid = user?.uid;
+
   // useCallback NO es cosmético aquí: esta función viaja como prop a cuatro vistas
   // envueltas en React.memo (Dashboard, Calendario, Ajustes, Licencias). Sin
   // memoizarla se recreaba en CADA render de AppContent —que ocurre, por ejemplo,
@@ -118,7 +127,7 @@ export const useNotifications = (user) => {
         // Solo si este dispositivo no consta ya (mismo criterio que recordAppOpen en
         // useAuth): evita una escritura por cada apertura de la app.
         if (auth.currentUser) {
-          await saveDeviceToken(auth.currentUser.uid, currentToken, user?.fcmTokens);
+          await saveDeviceToken(auth.currentUser.uid, currentToken, tokensRef.current);
         }
         // Web: la suscripción al topic la hace el backend (el SDK web no puede solo).
         // Mejor esfuerzo: si falla (p.ej. sin red), se reintenta en el próximo arranque.
@@ -130,10 +139,10 @@ export const useNotifications = (user) => {
     } catch (error) {
       setTokenError(error.message);
     }
-  }, [user?.fcmTokens]);
+  }, []);
 
   useEffect(() => {
-    if (!user || !user.uid) return;
+    if (!uid) return;
 
     if (Capacitor.isNativePlatform()) {
       PushNotifications.checkPermissions().then(res => {
@@ -155,7 +164,7 @@ export const useNotifications = (user) => {
           // Solo si este dispositivo no consta ya: en cada arranque el token suele ser
           // el mismo, así que evitamos una escritura por apertura (a 50k usuarios,
           // millones de escrituras/mes de más).
-          saveDeviceToken(user.uid, fcmToken, user.fcmTokens).catch(()=>{});
+          saveDeviceToken(uid, fcmToken, tokensRef.current).catch(()=>{});
         } catch (err) {
           // OJO: en iOS NO guardamos token.value (es APNs, no FCM) porque haría fallar
           // el envío desde el backend. Preferimos no guardar nada y reflejar el error.
@@ -164,7 +173,7 @@ export const useNotifications = (user) => {
           if (Capacitor.getPlatform() !== 'ios') {
             fcmToken = token.value;
             setToken(fcmToken);
-            saveDeviceToken(user.uid, fcmToken, user.fcmTokens).catch(()=>{});
+            saveDeviceToken(uid, fcmToken, tokensRef.current).catch(()=>{});
           } else {
             fcmToken = null;
           }
@@ -211,7 +220,7 @@ export const useNotifications = (user) => {
         if (unsubscribe) unsubscribe();
       };
     }
-  }, [user?.uid]);
+  }, [uid, requestTokenManually]);
 
   return { token, tokenError, permissionState, requestTokenManually };
 };

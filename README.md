@@ -49,6 +49,12 @@ El cliente lee la config de Firebase de un `.env` (no versionado) con variables
 - **Versión**: `package.json` es el punto único de verdad. Vite la inyecta como
   `__APP_VERSION__` y `codemagic.yaml` la usa como *marketing version* de iOS.
 - **Android** se compila a mano: tras `npm run build` hay que ejecutar
-  `npx cap sync android` o el `.aab` sale con el código anterior.
+  `npx cap sync android` o el `.aab` sale con el código anterior. El JDK se pasa al
+  lanzar Gradle (ya no va fijado en `gradle.properties`), y sin `keystore.properties`
+  la release se para en vez de firmarse con la clave de depuración:
+  `cd android && JAVA_HOME=../jdk21/jdk-21.0.3+9 ./gradlew bundleRelease`
+- **Índices de Firestore**: `firestore.indexes.json` exime de índice los mapas grandes
+  que ninguna consulta usa (`shiftMonths.days`, `profile.nomina`, `settings`, el censo
+  y los textos de las noticias). Antes de consultar por uno de ellos, quitar su exención.
 - **App Check** está preparado pero **no activado**: ver `docs/APP-CHECK.md` antes
   de tocarlo (activarlo sin más dejaría fuera a los usuarios de iOS y Android).

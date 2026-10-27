@@ -189,7 +189,7 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
       {stores.length === 0 ? (
         <div className="py-14 flex flex-col items-center opacity-50 text-center px-6">
           <Newspaper size={40} className="text-slate-300 mb-3" />
-          <p className="text-[10px] text-slate-400 italic uppercase font-bold tracking-widest leading-relaxed">
+          <p className="text-[10px] text-slate-500 italic uppercase font-bold tracking-widest leading-relaxed">
             Aún no tienes tiendas autorizadas.<br />El administrador debe asignártelas.
           </p>
         </div>
@@ -260,7 +260,7 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
                         type="button"
                         onClick={() => toggleStore(s)}
                         aria-pressed={on}
-                        className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-tight transition-all active:scale-95 ${on ? 'text-white' : 'bg-white text-slate-400 ring-1 ring-slate-200'}`}
+                        className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-tight transition-all active:scale-95 ${on ? 'text-white' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}
                         style={on ? { background: 'linear-gradient(180deg,#34d399,#059669)', boxShadow: '0 4px 10px rgba(5,150,105,0.35), inset 0 1px 1px rgba(255,255,255,0.5)' } : {}}
                       >
                         {formatStoreName(s)}
@@ -268,7 +268,7 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
                     );
                   })}
                 </div>
-                <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest ml-1">Solo la verán los usuarios de las tiendas marcadas</p>
+                <p className="text-[11px] text-slate-500 font-medium ml-1">Solo la verán los usuarios de las tiendas marcadas</p>
               </div>
 
               {/* Foto opcional */}
@@ -306,7 +306,7 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
           ) : publicaciones.length === 0 ? (
             <div className="py-10 flex flex-col items-center opacity-40">
               <Newspaper size={36} className="text-slate-300 mb-3" />
-              <p className="text-[10px] text-slate-400 text-center italic uppercase font-bold tracking-widest">Aún no has publicado nada</p>
+              <p className="text-[10px] text-slate-500 text-center italic uppercase font-bold tracking-widest">Aún no has publicado nada</p>
             </div>
           ) : (
             <div className="space-y-5">
@@ -315,9 +315,9 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
                   <div className="flex justify-between items-center mb-2.5">
                     <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                       {(n.stores || []).map((s) => (
-                        <span key={s} className="text-[8px] font-black text-emerald-700 uppercase tracking-tighter bg-emerald-500/10 px-2 py-0.5 rounded-md">{formatStoreName(s)}</span>
+                        <span key={s} className="text-[9px] font-black text-emerald-700 uppercase tracking-tighter bg-emerald-500/10 px-2 py-0.5 rounded-md">{formatStoreName(s)}</span>
                       ))}
-                      <span className="text-[8px] text-slate-400 font-bold">{n.date}</span>
+                      <span className="text-[9px] text-slate-500 font-bold">{n.date}</span>
                     </div>
                     <button onClick={() => handleDelete(n)} className="text-rose-500 p-2 bg-rose-500/10 hover:bg-rose-500/20 rounded-xl transition-colors shrink-0" aria-label="Borrar noticia">
                       <Trash2 size={14} />
@@ -343,7 +343,7 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
             <div className="flex justify-between items-center mb-5 shrink-0">
               <div className="flex flex-col">
                 <h3 className="text-sm font-black text-indigo-700 uppercase italic tracking-widest">Lanzar Alerta Push</h3>
-                <span className="text-[8px] font-bold text-slate-400 uppercase mt-1">Solo a los dispositivos de tus tiendas</span>
+                <span className="text-[11px] font-medium text-slate-500 mt-1">Solo a los dispositivos de tus tiendas</span>
               </div>
               <button onClick={() => setShowPushModal(false)} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 text-slate-400"><X size={20}/></button>
             </div>
@@ -351,10 +351,13 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
             <form onSubmit={sendPushNotification} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-indigo-600 uppercase ml-1 tracking-tight">Título de la Alerta</label>
+                {/* Topes del push: el servidor recorta igualmente (FCM rechaza los
+                    mensajes de más de 4 KB, ver PUSH_*_MAX_BYTES en functions/lib/push.js);
+                    esto solo avisa a quien escribe antes de que el móvil le corte el texto. */}
                 <input
                   value={pushTitle}
                   onChange={(e) => setPushTitle(e.target.value)}
-                  maxLength={200}
+                  maxLength={60}
                   required
                   className="w-full bg-slate-50 border-none p-3 text-sm rounded-xl outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm text-slate-800"
                   placeholder="Ej: Asamblea mañana"
@@ -368,6 +371,7 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
                   onChange={(e) => setPushBody(e.target.value)}
                   required
                   rows={3}
+                  maxLength={300}
                   className="w-full bg-slate-50 border-none p-3 text-sm rounded-xl outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm text-slate-800"
                   placeholder="Escribe aquí el contenido de la notificación..."
                 />
@@ -384,7 +388,7 @@ export const DelegadoNoticiasView = React.memo(function DelegadoNoticiasView({ u
                         type="button"
                         onClick={() => togglePushStore(s)}
                         aria-pressed={on}
-                        className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-tight transition-all active:scale-95 ${on ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-slate-400 ring-1 ring-slate-200'}`}
+                        className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-tight transition-all active:scale-95 ${on ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}
                       >
                         {formatStoreName(s)}
                       </button>

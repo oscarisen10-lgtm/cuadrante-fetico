@@ -16,9 +16,15 @@ workflows:
   # No está en `triggering` a propósito: desplegar reglas es una acción
   # deliberada, no algo que deba pasar solo al hacer push.
   #
-  # REQUISITO ÚNICO: un grupo de variables `firebase_deploy` en Codemagic con
-  # FIREBASE_TOKEN (generado con `firebase login:ci`). Si falta, el workflow
-  # corta ANTES de tocar nada.
+  # REQUISITO: un grupo de variables `firebase_deploy` en Codemagic con UNA de estas
+  # dos credenciales. Si no hay ninguna, el workflow corta ANTES de tocar nada.
+  #   - FIREBASE_SA_BASE64 (RECOMENDADA): la clave JSON de una cuenta de servicio
+  #     solo para desplegar, en base64. Tiene únicamente los permisos de despliegue.
+  #   - FIREBASE_TOKEN (OBSOLETA): el token de `firebase login:ci`. Equivale a la
+  #     cuenta de Google del propietario con TODOS sus permisos, incluido borrar la
+  #     base de datos; firebase-tools ya lo marca como obsoleto. Se mantiene solo
+  #     como respaldo hasta que exista la cuenta de servicio (auditoría 25-oct-2026,
+  #     H-10); después, borrarla del grupo.
   # ───────────────────────────────────────────────────────────────────────────
   firebase-workflow:
     name: Firebase Rules & Functions Deploy
@@ -27,13 +33,17 @@ workflows:
     environment:
       groups:
         - firebase_deploy
-      node: latest
+      # Versión FIJA (auditoría 25-oct-2026, H-30): con `latest` un Node mayor nuevo podía
+      # romper el build sin que cambiara nada del proyecto. 22 = el runtime de functions.
+      node: 22.20.0
     scripts:
       - name: Install dependencies
         script: |
           set -eu
-          npm install
-          npm --prefix functions install
+          # `npm ci` y no `npm install`: instala EXACTAMENTE lo del package-lock y falla
+          # si no cuadra con package.json, en vez de resolver versiones nuevas por su cuenta.
+          npm ci
+          npm --prefix functions ci
       - name: Lint
         script: |
           npm run lint
@@ -52,7 +62,8 @@ workflows:
             export PATH="$JAVA_HOME/bin:$PATH"
           fi
           java -version
-          npm install -g firebase-tools
+          # Major fijada (la misma que en local): una 16 podría cambiar el despliegue.
+          npm install -g firebase-tools@15
           # Levanta el emulador, corre los tests de reglas y lo apaga solo.
           # Si un test falla, este paso devuelve != 0 y el workflow se detiene
           # AQUÍ: no se llega al despliegue.
@@ -76,12 +87,26 @@ workflows:
           fi
           # Necesitan functions/node_modules: el paso de instalación solo hace la raíz
           # en algunos runners, así que se asegura aquí.
-          npm --prefix functions install
+          npm --prefix functions ci
           npm run test:functions
       - name: Deploy Firestore rules, indexes and functions
         script: |
           set -eu
-          : "${FIREBASE_TOKEN:?falta FIREBASE_TOKEN en el grupo firebase_deploy}"
+          # Credencial: cuenta de servicio si existe; si no, el token antiguo (ver la
+          # cabecera de este workflow). La clave se escribe en un temporal que se borra
+          # al salir, y NUNCA se imprime.
+          AUTH_ARGS=""
+          if [ -n "${FIREBASE_SA_BASE64:-}" ]; then
+            SA_FILE="$(mktemp)"
+            trap 'rm -f "$SA_FILE"' EXIT
+            printf '%s' "$FIREBASE_SA_BASE64" | base64 --decode > "$SA_FILE"
+            export GOOGLE_APPLICATION_CREDENTIALS="$SA_FILE"
+            echo "Despliegue con la cuenta de servicio."
+          else
+            : "${FIREBASE_TOKEN:?falta FIREBASE_SA_BASE64 (recomendada) o FIREBASE_TOKEN en el grupo firebase_deploy}"
+            echo "AVISO: despliegue con FIREBASE_TOKEN (obsoleto, permisos de propietario). Crea FIREBASE_SA_BASE64."
+            AUTH_ARGS="--token $FIREBASE_TOKEN"
+          fi
           # El proyecto se indica explícitamente con --project y no se confía en
           # .firebaserc. (Ese fichero aparece en .gitignore, pero se versionó ANTES
           # de añadir la regla y .gitignore no desengancha lo ya trackeado: sí llega
@@ -93,11 +118,17 @@ workflows:
           # En modo no interactivo, Firebase avisa de las sobrantes y no las
           # toca; retirarlas es un acto manual y consciente:
           #   firebase functions:delete <nombre> --region europe-west1
+          #
+          # `storage` incluido desde el 25-oct-2026: antes las reglas de Storage solo se
+          # subían a mano y podían quedarse desfasadas respecto al repositorio. No tienen
+          # tests propios todavía; Firebase sí las compila al desplegar y corta si fallan.
+          # $AUTH_ARGS va sin comillas a propósito: vacío no debe pasar un argumento "".
+          # shellcheck disable=SC2086
           firebase deploy \
-            --only firestore:rules,firestore:indexes,functions \
+            --only firestore:rules,firestore:indexes,storage,functions \
             --project mi-calendario-fe \
             --non-interactive \
-            --token "$FIREBASE_TOKEN"
+            $AUTH_ARGS
 
   ios-workflow:
     name: iOS App Store Build
@@ -119,7 +150,10 @@ workflows:
         XCODE_SCHEME: "App"
         XCODE_PROJECT: "ios/App/App.xcodeproj"
         IOS_BUNDLE_ID: "com.cuadrantefetico.app"
-      node: latest
+      # Node FIJO, igual que en firebase-workflow (ver allí el porqué).
+      node: 22.20.0
+      # Xcode sigue en `latest` porque Apple exige compilar con el SDK reciente. Para
+      # fijarlo, poner aquí la versión exacta que salga en el log del último build bueno.
       xcode: latest
       cocoapods: default
       ios_signing:
@@ -128,7 +162,8 @@ workflows:
     scripts:
       - name: Install dependencies
         script: |
-          npm install
+          # Exactamente lo del package-lock (ver firebase-workflow).
+          npm ci
       - name: Lint
         script: |
           # Falla solo con errores; los avisos no cortan el build.
@@ -196,8 +231,8 @@ workflows:
           echo "Marketing version -> $NEW_VERSION"
           grep -m2 "MARKETING_VERSION" "$XCODE_PROJECT/project.pbxproj"
           # Build number interno (incrementa en cada subida a App Store Connect)
-          # Un número de build no se puede reutilizar en App Store Connect. El 180 fue
-          # el último intentado; esta es la 3.8.1, así que sube a 181 sin más.
+          # Un número de build no se puede reutilizar en App Store Connect: súbelo SIEMPRE
+          # en uno respecto al último que llegó a subirse (aunque fallara después).
           NEW_BUILD=189
           echo "Build number -> $NEW_BUILD"
           cd ios/App

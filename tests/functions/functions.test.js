@@ -66,7 +66,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await Promise.all([limpiar('users'), limpiar('delegados'), limpiar('noticiasTienda')]);
+  await Promise.all([limpiar('users'), limpiar('delegados'), limpiar('noticiasTienda'), limpiar('censos')]);
 
   await db.collection('delegados').doc(DELEGADO_UID).set({
     stores: [TIENDA_A], active: true, email: 'delegado@test.com', fullName: 'Delegada',
@@ -355,6 +355,123 @@ describe('purgeDeadTokens', () => {
     expect(push.DEAD_TOKEN_CODES.has('messaging/internal-error')).toBe(false);
     expect(push.DEAD_TOKEN_CODES.has('messaging/quota-exceeded')).toBe(false);
   });
+
+  // Auditoría 25-oct-2026 (H-06): FCM devuelve INVALID_ARGUMENT también cuando el
+  // MENSAJE es demasiado grande, y entonces falla para todos los destinatarios.
+  test('invalid-argument NO cuenta como token muerto (puede ser el mensaje)', () => {
+    expect(push.DEAD_TOKEN_CODES.has('messaging/invalid-argument')).toBe(false);
+  });
+
+  const fallo = (code) => ({ success: false, error: { code } });
+  const bien = { success: true };
+
+  test('en un lote normal, devuelve solo los tokens muertos', () => {
+    const batch = ['a', 'b', 'c'];
+    const resp = [bien, fallo('messaging/registration-token-not-registered'), fallo('messaging/internal-error')];
+    expect(push.tokensMuertosDelLote(batch, resp)).toEqual(['b']);
+  });
+
+  test('si un lote grande vuelve muerto ENTERO, no se borra ninguno', () => {
+    const n = push.LOTE_SOSPECHOSO;
+    const batch = Array.from({ length: n }, (_, i) => `t${i}`);
+    const resp = batch.map(() => fallo('messaging/registration-token-not-registered'));
+    expect(push.tokensMuertosDelLote(batch, resp)).toEqual([]);
+  });
+
+  test('un lote pequeño muerto entero sí se limpia (una tienda de pocos)', () => {
+    const batch = ['a', 'b'];
+    const resp = batch.map(() => fallo('messaging/registration-token-not-registered'));
+    expect(push.tokensMuertosDelLote(batch, resp)).toEqual(['a', 'b']);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────────
+// Tamaño del push (auditoría 25-oct-2026, H-06). El texto viaja dos veces (en
+// `notification` y en el `aps.alert` de iOS) y FCM rechaza los mensajes grandes.
+describe('recorte del push', () => {
+  const push = require_(join(ROOT, 'functions', 'lib', 'push.js'));
+  const bytes = (s) => Buffer.byteLength(s, 'utf8');
+
+  test('un texto corto no se toca', () => {
+    expect(push.recortarBytes('Asamblea el viernes', 600)).toBe('Asamblea el viernes');
+  });
+
+  test('un texto largo se corta por BYTES y acaba en "…"', () => {
+    const largo = 'Ñandú áéíóú '.repeat(400); // con tildes: 2 bytes por letra
+    const r = push.recortarBytes(largo, 600);
+    expect(bytes(r)).toBeLessThanOrEqual(600);
+    expect(r.endsWith('…')).toBe(true);
+  });
+
+  test('nunca deja medio emoji', () => {
+    const r = push.recortarBytes('📣'.repeat(100), 50);
+    expect(bytes(r)).toBeLessThanOrEqual(50);
+    // Sin pares sustitutos sueltos: cada carácter es un emoji completo o la elipsis.
+    expect([...r.slice(0, -1)].every((c) => c === '📣')).toBe(true);
+  });
+
+  test('el mensaje que se envía cabe con margen aunque el delegado escriba 5.000 letras', () => {
+    const msg = push.buildMessage('Ñ'.repeat(200), 'é'.repeat(5000));
+    expect(bytes(msg.notification.title)).toBeLessThanOrEqual(push.PUSH_TITLE_MAX_BYTES);
+    expect(bytes(msg.notification.body)).toBeLessThanOrEqual(push.PUSH_BODY_MAX_BYTES);
+    expect(msg.apns.payload.aps.alert).toEqual({ title: msg.notification.title, body: msg.notification.body });
+    // Todo el payload, con el texto por duplicado, por debajo de los 2 KB de un topic.
+    expect(bytes(JSON.stringify(msg))).toBeLessThan(2048);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────────
+// Qué fichero de Storage se borra al borrar una noticia (auditoría 25-oct-2026, H-15).
+// Lo importante es lo que NO se borra: nada fuera de las carpetas de noticias, ni de
+// otro bucket, aunque la noticia traiga una URL rara.
+describe('rutaDeImagen', () => {
+  const { rutaDeImagen } = require_(join(ROOT, 'functions', 'lib', 'imagenes.js'));
+  const BUCKET = 'mi-calendario-fe.firebasestorage.app';
+  const url = (ruta, bucket = BUCKET) =>
+    `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(ruta)}?alt=media&token=abc`;
+
+  test('saca la ruta de un cartel de delegado y de uno del admin', () => {
+    expect(rutaDeImagen(url('noticias-delegado/uid1/nt1/cartel.webp'), BUCKET))
+      .toBe('noticias-delegado/uid1/nt1/cartel.webp');
+    expect(rutaDeImagen(url('noticias/1730000000_cartel.jpg'), BUCKET))
+      .toBe('noticias/1730000000_cartel.jpg');
+  });
+
+  test('no toca nada fuera de las carpetas de noticias', () => {
+    expect(rutaDeImagen(url('otra-cosa/secreto.pdf'), BUCKET)).toBeNull();
+    expect(rutaDeImagen(url('noticias/../otra-cosa/x.jpg'), BUCKET)).toBeNull();
+  });
+
+  test('ni de otro bucket, ni de otro dominio, ni basura', () => {
+    expect(rutaDeImagen(url('noticias/x.jpg', 'otro-bucket'), BUCKET)).toBeNull();
+    expect(rutaDeImagen('https://example.com/v0/b/x/o/noticias%2Fx.jpg', BUCKET)).toBeNull();
+    expect(rutaDeImagen(null, BUCKET)).toBeNull();
+    expect(rutaDeImagen('no es una url', BUCKET)).toBeNull();
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────────
+// A quién se avisa como "admin" de las altas pendientes (auditoría 25-oct-2026, H-08).
+describe('tokensDelAdmin', () => {
+  const push = require_(join(ROOT, 'functions', 'lib', 'push.js'));
+  const dbFn = () => db;
+
+  test('localiza al admin por su cuenta de Auth, no por profile.email', async () => {
+    await db.collection('users').doc(ADMIN_UID).set({
+      profile: { fullName: 'Admin', store: TIENDA_B, fcmTokens: ['tok-admin'] },
+    });
+    // Un impostor que se ha escrito el email del admin en su propio perfil.
+    await db.collection('users').doc(USER_BARNA).set({
+      profile: { fullName: 'Impostor', store: TIENDA_B, email: 'oscarisen10@gmail.com', fcmTokens: ['tok-impostor'] },
+    });
+
+    expect(await push.tokensDelAdmin(dbFn)).toEqual(['tok-admin']);
+  });
+
+  test('sin perfil del admin en Firestore no rompe: no hay a quién avisar', async () => {
+    await db.collection('users').doc(ADMIN_UID).delete();
+    expect(await push.tokensDelAdmin(dbFn)).toEqual([]);
+  });
 });
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -493,6 +610,37 @@ describe('adminStats — abandono', () => {
   });
 });
 
+// Versiones instaladas (auditoría 25-oct-2026): es lo que dirá cuándo se puede retirar
+// el doble guardado de turnos y las reglas que solo existen por las apps viejas.
+describe('adminStats — versiones instaladas', () => {
+  const delegadosMod = require_(join(ROOT, 'functions', 'delegados.js'));
+  const AHORA = Date.UTC(2026, 9, 26);
+  const hace = (dias) => AHORA - dias * 24 * 60 * 60 * 1000;
+
+  test('ordena por versión de verdad (3.13 va antes que 3.4) y deja al final las sin versión', () => {
+    const r = delegadosMod.contarVersiones([
+      { appVersion: '3.4.0' }, { appVersion: '3.13.2', lastActiveAt: hace(1) },
+      {}, { appVersion: '3.13.2', lastActiveAt: hace(40) }, { appVersion: '3.9.0', lastActiveAt: hace(3) },
+    ], AHORA);
+    expect(r.map((v) => v.version)).toEqual(['3.13.2', '3.9.0', '3.4.0', 'anterior a 3.3.0']);
+    expect(r[0]).toEqual({ version: '3.13.2', total: 2, activos: 1 });
+  });
+
+  test('donde nadie sella actividad, "activos" es null (no se puede saber), no 0', () => {
+    const r = delegadosMod.contarVersiones([{ appVersion: '3.4.0' }, { appVersion: '3.4.0' }], AHORA);
+    expect(r).toEqual([{ version: '3.4.0', total: 2, activos: null }]);
+  });
+
+  test('adminStats lo devuelve', async () => {
+    await limpiar('users');
+    await db.collection('users').doc('v1').set({ profile: { appVersion: '3.13.2', lastActiveAt: Date.now() } });
+    await db.collection('users').doc('v2').set({ profile: {} });
+    const res = await fns.adminStats.run(req(ADMIN_UID, { refresh: true }, { admin: true }));
+    expect(res.versiones.map((v) => [v.version, v.total])).toEqual([['3.13.2', 1], ['anterior a 3.3.0', 1]]);
+    expect(res.ventanaVersionesDias).toBe(30);
+  });
+});
+
 // ───────────────────────────────────────────────────────────────────────────────
 describe('delegadoSetActive', () => {
   test('un delegado SÍ puede activar a un usuario de su tienda', async () => {
@@ -525,6 +673,42 @@ describe('delegadoSetActive', () => {
     await expect(
       fns.delegadoSetActive.run(req(USER_BARNA, { uid: USER_CENTRO, active: true }))
     ).rejects.toThrow(/no pertenece a tus tiendas autorizadas/i);
+  });
+
+  // Auditoría 25-oct-2026 (H-12): dos delegados pueden compartir tienda; entre ellos
+  // decide el admin.
+  test('un delegado NO puede desactivar a OTRO delegado de su misma tienda', async () => {
+    const OTRO = 'delegado2';
+    await db.collection('delegados').doc(OTRO).set({ stores: [TIENDA_A], active: true });
+    await db.collection('users').doc(OTRO).set({
+      profile: { fullName: 'Otra Delegada', store: TIENDA_A }, membership: { active: true },
+    });
+
+    await expect(
+      fns.delegadoSetActive.run(req(DELEGADO_UID, { uid: OTRO, active: false }))
+    ).rejects.toThrow(/otro delegado/i);
+    await expect(
+      fns.delegadoExpelUser.run(req(DELEGADO_UID, { uid: OTRO, expelled: true }))
+    ).rejects.toThrow(/otro delegado/i);
+    expect((await perfil(OTRO)).membership.active).toBe(true);
+  });
+
+  test('pero sobre su propia cuenta sí puede', async () => {
+    await db.collection('users').doc(DELEGADO_UID).set({
+      profile: { fullName: 'Delegada', store: TIENDA_A }, membership: { active: true },
+    });
+    await expect(
+      fns.delegadoSetActive.run(req(DELEGADO_UID, { uid: DELEGADO_UID, active: true }))
+    ).resolves.toMatchObject({ success: true });
+  });
+
+  test('y el admin sí puede gestionar a un delegado', async () => {
+    await db.collection('users').doc(DELEGADO_UID).set({
+      profile: { fullName: 'Delegada', store: TIENDA_A }, membership: { active: true },
+    });
+    await expect(
+      fns.delegadoSetActive.run(req(ADMIN_UID, { uid: DELEGADO_UID, active: false }, { admin: true }))
+    ).resolves.toMatchObject({ success: true });
   });
 
   test('rechaza parámetros no válidos', async () => {
@@ -576,6 +760,18 @@ describe('adminDeleteUser', () => {
 
     expect((await db.collection('users').doc(USER_CENTRO).get()).exists).toBe(false);
     expect((await db.collection('users').doc(USER_CENTRO).collection('shiftMonths').get()).empty).toBe(true);
+  });
+
+  // Auditoría 25-oct-2026 (H-03): el censo son datos de OTRAS personas que solo
+  // gestionaba ese delegado; sin él, se quedaban en Firestore sin dueño.
+  test('borra también su censo de delegado', async () => {
+    await db.collection('censos').doc(USER_CENTRO).set({
+      prospects: { [TIENDA_A]: [{ name: 'Futura', section: 'Sala' }] }, updatedAt: 1,
+    });
+
+    await fns.adminDeleteUser.run(comoAdmin({ uid: USER_CENTRO }));
+
+    expect((await db.collection('censos').doc(USER_CENTRO).get()).exists).toBe(false);
   });
 
   test('borra también su cuenta de Auth, para que pueda registrarse de nuevo', async () => {

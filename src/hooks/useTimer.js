@@ -59,7 +59,13 @@ async function cancelBreakNotification() {
   }
 }
 
-export const useTimer = (activeShift, isBreakActive, workTimeAccumulated, breakStartTime, settings, alarmUrl = 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3') => {
+// Sonido del fin de descanso, EMPAQUETADO en la app (auditoría 25-oct-2026). Antes era
+// un MP3 de un CDN externo (assets.mixkit.co): no sonaba sin cobertura y cada alarma
+// le pasaba la IP del usuario a un tercero. Se genera con scripts/generar-sonido-alarma.js.
+// Ruta absoluta desde la raíz: en la app nativa resuelve dentro del propio paquete.
+const SONIDO_ALARMA = '/sounds/alarma-descanso.wav';
+
+export const useTimer = (activeShift, isBreakActive, workTimeAccumulated, breakStartTime, settings, alarmUrl = SONIDO_ALARMA) => {
   const [showBreakFinishedMsg, setShowBreakFinishedMsg] = useState(false);
 
   const alarmRef = useRef(null);
@@ -67,9 +73,9 @@ export const useTimer = (activeShift, isBreakActive, workTimeAccumulated, breakS
   const breakFinishedRef = useRef(false);
   const alarmTimeoutRef = useRef(null);
   const unlockAttemptedRef = useRef(false);
-  // Respaldo de audio SIN conexión: el mp3 viene de un CDN externo y no suena en un
-  // almacén/trastienda sin red (justo el caso de uso). Sintetizamos un pitido con la
-  // Web Audio API, que no depende de internet ni de ningún asset descargado.
+  // Respaldo de audio: si el sonido empaquetado no puede reproducirse (por ejemplo,
+  // porque el sistema bloquea el audio sin un gesto previo del usuario), sintetizamos
+  // un pitido con la Web Audio API, que no depende de ningún fichero.
   const audioCtxRef = useRef(null);
   const beepRef = useRef(null); // { stop } mientras el pitido de respaldo está sonando
 
@@ -188,8 +194,8 @@ export const useTimer = (activeShift, isBreakActive, workTimeAccumulated, breakS
           if (settings?.notifications) {
             if (alarmRef.current) {
               alarmRef.current.loop = true;
-              // Si el mp3 (CDN externo) no puede sonar —típicamente por estar sin red—
-              // arrancamos el pitido sintetizado, que funciona offline.
+              // Si el sonido no puede reproducirse (p. ej. el sistema bloquea el audio),
+              // arrancamos el pitido sintetizado con Web Audio.
               alarmRef.current.play().catch((e) => {
                 console.log("mp3 no disponible, uso pitido de respaldo", e?.message);
                 startFallbackBeep();

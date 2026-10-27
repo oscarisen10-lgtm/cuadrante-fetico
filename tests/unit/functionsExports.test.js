@@ -28,6 +28,9 @@ const DEPLOYED_FUNCTIONS = [
   'delegadoListUsers',
   'delegadoSetActive',
   'deleteMyAccount',
+  // Añadidas el 25-oct-2026: borran el cartel de Storage al borrar la noticia.
+  'limpiarImagenNoticia',
+  'limpiarImagenNoticiaTienda',
   'notifyDelegadoNewUser',
   'sendPushNotification',
   'sendStoreNews',
@@ -35,7 +38,7 @@ const DEPLOYED_FUNCTIONS = [
 ];
 
 describe('functions/index.js — superficie desplegada', () => {
-  it('exporta exactamente las 16 funciones esperadas (comprobación estática)', () => {
+  it('exporta exactamente las 18 funciones esperadas (comprobación estática)', () => {
     const src = readFileSync(join(FUNCTIONS_DIR, 'index.js'), 'utf8');
     const exported = [...src.matchAll(/^exports\.([A-Za-z0-9_]+)\s*=/gm)]
       .map((m) => m[1])

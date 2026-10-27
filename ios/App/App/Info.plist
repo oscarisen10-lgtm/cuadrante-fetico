@@ -7,7 +7,11 @@
     <key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>en</string>
+	<string>es</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>es</string>
+	</array>
 	<key>CFBundleDisplayName</key>
         <string>Mi Cuadrante</string>
 	<key>CFBundleExecutable</key>
@@ -37,8 +41,6 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
@@ -55,5 +57,9 @@
 	<true/>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Desbloquea tu cuadrante de forma rápida y segura mediante biometría.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Para hacer la foto del cartel de una noticia que vas a publicar.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Para elegir la foto del cartel de una noticia que vas a publicar.</string>
 </dict>
 </plist>

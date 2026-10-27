@@ -7,22 +7,7 @@ import { toast, confirm } from '../services/toastBus';
 import { storage } from '../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { compressImage } from '../utils/imageUtils';
-
-/**
- * Devuelve el enlace solo si es http(s); si no, null (y el botón no se pinta).
- * El campo `linkUrl` viene del documento de la noticia, y aunque hoy el compositor
- * del admin siempre lo deja a null, nada en el esquema impide que otro camino de
- * escritura meta un `javascript:…` que se ejecutaría al tocar el botón.
- */
-const enlaceSeguro = (url) => {
-  if (typeof url !== 'string' || !url.trim()) return null;
-  try {
-    const { protocol } = new URL(url, window.location.origin);
-    return protocol === 'http:' || protocol === 'https:' ? url : null;
-  } catch {
-    return null;
-  }
-};
+import { enlaceSeguro } from '../utils/enlaces';
 
 // newsOnly: cuentas pendientes de activación (o admin en Modo Admin) → el Resumen
 // muestra SOLO la sección de Noticias, sin las estadísticas personales.
@@ -206,7 +191,7 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
           </div>
           <div className="flex-1 min-w-0">
              <h4 className="text-[10px] font-black text-amber-800 uppercase tracking-widest leading-none mb-1">¡Activar Notificaciones!</h4>
-             <p className="text-[8px] text-slate-500 font-bold uppercase tracking-tight leading-tight">
+             <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tight leading-tight">
                {permissionState === 'denied'
                  ? "Permiso bloqueado. Actívalo en los Ajustes del móvil."
                  : "Es obligatorio para recibir avisos de tus turnos y cuadrantes."
@@ -214,7 +199,7 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
              </p>
           </div>
           {permissionState === 'denied' ? (
-             <span className="text-[8px] bg-slate-100 text-slate-500 px-2.5 py-1.5 rounded-lg font-black uppercase shrink-0">Bloqueado</span>
+             <span className="text-[9px] bg-slate-100 text-slate-500 px-2.5 py-1.5 rounded-lg font-black uppercase shrink-0">Bloqueado</span>
           ) : (
              <button onClick={requestTokenManually} className="bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-2 rounded-xl text-[9px] font-black uppercase shadow-md shadow-amber-500/10 active:scale-95 transition-all shrink-0">
                 Permitir
@@ -226,7 +211,7 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
       <div className="rounded-[2rem] p-6 flex flex-col items-center justify-center min-h-[300px] text-center" style={{ background: 'linear-gradient(180deg,#ffffff,#f8f9fb)', boxShadow: '0 14px 34px -16px rgba(30,41,59,0.25), inset 0 1.5px 1px rgba(255,255,255,0.9)', border: '1px solid rgba(15,23,42,0.05)' }}>
         <span className="grid place-items-center w-14 h-14 rounded-2xl text-white mb-4" style={{ background: 'linear-gradient(180deg,#fbbf24,#d97706)', boxShadow: '0 6px 14px rgba(217,119,6,0.35), inset 0 1px 1px rgba(255,255,255,0.5)' }}><HardHat size={26} /></span>
         <h2 className="text-sm font-black text-slate-800 uppercase italic tracking-widest">En construcción</h2>
-        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2 max-w-[15rem]">
+        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-2 max-w-[15rem]">
           El resumen del calendario para El Corte Inglés estará disponible próximamente
         </p>
       </div>
@@ -240,7 +225,7 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
         {sinObjetivos && (
           <div data-tour="res-sin-objetivos" className="rounded-2xl bg-amber-50 border border-amber-200 p-3.5 mb-5 shrink-0">
             <p className="text-[9px] font-black text-amber-800 uppercase tracking-widest leading-none mb-1.5">Sin objetivos configurados</p>
-            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tight leading-tight">
+            <p className="text-[11px] text-slate-500 font-medium leading-snug">
               No conocemos el convenio de tu empresa. Puedes fijar tus objetivos a mano en Ajustes.
             </p>
           </div>
@@ -250,7 +235,7 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
             <p className="text-[9px] font-black text-emerald-800 uppercase tracking-widest leading-none mb-1.5">
               Objetivos ajustados a tu alta
             </p>
-            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tight leading-tight">
+            <p className="text-[11px] text-slate-500 font-medium leading-snug">
               {prorrateo.proporcion === 0
                 ? `Entraste el ${fechaLegible(prorrateo.desde)}, así que en ${prorrateo.anio} todavía no estabas en la empresa.`
                 : `Entraste el ${fechaLegible(prorrateo.desde)}: te corresponden ${prorrateo.dias} de los ${prorrateo.diasAnio} días de ${prorrateo.anio} (${Math.round(prorrateo.proporcion * 100)}%). Los topes del convenio se reparten en esa misma proporción.`}
@@ -286,7 +271,7 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
               <StatBar label="Calidad" hint={deAlAnio('calidad')} currentValue={stats.findesCalidad} percentage={(stats.findesCalidad/objetivo('calidad'))*100} totalValue={objetivo('calidad')} color="bg-emerald-600" large={true} />
               <div className="flex gap-3 mt-1.5 ml-1">
                 <span className="text-[9px] font-black text-emerald-700 uppercase tracking-wider">● Sáb-Dom: {stats.findesCalidadCorto}/{calidadCortoTarget}</span>
-                <span className="text-[9px] font-black text-emerald-500 uppercase tracking-wider">● {calidadLargoLabel}: {stats.findesCalidadLargo}/{calidadLargoTarget}</span>
+                <span className="text-[9px] font-black text-emerald-600 uppercase tracking-wider">● {calidadLargoLabel}: {stats.findesCalidadLargo}/{calidadLargoTarget}</span>
               </div>
             </div>
           )}
@@ -324,7 +309,7 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
               {noticiasVisibles.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center py-10 opacity-40">
                   <Newspaper size={40} className="text-slate-300 mb-3" />
-                  <p className="text-[10px] text-slate-400 text-center italic uppercase font-bold tracking-widest">No hay noticias publicadas</p>
+                  <p className="text-[10px] text-slate-500 text-center italic uppercase font-bold tracking-widest">No hay noticias publicadas</p>
                 </div>
               ) : (
                 noticiasVisibles.map(news => (
@@ -338,9 +323,9 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
                                 // noticiasTienda): etiqueta propia + nombre del delegado.
                                 <span className="text-[9px] font-black text-indigo-600 uppercase tracking-tighter bg-indigo-500/10 px-2 py-0.5 rounded-md">Tu Delegado</span>
                               ) : (
-                                <span className="text-[9px] font-black text-emerald-600 uppercase tracking-tighter bg-emerald-500/10 px-2 py-0.5 rounded-md">{news.tag}</span>
+                                <span className="text-[9px] font-black text-emerald-700 uppercase tracking-tighter bg-emerald-500/10 px-2 py-0.5 rounded-md">{news.tag}</span>
                               )}
-                              <span className="text-[8px] text-slate-400 font-bold">
+                              <span className="text-[9px] text-slate-500 font-bold">
                                 {news.date}{news.isStoreNews && news.authorName ? ` · ${news.authorName}` : ''}
                               </span>
                             </div>
@@ -396,7 +381,7 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
                    <InputGroup label="Etiqueta" name="tag" small value={formTag} onChange={e=>setFormTag(e.target.value)} placeholder="Ej: Supercor" />
                    
                    <div className="space-y-1.5 flex flex-col">
-                     <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Foto (Opcional)</label>
+                     <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Foto (Opcional)</label>
                      <label className="bg-slate-100 border border-slate-200 text-slate-600 rounded-xl p-3 flex items-center justify-center gap-2 cursor-pointer hover:bg-slate-200 active:scale-95 transition-all text-xs font-bold shadow-inner">
                         <Upload size={16}/> {selectedFile ? "Cambiar" : "Subir"}
                         <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} className="hidden" />
@@ -429,17 +414,20 @@ export const DashboardView = React.memo(function DashboardView({ user, stats, ne
             <div className="flex justify-between items-center mb-6 shrink-0">
               <div className="flex flex-col">
                 <h3 className="text-sm font-black text-indigo-700 uppercase italic tracking-widest">Lanzar Alerta Push</h3>
-                <span className="text-[8px] font-bold text-slate-400 uppercase mt-1">Se enviará a todos los dispositivos</span>
+                <span className="text-[11px] font-medium text-slate-500 mt-1">Se enviará a todos los dispositivos</span>
               </div>
               <button onClick={() => setShowPushModal(false)} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 text-slate-400"><X size={20}/></button>
             </div>
             
             <form onSubmit={handleSendPush} className="space-y-4">
-               <InputGroup label="Título de la Alerta" name="push_title" small value={pushTitle} onChange={e=>setPushTitle(e.target.value)} placeholder="Ej: Nueva noticia disponible" />
+               {/* Topes del push: el servidor recorta igualmente (FCM rechaza los mensajes
+                   de más de 4 KB, ver PUSH_*_MAX_BYTES en functions/lib/push.js); esto solo
+                   avisa a quien escribe antes de que el móvil le corte el texto. */}
+               <InputGroup label="Título de la Alerta" name="push_title" small maxLength={60} value={pushTitle} onChange={e=>setPushTitle(e.target.value)} placeholder="Ej: Nueva noticia disponible" />
                
                <div className="space-y-1.5 flex flex-col">
                   <label className="text-[10px] font-black text-indigo-600 uppercase ml-1 tracking-tight">Mensaje a mostrar</label>
-                  <textarea value={pushBody} onChange={e=>setPushBody(e.target.value)} required rows={3} className="w-full bg-slate-50 border-none p-3 text-sm rounded-xl outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm text-slate-800" placeholder="Escribe aquí el contenido de la notificación..."></textarea>
+                  <textarea value={pushBody} onChange={e=>setPushBody(e.target.value)} required rows={3} maxLength={300} className="w-full bg-slate-50 border-none p-3 text-sm rounded-xl outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm text-slate-800" placeholder="Escribe aquí el contenido de la notificación..."></textarea>
                </div>
 
                <button type="submit" disabled={isLoading} className={`w-full bg-indigo-600 text-white font-black py-4 rounded-2xl uppercase text-xs active:scale-95 transition-all shadow-xl flex items-center justify-center gap-2 mt-2 ${isLoading ? 'opacity-70' : ''}`}>

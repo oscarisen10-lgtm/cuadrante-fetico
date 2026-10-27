@@ -140,7 +140,13 @@ function AppContent({ user, authHook }) {
   // Con un aviso del tutorial abierto NO se auto-abre: taparía la pantalla que se
   // está explicando. Al cerrar el aviso, el cartel salta a continuación.
   const autoCartelOpen = !tip && !!activeCartel && String(activeCartel.id) !== String(seenCartelId);
-  const lightbox = manualImg || (autoCartelOpen ? { url: activeCartel.imageUrl, title: activeCartel.title, isAuto: true } : null);
+  // Memoizado (auditoría 25-oct-2026, H-23): creado en línea era un objeto NUEVO en
+  // cada render, así que el useCallback de closeLightbox, que depende de él, también se
+  // recreaba siempre y no servía de nada.
+  const lightbox = useMemo(
+    () => manualImg || (autoCartelOpen ? { url: activeCartel.imageUrl, title: activeCartel.title, isAuto: true } : null),
+    [manualImg, autoCartelOpen, activeCartel]
+  );
   const closeLightbox = useCallback(() => {
     if (lightbox?.isAuto && activeCartel?.id != null) {
       try { localStorage.setItem('cartelSeenId', String(activeCartel.id)); } catch { /* almacenamiento no disponible */ }

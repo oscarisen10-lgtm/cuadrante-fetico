@@ -4,74 +4,106 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Política de Privacidad - Mi Cuadrante</title>
+    <!--
+      Reescrita el 25-oct-2026 (auditoría, H-21 y H-03). Lo que dice aquí tiene que
+      coincidir con:
+        - lo que hace el código (purgeUserData, delegadoListUsers, utils/censo.js),
+        - ios/App/App/PrivacyInfo.xcprivacy y las etiquetas de App Store Connect,
+        - el formulario Data safety de Google Play,
+        - public/eliminar-cuenta.html (plazos de conservación).
+      Si cambia un dato que se recoge o quién lo ve, hay que tocar todos.
+    -->
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1f2937; max-width: 800px; margin: 40px auto; padding: 0 20px; }
         h1 { color: #059669; border-bottom: 2px solid #ecfdf5; padding-bottom: 10px; }
         h2 { color: #111827; margin-top: 30px; font-size: 1.25rem; }
+        h3 { color: #111827; margin-top: 18px; font-size: 1rem; }
         p, li { font-size: 0.95rem; }
+        li { margin-bottom: 4px; }
         .contact-box { background: #f9fafb; border: 1px solid #e5e7eb; padding: 20px; border-radius: 12px; margin-top: 30px; }
     </style>
 </head>
 <body>
     <h1>Política de Privacidad</h1>
-    <p><strong>Última actualización:</strong> 28 de agosto de 2026</p>
+    <p><strong>Última actualización:</strong> 25 de octubre de 2026</p>
 
-    <p>Esta Política de Privacidad describe cómo la aplicación <strong>Mi Cuadrante</strong> (en adelante, "la Aplicación") recopila, utiliza y protege la información de los usuarios, cumpliendo con el Reglamento General de Protección de Datos (RGPD) y la normativa vigente en España.</p>
+    <p>Esta política explica qué datos trata la aplicación <strong>Mi Cuadrante</strong> (en adelante, "la Aplicación"), para qué, quién puede verlos y cuánto tiempo se guardan, conforme al Reglamento General de Protección de Datos (RGPD) y a la Ley Orgánica 3/2018 de Protección de Datos (LOPDGDD).</p>
 
-    <h2>1. Responsable del Tratamiento de Datos</h2>
-    <p>El responsable del tratamiento de los datos personales facilitados por el usuario es el Administrador de la Aplicación, con correo de contacto: <strong>oscarisen10@gmail.com</strong>.</p>
+    <h2>1. Responsable del tratamiento</h2>
+    <p>El responsable es el Administrador de la Aplicación, con correo de contacto <strong>oscarisen10@gmail.com</strong>. En Google Play, la Aplicación se publica con el nombre de desarrollador <strong>LEIApp</strong>.</p>
 
-    <h2>2. Datos que recopilamos</h2>
-    <p>La Aplicación trata los siguientes datos, estrictamente los necesarios para la gestión de turnos y la comunicación sindical:</p>
+    <h2>2. Qué datos tratamos</h2>
     <ul>
-        <li><strong>Identificación:</strong> Nombre, apellidos y dirección de correo electrónico.</li>
-        <li><strong>Datos laborales:</strong> Empresa, centro de trabajo, sección y categoría profesional.</li>
-        <li><strong>Actividad en la App:</strong> Registros de horarios, turnos, descansos y licencias introducidos voluntariamente por el usuario.</li>
-        <li><strong>Datos económicos y fiscales (Nómina):</strong> Si utiliza el apartado de Nómina, la Aplicación trata los datos que introduce voluntariamente para calcularla de forma estimada: antigüedad, complementos salariales, cuota sindical y su porcentaje de retención de IRPF. Ningún dato bancario (cuenta, tarjeta) se solicita ni se almacena.</li>
-        <li><strong>Notificaciones:</strong> Uno o varios identificadores técnicos de sus dispositivos (tokens push) — uno por cada dispositivo en el que use la Aplicación con las notificaciones activadas — para poder enviarle avisos de turnos y noticias.</li>
-        <li><strong>Fotografías:</strong> Cuando un administrador o delegado sindical publica una noticia con imagen, esa fotografía se almacena para mostrarla en la Aplicación.</li>
-        <li><strong>Datos técnicos y de diagnóstico:</strong> Plataforma (iOS/Android/web), versión de la Aplicación y fecha de última actividad, para mantener la estabilidad del servicio.</li>
+        <li><strong>Identificación y contacto:</strong> nombre y apellidos, correo electrónico y, solo si lo facilitaste, teléfono.</li>
+        <li><strong>Datos laborales:</strong> empresa, centro de trabajo, sección, categoría profesional (rango) y fecha de alta en la empresa.</li>
+        <li><strong>Tu cuadrante:</strong> turnos, fichajes, descansos, vacaciones, días libres y bajas que registras.</li>
+        <li><strong>Nómina (opcional):</strong> si usas este apartado, los datos que introduces para calcularla de forma estimada: antigüedad, complementos, retención de IRPF y, si la indicas, tu <strong>cuota sindical</strong>. La cuota revela que estás afiliado a un sindicato, que es un dato especialmente protegido: solo se guarda si tú la rellenas y la borras dejándola vacía. Nunca pedimos ni guardamos datos bancarios.</li>
+        <li><strong>Notificaciones:</strong> un identificador técnico (token) por cada dispositivo en el que tengas activadas las notificaciones.</li>
+        <li><strong>Fotografías:</strong> solo las que publican el administrador o un delegado como cartel de una noticia.</li>
+        <li><strong>Datos técnicos:</strong> plataforma (iOS, Android o web), versión de la Aplicación, fecha de tu última actividad y si has usado el apartado Fichar.</li>
     </ul>
-    <p><strong>Autenticación biométrica (huella o Face ID):</strong> si activa el bloqueo biométrico, la verificación la realiza el sistema operativo de su propio dispositivo. La Aplicación nunca recibe ni almacena su huella dactilar o datos faciales.</p>
+    <p><strong>Bloqueo biométrico (huella o Face ID):</strong> la comprobación la hace el sistema operativo de tu propio dispositivo. La Aplicación nunca recibe ni guarda tu huella ni tu cara.</p>
+    <p><strong>Sin publicidad ni rastreo:</strong> no usamos cookies de analítica ni de publicidad, no vendemos datos y no los compartimos para hacer perfiles comerciales. En la versión web, el navegador guarda tu sesión y tus preferencias solo para que la Aplicación funcione.</p>
 
-    <h2>3. Datos de otras personas recogidos por delegados</h2>
-    <p>Los delegados disponen de una sección de <strong>censo</strong> en la que pueden anotar manualmente el nombre y la sección de compañeros de su centro de trabajo que aún no utilizan la Aplicación, con la finalidad de llevar constancia de la plantilla de cada centro. Estos datos:</p>
+    <h2>3. Para qué los usamos y con qué base legal</h2>
     <ul>
-        <li>Los introduce y los controla el propio delegado, bajo su responsabilidad, a partir de la información que la persona interesada le facilita directamente.</li>
-        <li>Solo son visibles para el delegado que los apuntó y para el administrador de la Aplicación.</li>
-        <li>Cualquier persona incluida en este censo, aunque no tenga cuenta en la Aplicación, puede solicitar su acceso, rectificación o eliminación dirigiéndose al delegado que los recogió o al contacto indicado en el punto 8.</li>
-    </ul>
-
-    <h2>4. Finalidad del Tratamiento</h2>
-    <p>Los datos se recogen con las siguientes finalidades:</p>
-    <ul>
-        <li>Sincronización de los registros del cuadrante entre diferentes dispositivos del mismo usuario.</li>
-        <li>Gestión del perfil de usuario, activación de cuentas y seguridad de acceso.</li>
-        <li>Cálculo estimado de la nómina mensual a partir de los datos económicos que el usuario introduce voluntariamente (ver punto 2).</li>
-        <li>Comunicación de noticias y novedades laborales relevantes para el sector a través de la pestaña de noticias, incluyendo notificaciones push.</li>
-        <li>Llevar constancia de la plantilla de cada centro de trabajo (censo de delegados, ver punto 3).</li>
+        <li><strong>Tu cuenta, tu perfil y tu cuadrante</strong> (guardarlos, sincronizarlos entre tus dispositivos y calcular tus objetivos del convenio): es el servicio que nos pides al registrarte (art. 6.1.b RGPD).</li>
+        <li><strong>Verificar tu cuenta</strong> por parte del delegado de tu centro: forma parte del mismo servicio, porque las cuentas de las empresas con convenio en la Aplicación se activan cuando un delegado comprueba que trabajas allí (art. 6.1.b).</li>
+        <li><strong>Nómina:</strong> tu consentimiento, que das al rellenarla (art. 6.1.a). Para la cuota sindical, tu consentimiento explícito (art. 9.2.a). Puedes retirarlo en cualquier momento borrando esos datos.</li>
+        <li><strong>Noticias y notificaciones push:</strong> las noticias forman parte del servicio; las notificaciones, tu consentimiento, que das al permitirlas en tu dispositivo y retiras desactivándolas.</li>
+        <li><strong>Datos técnicos:</strong> nuestro interés legítimo en mantener la Aplicación funcionando y saber si se usa (art. 6.1.f).</li>
     </ul>
 
-    <h2>5. Base Jurídica</h2>
-    <p>La base legal para el tratamiento de sus datos es el <strong>consentimiento explícito</strong> del usuario al registrarse en la aplicación y aceptar los términos de uso. Para el censo del punto 3, la base es el interés legítimo de la actividad de representación de los trabajadores, sin perjuicio del derecho de la persona interesada a oponerse en cualquier momento.</p>
-
-    <h2>6. Almacenamiento y Proveedores</h2>
-    <p>Los datos se almacenan de forma segura en la plataforma <strong>Firebase (Google Cloud)</strong>, incluyendo copias de seguridad automáticas para evitar su pérdida accidental. No se cederán datos a terceros ajenos al servicio, salvo obligación legal.</p>
-
-    <h2>7. Derechos de los Usuarios (Derechos ARCO)</h2>
-    <p>De acuerdo con el RGPD, usted tiene derecho a:</p>
+    <h2>4. Quién puede ver tus datos</h2>
     <ul>
-        <li><strong>Acceso:</strong> Saber qué datos tenemos.</li>
-        <li><strong>Rectificación:</strong> Corregir datos erróneos.</li>
-        <li><strong>Supresión (Derecho al olvido):</strong> Solicitar que borremos todos sus datos de la base de datos.</li>
-        <li><strong>Portabilidad:</strong> Solicitar una copia de sus datos en formato digital.</li>
+        <li><strong>Tú:</strong> todos los tuyos.</li>
+        <li><strong>El delegado de tu centro</strong> (si tu empresa tiene delegado en la Aplicación): tu nombre, email, teléfono, sección y rango, la plataforma que usas, si tienes notificaciones activas, cuándo usaste la Aplicación por última vez y si tu cuenta está activa. <strong>No</strong> ve tus turnos ni tu nómina.</li>
+        <li><strong>El Administrador de la Aplicación:</strong> puede acceder a todos los datos para dar soporte y mantener el servicio.</li>
+        <li><strong>Google (Firebase):</strong> como proveedor que aloja los datos y envía las notificaciones, por encargo nuestro y sin usarlos para fines propios.</li>
     </ul>
+    <p>No cedemos datos a nadie más, salvo obligación legal.</p>
+
+    <h2>5. Datos de otras personas: el censo de los delegados</h2>
+    <p>Los delegados tienen un <strong>censo</strong> donde pueden apuntar a compañeros de su centro que aún no usan la Aplicación, para llevar la cuenta de la plantilla:</p>
+    <ul>
+        <li><strong>Nombre y sección:</strong> base legal, el interés legítimo de la actividad de representación de los trabajadores (art. 6.1.f). La persona puede oponerse en cualquier momento.</li>
+        <li><strong>Sindicato:</strong> es un dato especialmente protegido (art. 9 RGPD). Solo puede apuntarse con el <strong>consentimiento expreso</strong> de esa persona (art. 9.2.a). La Aplicación obliga al delegado a confirmar que lo tiene y guarda la fecha y quién lo registró. Los sindicatos que se apuntaron antes de esta medida sin ese registro se borran si el delegado no confirma el consentimiento.</li>
+        <li>Estos datos los introduce el delegado, bajo su responsabilidad, a partir de lo que la propia persona le cuenta. Solo los ven ese delegado y el Administrador.</li>
+        <li>Cualquier persona apuntada, aunque no tenga cuenta, puede pedir verlos, corregirlos, retirar su consentimiento o que se borren, al delegado que la apuntó o al contacto del punto 10.</li>
+    </ul>
+
+    <h2>6. Cuánto tiempo los guardamos</h2>
+    <ul>
+        <li><strong>Tu cuenta y todo lo asociado</strong> (perfil, cuadrante, nómina, ajustes, tokens): mientras la tengas. Al eliminarla se borran en el momento.</li>
+        <li><strong>Copias de seguridad:</strong> lo borrado puede seguir en ellas hasta <strong>7 días</strong>; después desaparecen solas.</li>
+        <li><strong>Registros técnicos</strong> del servidor (fechas e identificador interno de la cuenta, sin nombre ni email): hasta <strong>30 días</strong>.</li>
+        <li><strong>Noticias y sus fotos:</strong> hasta que su autor o el Administrador las borra. Las de un delegado se borran también al eliminar su cuenta.</li>
+        <li><strong>Censo:</strong> mientras el delegado lo mantenga; se borra al eliminar su cuenta.</li>
+    </ul>
+
+    <h2>7. Dónde se guardan</h2>
+    <p>En <strong>Firebase (Google Cloud)</strong>. La base de datos y los procesos del servidor están en la <strong>Unión Europea</strong>. Algunos servicios de Google, como el inicio de sesión o el envío de notificaciones, pueden tratar datos fuera del Espacio Económico Europeo; en ese caso Google se acoge al Marco de Privacidad de Datos UE-EE. UU. y a las cláusulas contractuales tipo de la Comisión Europea. Los datos viajan cifrados.</p>
+
+    <h2>8. Tus derechos</h2>
+    <p>Puedes ejercer en cualquier momento tus derechos de:</p>
+    <ul>
+        <li><strong>Acceso:</strong> saber qué datos tuyos tenemos.</li>
+        <li><strong>Rectificación:</strong> corregir los que estén mal (la mayoría puedes cambiarlos tú en Ajustes).</li>
+        <li><strong>Supresión:</strong> que los borremos (ver el punto 9).</li>
+        <li><strong>Oposición</strong> y <strong>limitación</strong> del tratamiento.</li>
+        <li><strong>Portabilidad:</strong> recibir una copia en formato digital.</li>
+        <li><strong>Retirar tu consentimiento</strong> donde sea la base legal, sin que afecte a lo tratado antes.</li>
+    </ul>
+    <p>Te responderemos en un plazo máximo de un mes. Si no estás de acuerdo con la respuesta, puedes reclamar ante la <strong>Agencia Española de Protección de Datos</strong> (<a href="https://www.aepd.es">www.aepd.es</a>).</p>
+
+    <h2>9. Eliminar tu cuenta</h2>
+    <p>Desde la Aplicación: <strong>Ajustes → Eliminar cuenta</strong>. Se borra todo al momento. Si ya no tienes la Aplicación, sigue los pasos de <a href="/eliminar-cuenta">esta página</a>.</p>
 
     <div class="contact-box">
-        <h2>8. Contacto y Ejercicio de Derechos</h2>
-        <p>Para ejercer cualquier derecho de rectificación o borrado de cuenta, el usuario puede enviar una solicitud directa al administrador:</p>
+        <h2 style="margin-top: 0;">10. Contacto</h2>
+        <p>Para cualquier duda o para ejercer tus derechos:</p>
         <p>📧 <strong>Email:</strong> oscarisen10@gmail.com</p>
-        <p style="margin-top:12px;">Para ejercer estos mismos derechos sobre los datos del <strong>censo</strong> (punto 3) puede dirigirse también al delegado que los recogió.</p>
+        <p style="margin-top:12px;">Para los datos del <strong>censo</strong> (punto 5) también puedes dirigirte al delegado que te apuntó.</p>
     </div>
 
 </body>

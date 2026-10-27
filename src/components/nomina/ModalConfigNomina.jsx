@@ -19,7 +19,7 @@ import {
 function CampoEuros({ id, label, valor, onChange, ayuda }) {
   return (
     <div className="flex flex-col gap-1.5 mb-4">
-      <label htmlFor={id} className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{label}</label>
+      <label htmlFor={id} className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">{label}</label>
       <div className="relative">
         <input
           id={id} type="number" inputMode="decimal" min="0" step="0.01" placeholder="0,00"
@@ -28,7 +28,7 @@ function CampoEuros({ id, label, valor, onChange, ayuda }) {
         />
         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">€</span>
       </div>
-      {ayuda && <p className="text-[10px] text-slate-400 font-medium ml-1 leading-snug">{ayuda}</p>}
+      {ayuda && <p className="text-[10px] text-slate-500 font-medium ml-1 leading-snug">{ayuda}</p>}
     </div>
   );
 }
@@ -102,7 +102,7 @@ export function ModalConfigNomina({ cfg, mesEtiqueta, onGuardar, onCerrar }) {
           <span className="flex flex-col min-w-0">
             <span className="text-xs font-black uppercase italic tracking-widest text-emerald-700">Configurar nómina</span>
             {mesEtiqueta && (
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{mesEtiqueta}</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">{mesEtiqueta}</span>
             )}
           </span>
           <button onClick={onCerrar} className="p-2 bg-slate-50 rounded-full hover:bg-slate-200 text-slate-300 shrink-0" aria-label="Cerrar"><X size={18} /></button>
@@ -114,7 +114,7 @@ export function ModalConfigNomina({ cfg, mesEtiqueta, onGuardar, onCerrar }) {
         <div className="flex-1 overflow-y-auto overscroll-contain px-6 pt-4">
 
         <div className="flex flex-col gap-1.5 mb-5">
-          <label htmlFor="cfg-grupo" className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Grupo profesional</label>
+          <label htmlFor="cfg-grupo" className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Grupo profesional</label>
           <select
             id="cfg-grupo" value={g} onChange={(e) => setG(e.target.value)}
             className="w-full bg-slate-50 ring-1 ring-slate-200 p-3 rounded-xl text-sm outline-none text-slate-800 focus:ring-2 focus:ring-emerald-500"
@@ -125,7 +125,7 @@ export function ModalConfigNomina({ cfg, mesEtiqueta, onGuardar, onCerrar }) {
             ))}
           </select>
           {gr && (
-            <p className="text-[10px] text-slate-400 font-medium ml-1 mt-1 leading-snug">
+            <p className="text-[10px] text-slate-500 font-medium ml-1 mt-1 leading-snug">
               {eur(gr.anual)} al año ÷ 16 pagas = <span className="font-black text-slate-600">{eur(baseMes)}</span> al mes
               <br />
               Hora efectiva: <span className="font-bold text-slate-500">{num5(precioHora(gr.anual))} €/h</span> (1.770 h al año)
@@ -137,10 +137,10 @@ export function ModalConfigNomina({ cfg, mesEtiqueta, onGuardar, onCerrar }) {
             pone una vez en Ajustes. Un desplegable a mano se queda obsoleto —nadie
             vuelve aquí el día que cumple ocho años— y podía contradecir a la fecha. */}
         <div className="flex flex-col gap-1.5 mb-6">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Antigüedad</span>
+          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Antigüedad</span>
           <div className="bg-slate-50 ring-1 ring-slate-200 p-3 rounded-xl">
             <p className="text-sm text-slate-800 leading-tight">{etiquetaCuatrienio(c)}</p>
-            <p className="text-[10px] text-slate-400 font-medium mt-1.5 leading-snug">
+            <p className="text-[10px] text-slate-500 font-medium mt-1.5 leading-snug">
               {sinFechaAlta
                 ? 'Se calcula sola con tu fecha de alta. Ponla en Ajustes → Mi Puesto.'
                 : c > 0
@@ -155,7 +155,7 @@ export function ModalConfigNomina({ cfg, mesEtiqueta, onGuardar, onCerrar }) {
             nombre en la nómina. Estos SÍ entran en la base de las pagas. */}
         <div className="border-t border-slate-100 pt-4 mb-4">
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Complementos</p>
-          <p className="text-[10px] text-slate-400 font-medium mb-3 leading-snug">
+          <p className="text-[10px] text-slate-500 font-medium mb-3 leading-snug">
             Suman a las pagas de Beneficios, Fomento, Verano y Navidad.
           </p>
 
@@ -216,7 +216,7 @@ export function ModalConfigNomina({ cfg, mesEtiqueta, onGuardar, onCerrar }) {
               <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest leading-none">
                 Complementos en 12 pagas
               </span>
-              <span className="text-[10px] text-slate-400 font-medium mt-1.5 leading-tight truncate">
+              <span className="text-[10px] text-slate-500 font-medium mt-1.5 leading-tight truncate">
                 {total12 > 0
                   ? `${eur(total12)} al mes · toca para ${abierto12 ? 'cerrar' : 'editar'}`
                   : 'Complemento Puesto · Compensación Fija SR'}
@@ -231,7 +231,7 @@ export function ModalConfigNomina({ cfg, mesEtiqueta, onGuardar, onCerrar }) {
 
           {abierto12 && (
             <div id="bloque-12-pagas" className="mt-3 animate-in fade-in slide-in-from-top-1 duration-200">
-              <p className="text-[10px] text-slate-400 font-medium mb-3 leading-snug">
+              <p className="text-[10px] text-slate-500 font-medium mb-3 leading-snug">
                 Estos NO generan paga extra: no cuentan para Beneficios, Fomento, Verano ni Navidad.
               </p>
               <CampoEuros id="cfg-puesto" label="Complemento Puesto" valor={puesto} onChange={setPuesto} />
@@ -244,11 +244,11 @@ export function ModalConfigNomina({ cfg, mesEtiqueta, onGuardar, onCerrar }) {
             grupo, así que sabiendo el grupo ya está. Solo hacen falta las horas. */}
         <div className="border-t border-slate-100 pt-4 mb-4">
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Nocturnidad</p>
-          <p className="text-[10px] text-slate-400 font-medium mb-3 leading-snug">
+          <p className="text-[10px] text-slate-500 font-medium mb-3 leading-snug">
             Horas trabajadas entre las 22:00 y las 06:00 este mes.
           </p>
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="cfg-noct" className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Horas nocturnas</label>
+            <label htmlFor="cfg-noct" className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Horas nocturnas</label>
             <div className="relative">
               <input
                 id="cfg-noct" type="number" inputMode="decimal" min="0" step="0.5" placeholder="0"
@@ -258,7 +258,7 @@ export function ModalConfigNomina({ cfg, mesEtiqueta, onGuardar, onCerrar }) {
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">h</span>
             </div>
             {gr && (
-              <p className="text-[10px] text-slate-400 font-medium ml-1 mt-1 leading-snug">
+              <p className="text-[10px] text-slate-500 font-medium ml-1 mt-1 leading-snug">
                 Tu hora nocturna: <span className="font-bold text-slate-500">{num4(plusNocturnidadHora(gr.anual))} €/h</span>{' '}
                 ({PCT_NOCTURNIDAD * 100}% de {num4(precioHora(gr.anual))} €/h)
                 {Number(noct) > 0 && (
@@ -284,7 +284,7 @@ export function ModalConfigNomina({ cfg, mesEtiqueta, onGuardar, onCerrar }) {
               <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest leading-none flex items-center gap-1.5">
                 <HeartPulse size={13} className="text-slate-400" /> Bajas este año
               </span>
-              <span className="text-[10px] text-slate-400 font-medium mt-1.5 leading-tight truncate">
+              <span className="text-[10px] text-slate-500 font-medium mt-1.5 leading-tight truncate">
                 {bajas.length > 0
                   ? `${bajas.length} ${bajas.length === 1 ? 'registrada' : 'registradas'} · toca para ${abiertoBajas ? 'cerrar' : 'editar'}`
                   : 'Afectan a lo que cobras según cuántas lleves'}
@@ -299,7 +299,7 @@ export function ModalConfigNomina({ cfg, mesEtiqueta, onGuardar, onCerrar }) {
 
           {abiertoBajas && (
             <div id="bloque-bajas" className="mt-3 animate-in fade-in slide-in-from-top-1 duration-200">
-              <p className="text-[10px] text-slate-400 font-medium mb-3 leading-snug">
+              <p className="text-[10px] text-slate-500 font-medium mb-3 leading-snug">
                 Apunta cada proceso por separado. La primera baja del año se trata
                 distinto que la segunda, y eso cambia lo que cobras.
               </p>
@@ -367,12 +367,12 @@ export function ModalConfigNomina({ cfg, mesEtiqueta, onGuardar, onCerrar }) {
             donde viene escrito, en vez de intentar calcularlo y fallar. */}
         <div className="border-t border-slate-100 pt-4 mb-4">
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Retención de IRPF</p>
-          <p className="text-[10px] text-slate-400 font-medium mb-3 leading-snug">
+          <p className="text-[10px] text-slate-500 font-medium mb-3 leading-snug">
             Míralo en tu última nómina, en la línea «I.R.P.F.»: es el porcentaje
             entre paréntesis. Depende de tu situación personal, así que no se puede calcular.
           </p>
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="cfg-irpf" className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tu porcentaje</label>
+            <label htmlFor="cfg-irpf" className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Tu porcentaje</label>
             <div className="relative">
               <input
                 id="cfg-irpf" type="number" inputMode="decimal" min="0" max={IRPF_MAXIMO} step="0.01" placeholder="0,00"
@@ -399,7 +399,10 @@ export function ModalConfigNomina({ cfg, mesEtiqueta, onGuardar, onCerrar }) {
           <CampoEuros id="cfg-prima" label="Prima Seg. Vida" valor={prima} onChange={setPrima} />
           <CampoEuros
             id="cfg-cuota" label="Cuota sindical" valor={cuota} onChange={setCuota}
-            ayuda={`Solo si estás afiliado. Se descuenta de la nómina; lo habitual son ${eur(CUOTA_SINDICAL_POR_DEFECTO)} al mes. Si tienes baja el MES COMPLETO, no se paga: ponlo a 0 solo ese mes.`}
+            // La última frase es el consentimiento (RGPD art. 9): pagar cuota revela la
+            // afiliación sindical, un dato especialmente protegido. Rellenarlo es
+            // voluntario y se puede borrar dejándolo vacío (auditoría 25-oct-2026).
+            ayuda={`Solo si estás afiliado. Se descuenta de la nómina; lo habitual son ${eur(CUOTA_SINDICAL_POR_DEFECTO)} al mes. Si tienes baja el MES COMPLETO, no se paga: ponlo a 0 solo ese mes. Al rellenarla aceptas que la app guarde este dato, que indica que estás afiliado; puedes borrarlo cuando quieras dejándolo vacío.`}
           />
         </div>
 

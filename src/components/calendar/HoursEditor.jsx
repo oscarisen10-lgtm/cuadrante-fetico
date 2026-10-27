@@ -71,12 +71,12 @@ export function HoursEditor({
         {!esLibre && (
           <div className="flex items-center justify-center gap-4 mb-6 bg-slate-50 py-6 rounded-3xl text-slate-800 border border-slate-100 shadow-inner">
             <div className="flex flex-col items-center">
-              <label htmlFor="edit-hours" className="text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">Horas</label>
+              <label htmlFor="edit-hours" className="text-[10px] font-black text-slate-500 uppercase mb-2 tracking-widest">Horas</label>
               <input id="edit-hours" type="number" min="0" max="24" value={editHH} onChange={e=>setEditHH(e.target.value)} className={`w-20 bg-white border border-slate-200 p-3 rounded-2xl text-center text-3xl font-black outline-none ${acento.borde} focus:ring-2 ${acento.anillo} transition-all shadow-sm`} aria-label="Horas trabajadas"/>
             </div>
             <span className="font-black text-4xl text-slate-300 mt-6" aria-hidden="true">:</span>
             <div className="flex flex-col items-center">
-              <label htmlFor="edit-minutes" className="text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">Minutos</label>
+              <label htmlFor="edit-minutes" className="text-[10px] font-black text-slate-500 uppercase mb-2 tracking-widest">Minutos</label>
               <input id="edit-minutes" type="number" min="0" max="59" value={editmm} onChange={e=>handleMinutesChange(e.target.value)} className={`w-20 bg-white border border-slate-200 p-3 rounded-2xl text-center text-3xl font-black outline-none ${acento.borde} focus:ring-2 ${acento.anillo} transition-all shadow-sm`} aria-label="Minutos trabajados"/>
             </div>
           </div>
@@ -101,7 +101,7 @@ export function HoursEditor({
             role="switch"
             aria-checked={editHA}
           >
-            <span className={`text-[10px] font-black uppercase tracking-widest ${editHA ? 'text-cyan-700' : 'text-slate-400'}`}>Día HA</span>
+            <span className={`text-[10px] font-black uppercase tracking-widest ${editHA ? 'text-cyan-700' : 'text-slate-500'}`}>Día HA</span>
             <span className={`w-10 h-5 rounded-full relative transition-colors ${editHA ? 'bg-cyan-500' : 'bg-slate-300'}`}>
               <span className={`absolute top-0.5 size-4 bg-white rounded-full shadow transition-all ${editHA ? 'left-5' : 'left-0.5'}`} />
             </span>

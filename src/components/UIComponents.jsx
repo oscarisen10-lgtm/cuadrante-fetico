@@ -40,7 +40,7 @@ export function NavItem({ icon, label, isActive, onClick }) {
       >
         {React.cloneElement(icon, { size: 20, strokeWidth: isActive ? 2.6 : 2 })}
       </div>
-      <span className={`text-[9px] uppercase tracking-tight leading-none ${isActive ? 'font-black text-emerald-700' : 'font-bold text-slate-400'}`}>{label}</span>
+      <span className={`text-[10px] uppercase tracking-tight leading-none ${isActive ? 'font-black text-emerald-700' : 'font-bold text-slate-500'}`}>{label}</span>
     </button>
   );
 }
@@ -55,9 +55,9 @@ export function StatBar({ label, currentValue, totalValue, percentage, color, la
   return (
     <div data-tour={dataTour} className="space-y-2.5 flex flex-col" role="meter" aria-label={label} aria-valuenow={clampedPercentage} aria-valuemin={0} aria-valuemax={100}>
       <div className="flex justify-between items-end leading-none">
-        <span className={`font-black uppercase ${large ? "text-xs text-slate-500 tracking-tight" : "text-[10px] text-slate-400 tracking-widest"}`}>
+        <span className={`font-black uppercase ${large ? "text-xs text-slate-500 tracking-tight" : "text-[10px] text-slate-500 tracking-widest"}`}>
           {label}
-          {hint && <span className="ml-1.5 text-[9px] font-bold text-slate-400 normal-case tracking-tight">{hint}</span>}
+          {hint && <span className="ml-1.5 text-[9px] font-bold text-slate-500 normal-case tracking-tight">{hint}</span>}
         </span>
         <span className={`font-bold text-slate-400 ${large ? "text-base mr-0.5" : "text-xs mr-1"}`}>
           {currentValue} <span className="text-slate-300">/</span> <span className={`${large ? "text-2xl font-black tracking-tighter" : "text-sm font-black"} text-slate-900`}>{totalValue}</span>
@@ -88,9 +88,9 @@ export function StatBar({ label, currentValue, totalValue, percentage, color, la
 export function StatCounter({ label, value, large = false, dataTour, hint }) {
   return (
     <div data-tour={dataTour} className="flex justify-between items-end leading-none">
-      <span className={`font-black uppercase ${large ? "text-xs text-slate-500 tracking-tight" : "text-[10px] text-slate-400 tracking-widest"}`}>
+      <span className={`font-black uppercase ${large ? "text-xs text-slate-500 tracking-tight" : "text-[10px] text-slate-500 tracking-widest"}`}>
         {label}
-        {hint && <span className="ml-1.5 text-[9px] font-bold text-slate-400 normal-case tracking-tight">{hint}</span>}
+        {hint && <span className="ml-1.5 text-[9px] font-bold text-slate-500 normal-case tracking-tight">{hint}</span>}
       </span>
       <span className={`${large ? "text-2xl font-black tracking-tighter" : "text-sm font-black"} text-slate-900`}>{value}</span>
     </div>

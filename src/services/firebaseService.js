@@ -238,10 +238,17 @@ export const registerUser = async (email, password, profileData) => {
   return res;
 };
 
+// Mientras el servidor borra la cuenta, el documento desaparece ANTES que la sesión: el
+// onSnapshot de useAuth lo ve "huérfano" y, sin esta marca, ensureUserDoc lo volvía a
+// crear con el token todavía válido — dejando un perfil fantasma con el email de alguien
+// que acaba de pedir que se le borre todo (auditoría 25-oct-2026, H-17).
+let cuentaEnBorrado = false;
+
 // Crea el documento users/{uid} si no existe (auto-reparación de "huérfanos":
 // cuentas de Auth sin documento en Firestore). Se usa en login email, Google y Apple,
 // y al arrancar la sesión desde useAuth. Si el doc ya existe, no hace nada.
 export const ensureUserDoc = async (user) => {
+  if (cuentaEnBorrado) return;
   const userDocRef = doc(db, "users", user.uid);
   const userDoc = await getDoc(userDocRef);
   if (!userDoc.exists()) {
@@ -300,9 +307,16 @@ export const deleteUserAccount = async () => {
   // usuario un error mientras el borrado sigue corriendo y termina bien — peor que
   // no poner tope, porque le haría reintentar algo que ya está hecho.
   const fn = httpsCallable(functions, 'deleteMyAccount');
-  await fn();
-  // Cerramos sesión localmente para que la app vuelva al login de inmediato.
-  await signOut(auth).catch(() => {});
+  cuentaEnBorrado = true; // ver ensureUserDoc: que no recree el perfil a medio borrar
+  try {
+    await fn();
+    // Cerramos sesión localmente para que la app vuelva al login de inmediato.
+    await signOut(auth).catch(() => {});
+  } finally {
+    // Ya sin sesión (o si el borrado falló y la cuenta sigue viva), la auto-reparación
+    // vuelve a hacer falta para el siguiente inicio de sesión.
+    cuentaEnBorrado = false;
+  }
 };
 
 export const saveUserData = async (updates) => {

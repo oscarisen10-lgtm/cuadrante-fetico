@@ -587,6 +587,41 @@ describe('Noticias de delegado (noticiasTienda)', () => {
     await assertFails(setDoc(doc(as(BASE), 'noticiasTienda', 'mal5'), nueva({ authorUid: BASE })));
   });
 
+  // Auditoría 25-oct-2026 (H-01): con Capacitor ≤ 8.3.4, un linkUrl a la ruta interna
+  // del proxy cargaba una web ajena dentro de la app Android. La lista de campos es
+  // cerrada: ninguna versión de la app ha escrito linkUrl en una noticia de tienda.
+  test('el delegado NO puede colar un enlace (linkUrl) en su noticia', async () => {
+    await assertFails(
+      setDoc(doc(as(DELEGADO), 'noticiasTienda', 'mal6'),
+        nueva({ linkUrl: 'https://localhost/_capacitor_http_interceptor_?u=https://x.example' }))
+    );
+  });
+
+  test('ni ningún otro campo que la app no escriba', async () => {
+    await assertFails(setDoc(doc(as(DELEGADO), 'noticiasTienda', 'mal7'), nueva({ tag: 'URGENTE' })));
+  });
+
+  // Lo que SÍ escribe la app, tal cual: la noticia con cartel y el aviso push.
+  test('la noticia real del compositor (con cartel) pasa', async () => {
+    await assertSucceeds(setDoc(doc(as(DELEGADO), 'noticiasTienda', 'ok2'), nueva({
+      imageUrl: 'https://firebasestorage.googleapis.com/v0/b/x/o/cartel.jpg?alt=media&token=t',
+      authorName: 'Delegada', date: '25 oct',
+    })));
+    await assertSucceeds(setDoc(doc(as(DELEGADO), 'noticiasTienda', 'ok3'), nueva({
+      imageUrl: null, authorName: 'Delegada', date: '25 oct',
+    })));
+  });
+
+  test('el aviso push real del delegado pasa', async () => {
+    await assertSucceeds(setDoc(doc(as(DELEGADO), 'noticiasTienda', 'ok4'), nueva({
+      authorName: 'Delegada', date: '25 oct', isPushRequest: true, sendPush: true,
+    })));
+  });
+
+  test('sendPush tiene que ser booleano', async () => {
+    await assertFails(setDoc(doc(as(DELEGADO), 'noticiasTienda', 'mal8'), nueva({ sendPush: 'sí' })));
+  });
+
   test('el autor SÍ puede leer y borrar su propia noticia (aunque su perfil sea de otra tienda)', async () => {
     await assertSucceeds(getDoc(doc(as(DELEGADO), 'noticiasTienda', 'nt1')));
     await assertSucceeds(deleteDoc(doc(as(DELEGADO), 'noticiasTienda', 'nt1')));
@@ -654,6 +689,23 @@ describe('Censo de afiliación (censos/{uid})', () => {
   test('un usuario NO puede escribir el censo de otro', async () => {
     await assertFails(
       setDoc(doc(as(BASE), 'censos', DELEGADO), { prospects: {}, updatedAt: 2 })
+    );
+  });
+
+  // Auditoría 25-oct-2026: antes bastaba con que el uid coincidiera, así que cualquier
+  // usuario podía crearse un censo propio de hasta 1 MB.
+  test('quien NO es delegado no puede crearse un censo propio', async () => {
+    await assertFails(
+      setDoc(doc(as(BASE), 'censos', BASE), { prospects: {}, updatedAt: 1 })
+    );
+  });
+
+  test('un delegado DESACTIVADO ya no puede escribir en su censo', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'delegados', DELEGADO), { stores: ['Centro'], active: false });
+    });
+    await assertFails(
+      setDoc(doc(as(DELEGADO), 'censos', DELEGADO), { prospects: {}, updatedAt: 3 })
     );
   });
 

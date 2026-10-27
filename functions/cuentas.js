@@ -17,9 +17,9 @@ const { isValidStore, isAngedCompany, storeBelongsToCompany } = require("./lib/v
 
 /**
  * purgeUserData — Borra de Firestore TODO lo asociado a un uid (perfil + subcolecciones,
- * peticiones y noticias de delegado) y da de baja su token del topic de noticias. NO toca
- * la cuenta de Auth. Idempotente: si los datos ya no existen, es un no-op (por eso da
- * igual que los dos caminos se solapen).
+ * peticiones, noticias de delegado, su alta de delegado y su censo) y da de baja sus
+ * tokens del topic de noticias. NO toca la cuenta de Auth. Idempotente: si los datos ya
+ * no existen, es un no-op (por eso da igual que los dos caminos se solapen).
  */
 async function purgeUserData(uid) {
   // Tokens FCM antes de borrar nada, para dar de baja del topic de noticias TODOS sus
@@ -54,7 +54,14 @@ async function purgeUserData(uid) {
   await db().collection("delegados").doc(uid).delete()
     .catch((e) => console.warn("No se pudo borrar el doc de delegado:", e.message));
 
-  // 5) Baja del topic de noticias (mejor esfuerzo: si falla, no aborta el borrado).
+  // 5) Su censo, si era delegado (auditoría 25-oct-2026, H-03). Son datos de OTRAS
+  //    personas —nombre, sección y, en los apuntados hasta ahora, su sindicato— que
+  //    solo gestionaba él. Sin esto se quedaban en Firestore sin nadie que pudiera
+  //    verlos ni atender una petición de borrado. A diferencia del doc de delegado,
+  //    aquí un fallo SÍ aborta: es justo lo que el borrado de la cuenta promete.
+  await db().collection("censos").doc(uid).delete();
+
+  // 6) Baja del topic de noticias (mejor esfuerzo: si falla, no aborta el borrado).
   if (fcmTokens.length > 0) {
     await admin.messaging().unsubscribeFromTopic(fcmTokens, NEWS_TOPIC)
       .catch((e) => console.warn("No se pudo desuscribir del topic:", e.message));

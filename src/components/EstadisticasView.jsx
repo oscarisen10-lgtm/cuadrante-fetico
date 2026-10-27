@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { BarChart3, Users, Bell, Activity, Newspaper, Send, RefreshCw, Apple, Smartphone, Globe, Timer, UserMinus } from 'lucide-react';
+import { BarChart3, Users, Bell, Activity, Newspaper, Send, RefreshCw, Apple, Smartphone, Globe, Timer, UserMinus, Layers } from 'lucide-react';
 import { fetchAdminStats } from '../services/firebaseService';
 import { toast } from '../services/toastBus';
 import { LoadingLogo } from './UIComponents';
@@ -19,7 +19,7 @@ function StatCard({ icon, label, value, sub, tone = "emerald" }) {
       </span>
       <span className="text-2xl font-black tracking-tighter leading-none" style={{ color: t.text }}>{value ?? '—'}</span>
       <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 leading-tight">{label}</span>
-      {sub && <span className="text-[8px] font-bold uppercase tracking-tight text-slate-400 leading-tight">{sub}</span>}
+      {sub && <span className="text-[9px] font-bold uppercase tracking-tight text-slate-500 leading-tight">{sub}</span>}
     </div>
   );
 }
@@ -39,6 +39,15 @@ function PlatformSplit({ ios, android }) {
     </div>
   );
 }
+
+// Las versiones anteriores a la 3.4.0 leen los turnos en el formato diario antiguo:
+// mientras alguien las use, la app tiene que seguir guardándolos también así
+// (LEGACY_SHIFTS_DUAL_WRITE en services/firebaseService.js).
+const necesitaFormatoAntiguo = (version) => {
+  if (!/^\d+\.\d+/.test(version)) return true; // "anterior a 3.3.0"
+  const [ma, mi] = version.split('.').map((n) => parseInt(n, 10) || 0);
+  return ma < 3 || (ma === 3 && mi < 4);
+};
 
 function Panel({ icon, title, children }) {
   return (
@@ -102,7 +111,7 @@ export const EstadisticasView = React.memo(function EstadisticasView() {
           </div>
 
           <Panel icon={<Activity size={14} className="text-emerald-600" />} title={`Uso en los últimos ${ventana} días`}>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 leading-relaxed">
+            <p className="text-[11px] font-medium text-slate-500 leading-snug">
               Usuarios que han abierto la app. Las versiones anteriores a agosto de 2026 no
               registraban actividad: cuentan como inactivas hasta que se actualicen.
             </p>
@@ -132,14 +141,14 @@ export const EstadisticasView = React.memo(function EstadisticasView() {
               </div>
               <PlatformSplit ios={stats?.pushMuertoIos} android={stats?.pushMuertoAndroid} />
             </div>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 leading-relaxed mt-3">
+            <p className="text-[11px] font-medium text-slate-500 leading-snug mt-3">
               Ni Apple ni Google avisan cuando alguien desinstala. «Push muerto» es lo más
               parecido: sus dispositivos ya no existen para Firebase. También sale al
               reinstalar o tras meses sin abrirla, así que es un indicio, no una baja
               confirmada. Se descubre al enviarle un aviso, no antes.
             </p>
             {stats?.sinActividad > 0 && (
-              <p className="text-[8px] text-slate-400 uppercase font-bold tracking-tight mt-2 leading-tight">
+              <p className="text-[11px] text-slate-500 font-medium mt-2 leading-snug">
                 {stats.sinActividad} sin registro de actividad (apps anteriores a agosto de 2026): no cuentan como inactivos
               </p>
             )}
@@ -167,25 +176,53 @@ export const EstadisticasView = React.memo(function EstadisticasView() {
               <div className="bg-slate-100 rounded-xl px-2 py-2.5 text-center">
                 <Apple size={13} className="mx-auto text-slate-500 mb-1" />
                 <div className="text-sm font-black text-slate-700">{stats?.ios ?? '—'}</div>
-                <div className="text-[8px] font-black uppercase text-slate-400">iOS</div>
+                <div className="text-[9px] font-black uppercase text-slate-500">iOS</div>
               </div>
               <div className="bg-slate-100 rounded-xl px-2 py-2.5 text-center">
                 <Smartphone size={13} className="mx-auto text-slate-500 mb-1" />
                 <div className="text-sm font-black text-slate-700">{stats?.android ?? '—'}</div>
-                <div className="text-[8px] font-black uppercase text-slate-400">Android</div>
+                <div className="text-[9px] font-black uppercase text-slate-500">Android</div>
               </div>
               <div className="bg-slate-100 rounded-xl px-2 py-2.5 text-center">
                 <Globe size={13} className="mx-auto text-slate-500 mb-1" />
                 <div className="text-sm font-black text-slate-700">{stats?.web ?? '—'}</div>
-                <div className="text-[8px] font-black uppercase text-slate-400">Web</div>
+                <div className="text-[9px] font-black uppercase text-slate-500">Web</div>
               </div>
             </div>
             {stats?.desconocido > 0 && (
-              <p className="text-[8px] text-slate-400 uppercase font-bold text-center tracking-tight mt-2.5">
+              <p className="text-[11px] text-slate-500 font-medium text-center mt-2.5">
                 {stats.desconocido} sin plataforma aún (apps antiguas; se registrará al actualizar)
               </p>
             )}
           </Panel>
+
+          {/* Versiones instaladas (auditoría 25-oct-2026): dice cuándo se puede retirar
+              lo que solo existe por las apps viejas. Requiere la function adminStats
+              actualizada; con la anterior, este panel no sale. */}
+          {Array.isArray(stats?.versiones) && stats.versiones.length > 0 && (
+            <Panel icon={<Layers size={14} className="text-slate-600" />} title="Versiones instaladas">
+              <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 gap-y-1.5 items-center text-[10px]">
+                <span className="font-black uppercase tracking-widest text-slate-400">Versión</span>
+                <span className="font-black uppercase tracking-widest text-slate-400 text-right">Usuarios</span>
+                <span className="font-black uppercase tracking-widest text-slate-400 text-right">Activos {stats.ventanaVersionesDias ?? 30} d</span>
+                {stats.versiones.map((v) => {
+                  const vieja = necesitaFormatoAntiguo(v.version);
+                  return (
+                    <React.Fragment key={v.version}>
+                      <span className={`font-black ${vieja ? 'text-amber-700' : 'text-slate-700'}`}>{v.version}</span>
+                      <span className="font-black text-slate-700 text-right tabular-nums">{v.total}</span>
+                      <span className="font-bold text-slate-500 text-right tabular-nums">{v.activos ?? '—'}</span>
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] font-medium text-slate-500 leading-snug mt-3">
+                En ámbar, las versiones anteriores a la 3.4.0: mientras alguien las use, los
+                turnos se siguen guardando también en el formato antiguo. «—» = esa versión
+                aún no registraba actividad (anteriores a la 3.6.0), así que no se sabe si la abren.
+              </p>
+            </Panel>
+          )}
 
           <Panel icon={<Newspaper size={14} className="text-emerald-600" />} title="Actividad de delegados">
             <div className="grid grid-cols-2 gap-3 mb-4">
@@ -196,7 +233,7 @@ export const EstadisticasView = React.memo(function EstadisticasView() {
             {delegados.length === 0 ? (
               <div className="py-6 flex flex-col items-center opacity-40">
                 <Newspaper size={30} className="text-slate-300 mb-2" />
-                <p className="text-[10px] text-slate-400 italic uppercase font-bold tracking-widest">Ningún delegado ha publicado aún</p>
+                <p className="text-[10px] text-slate-500 italic uppercase font-bold tracking-widest">Ningún delegado ha publicado aún</p>
               </div>
             ) : (
               <div className="space-y-1.5">

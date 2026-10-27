@@ -13,6 +13,19 @@ import { isHoliday } from '../utils/holidayUtils';
  * @param {Date} [now]      Fecha de referencia (inyectable para tests deterministas)
  */
 export const computeShiftStats = (shifts, shiftsMap, user, now = new Date()) => {
+  const year = now.getFullYear();
+
+  // SOLO los turnos del año de `now` (auditoría 25-oct-2026, H-02). El Resumen recibe
+  // la ventana de 12 meses MÓVILES que carga useAuth, que empieza en el mismo mes del
+  // año anterior: sin este filtro, "Horas anuales", "Días trabajados" y compañía
+  // sumaban también los turnos de ese año anterior. Hasta octubre de 2026 casi nadie
+  // tenía datos de 2025 y no se notaba, pero el 1 de enero de 2027 la ventana abarca
+  // todo 2026 y los contadores arrancarían el año llenos. El cálculo de findes de
+  // calidad de abajo ya iba del 1 de enero a `now`; ahora todo usa el mismo año.
+  // El PDF ya filtraba antes de llamar aquí (CalendarView): para él no cambia nada.
+  const prefijoAnio = `${year}-`;
+  const delAnio = shifts.filter((s) => typeof s?.date === 'string' && s.date.startsWith(prefijoAnio));
+
   let horasTotalesDecimal = 0;
   let contadorHA = 0;
   let vacacionesCount = 0;
@@ -23,7 +36,7 @@ export const computeShiftStats = (shifts, shiftsMap, user, now = new Date()) => 
   let diasTrabajados = 0;
   let diasLibres = 0;
 
-  shifts.forEach(s => {
+  delAnio.forEach(s => {
     // BAJA ('sick'): guarda la jornada que el cuadrante tenía PROGRAMADA, no la que
     // se trabajó. En ANGED esa jornada cuenta igual para el cómputo anual aunque no
     // se llegara a trabajar por estar de baja, así que suma exactamente como un día
@@ -49,7 +62,6 @@ export const computeShiftStats = (shifts, shiftsMap, user, now = new Date()) => 
     if (s.type === 'rest' || bajaEnDiaLibre) diasLibres += 1;
   });
 
-  const year = now.getFullYear();
   const start = new Date(year, 0, 1);
   const end = now;
   // Algunos puestos (coordinadores de frescos, jefes) tienen finde de calidad largo de
@@ -126,9 +138,14 @@ export const useShifts = (shifts, user) => {
     return map;
   }, [shifts]);
 
+  // El año va en las dependencias para que, si la app sigue abierta al dar las doce
+  // en Nochevieja, el siguiente render recalcule con el año nuevo en vez de seguir
+  // enseñando el anterior hasta que cambie algún turno.
+  const anioActual = new Date().getFullYear();
   const stats = useMemo(
     () => computeShiftStats(shifts, shiftsMap, user),
-    [shifts, shiftsMap, user]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- anioActual es a propósito
+    [shifts, shiftsMap, user, anioActual]
   );
 
   return { shiftsMap, stats };

@@ -17,5 +17,12 @@
       ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    { "collectionGroup": "shiftMonths", "fieldPath": "days", "indexes": [] },
+    { "collectionGroup": "users", "fieldPath": "profile.nomina", "indexes": [] },
+    { "collectionGroup": "users", "fieldPath": "settings", "indexes": [] },
+    { "collectionGroup": "censos", "fieldPath": "prospects", "indexes": [] },
+    { "collectionGroup": "noticias", "fieldPath": "desc", "indexes": [] },
+    { "collectionGroup": "noticiasTienda", "fieldPath": "desc", "indexes": [] }
+  ]
 }

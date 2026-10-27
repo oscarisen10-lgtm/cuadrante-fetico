@@ -302,7 +302,7 @@ export const NominaView = React.memo(function NominaView({ user, saveToCloud }) 
             <Fila concepto="T. Computable de S.S." detalle={null} importe={nomina.baseCotizacion} fuerte />
             {nomina.diasBaja > 0 && (
               <div className="px-4 py-3 bg-slate-50">
-                <p className="text-[10px] text-slate-400 font-medium leading-snug">
+                <p className="text-[10px] text-slate-500 font-medium leading-snug">
                   Este mes tienes {nomina.diasBaja} días de baja: la base de cotización
                   se mantiene como si el mes hubiera sido completo, aunque los devengos
                   de arriba estén reducidos a {nomina.diasOrdinarios} días.
@@ -327,7 +327,7 @@ export const NominaView = React.memo(function NominaView({ user, saveToCloud }) 
                     <span className="text-[14px] text-slate-800 leading-tight">
                       {nombre}
                       {parcial && (
-                        <span className="ml-1.5 text-[9px] font-black text-amber-600 uppercase tracking-widest">Parcial</span>
+                        <span className="ml-1.5 text-[9px] font-black text-amber-700 uppercase tracking-widest">Parcial</span>
                       )}
                     </span>
                     <span className="text-[11px] text-slate-400 leading-tight mt-1">
@@ -342,13 +342,13 @@ export const NominaView = React.memo(function NominaView({ user, saveToCloud }) 
                   </div>
                   <div className="flex flex-col items-end shrink-0">
                     <span className="text-[15px] font-bold text-slate-800 tabular-nums whitespace-nowrap">{eur(pe.neto)}</span>
-                    <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none mt-1">Neto</span>
+                    <span className="text-[9px] font-black text-emerald-700 uppercase tracking-widest leading-none mt-1">Neto</span>
                   </div>
                 </div>
               );
             })}
             <div className="px-4 py-3 bg-slate-50">
-              <p className="text-[10px] text-slate-400 font-medium leading-snug">
+              <p className="text-[10px] text-slate-500 font-medium leading-snug">
                 Se cobran enteras en su mes, no cada mes. Aun así cotizan repartidas
                 todo el año: por eso suman {eur(nomina.prorrataPagas)} a la base de cotización de arriba
                 {Number(cfg?.tipoIrpf) > 0

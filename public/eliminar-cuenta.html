@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eliminar tu cuenta - Mi Cuadrante</title>
+    <!--
+      Página pública para pedir el borrado de la cuenta SIN tener la app instalada.
+      Google Play la exige (Data safety → "Eliminar cuenta"): nombre de la app y del
+      desarrollador, pasos, qué se borra y qué se conserva y cuánto tiempo.
+      Auditoría 25-oct-2026, H-24. Se sirve en /eliminar-cuenta (rewrite en firebase.json).
+      Lo que dice aquí tiene que coincidir con purgeUserData (functions/cuentas.js).
+    -->
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1f2937; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        h1 { color: #059669; border-bottom: 2px solid #ecfdf5; padding-bottom: 10px; }
+        h2 { color: #111827; margin-top: 30px; font-size: 1.25rem; }
+        p, li { font-size: 0.95rem; }
+        li { margin-bottom: 6px; }
+        .box { background: #f9fafb; border: 1px solid #e5e7eb; padding: 16px 20px; border-radius: 10px; margin-top: 16px; }
+        .contact-box { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 24px; border-radius: 12px; margin-top: 30px; }
+        .contact-box a { color: #059669; font-weight: 600; }
+        .app-badge { display: inline-flex; align-items: center; gap: 8px; background: #059669; color: #fff; padding: 6px 14px; border-radius: 8px; font-weight: 700; font-size: 0.9rem; margin-bottom: 20px; }
+        code { background: #ecfdf5; padding: 1px 6px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="app-badge">📋 Mi Cuadrante</div>
+    <h1>Eliminar tu cuenta de Mi Cuadrante</h1>
+    <p>Esta página explica cómo borrar tu cuenta de <strong>Mi Cuadrante</strong> (desarrollador en Google Play: <strong>LEIApp</strong>) y todos los datos asociados, tengas o no la aplicación instalada.</p>
+
+    <h2>Opción 1: desde la aplicación</h2>
+    <div class="box">
+        <ol>
+            <li>Abre Mi Cuadrante e inicia sesión.</li>
+            <li>Ve a la pestaña <strong>Ajustes</strong>.</li>
+            <li>Baja hasta el final y pulsa <strong>Eliminar</strong> en "Eliminar cuenta".</li>
+            <li>Confirma con <strong>Sí, eliminar</strong>. El borrado es inmediato.</li>
+        </ol>
+    </div>
+
+    <h2>Opción 2: sin la aplicación</h2>
+    <div class="box">
+        <ol>
+            <li>Escribe a <a href="mailto:oscarisen10@gmail.com?subject=Eliminar%20mi%20cuenta%20de%20Mi%20Cuadrante">oscarisen10@gmail.com</a> <strong>desde el mismo email con el que te registraste</strong>, con el asunto <code>Eliminar mi cuenta de Mi Cuadrante</code>.</li>
+            <li>Si escribes desde otra dirección, te pediremos que lo confirmes desde la de tu cuenta, para que nadie pueda borrar la cuenta de otra persona.</li>
+            <li>Borraremos la cuenta y te contestaremos confirmándolo en un plazo máximo de <strong>30 días</strong> (normalmente, en 48 horas laborables).</li>
+        </ol>
+    </div>
+
+    <h2>Qué se borra</h2>
+    <ul>
+        <li>Tu cuenta de acceso (email y contraseña).</li>
+        <li>Tu perfil: nombre, email, teléfono, empresa, centro, sección, rango y fecha de alta.</li>
+        <li>Tus turnos, fichajes, vacaciones, bajas y días libres, de todos los años.</li>
+        <li>Tu nómina y su configuración (salario, complementos, IRPF, cuota sindical).</li>
+        <li>Tus ajustes y los identificadores de notificaciones de tus dispositivos.</li>
+        <li>Las peticiones de días libres que enviaras con versiones antiguas de la app.</li>
+        <li>Si eres delegado: tus noticias publicadas con sus fotos, tu alta como delegado y el censo de futuros usuarios que hayas apuntado.</li>
+    </ul>
+
+    <h2>Qué se conserva, y cuánto tiempo</h2>
+    <ul>
+        <li><strong>Copias de seguridad</strong> de la base de datos: tus datos pueden seguir en ellas hasta <strong>7 días</strong>, que es lo que duran. Pasado ese plazo desaparecen solas.</li>
+        <li><strong>Registros técnicos</strong> del servidor (fechas y el identificador interno de la cuenta, sin tu nombre ni tu email): hasta <strong>30 días</strong>.</li>
+        <li>No conservamos ningún otro dato tuyo. Las estadísticas del panel de administración son recuentos sin nombres.</li>
+    </ul>
+
+    <div class="contact-box">
+        <h2 style="margin-top: 0;">¿Dudas?</h2>
+        <p>Escríbenos a <a href="mailto:oscarisen10@gmail.com">oscarisen10@gmail.com</a>. Tienes más detalle en la <a href="/privacidad.html">Política de Privacidad</a> y en la página de <a href="/soporte.html">Soporte</a>.</p>
+    </div>
+
+    <p style="margin-top: 40px; font-size: 0.8rem; color: #9ca3af; text-align: center;">
+        Mi Cuadrante © 2026 — <a href="/privacidad.html" style="color: #9ca3af;">Política de Privacidad</a>
+    </p>
+</body>
+</html>
