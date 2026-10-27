@@ -29,7 +29,9 @@ workflows:
   firebase-workflow:
     name: Firebase Rules & Functions Deploy
     max_build_duration: 30
-    instance_type: mac_mini_m1
+    # mac_mini_m1 ya no existe en Codemagic (oct-2026): con ella la build se quedaba
+    # para siempre en "Preparing build machine". M2 es la que entra en el plan sin facturacion.
+    instance_type: mac_mini_m2
     environment:
       groups:
         - firebase_deploy
@@ -133,7 +135,9 @@ workflows:
   ios-workflow:
     name: iOS App Store Build
     max_build_duration: 60
-    instance_type: mac_mini_m1
+    # mac_mini_m1 ya no existe en Codemagic (oct-2026): con ella la build se quedaba
+    # para siempre en "Preparing build machine". M2 es la que entra en el plan sin facturacion.
+    instance_type: mac_mini_m2
     environment:
       groups:
         - apple_credentials
