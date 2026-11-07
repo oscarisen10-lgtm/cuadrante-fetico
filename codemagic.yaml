@@ -42,6 +42,10 @@ workflows:
       - name: Install dependencies
         script: |
           set -eu
+          # Node 22 trae npm 10, y el package-lock se genera en local con npm 11: npm 10
+          # lo da por desincronizado (una dependencia opcional del Vite de vitest) y
+          # `npm ci` corta. Pasó en el build 108 (nov-2026). Misma npm que en local.
+          npm install -g npm@11.17.0
           # `npm ci` y no `npm install`: instala EXACTAMENTE lo del package-lock y falla
           # si no cuadra con package.json, en vez de resolver versiones nuevas por su cuenta.
           npm ci
@@ -166,7 +170,9 @@ workflows:
     scripts:
       - name: Install dependencies
         script: |
-          # Exactamente lo del package-lock (ver firebase-workflow).
+          set -eu
+          # npm 11 como en local y exactamente lo del package-lock (ver firebase-workflow).
+          npm install -g npm@11.17.0
           npm ci
       - name: Lint
         script: |
